@@ -1,6 +1,7 @@
-export default function NavShell({ navItems, activeId, onSelect, children }) {
+export default function Sidebar({ navItems, activeId, onSelect }) {
   return (
-    <div className="body-with-sidebar">
+    <>
+      {/* Desktop sidebar */}
       <div className="sidebar sidebar-desktop">
         {navItems.map((n) => (
           <div
@@ -8,14 +9,12 @@ export default function NavShell({ navItems, activeId, onSelect, children }) {
             className={`si ${activeId === n.id ? "active" : ""}`}
             onClick={() => onSelect(n.id)}
           >
-            <span>{n.icon}</span>
+            {n.icon}
             <span style={{ fontSize: 13 }}>{n.label}</span>
           </div>
         ))}
       </div>
-      <div className="main-scroll">
-        <div className="page-pad">{children}</div>
-      </div>
+      {/* Mobile bottom nav */}
       <div className="bottom-nav">
         {navItems.map((n) => (
           <button
@@ -28,6 +27,6 @@ export default function NavShell({ navItems, activeId, onSelect, children }) {
           </button>
         ))}
       </div>
-    </div>
+    </>
   );
 }
