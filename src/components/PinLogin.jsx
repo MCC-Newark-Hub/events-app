@@ -66,22 +66,6 @@ export default function PinLogin({ onSubmit, onBack, lang, t, pin, setPin, err, 
       <button className="btn btn-ghost" style={{ width: "100%", padding: 10 }} onClick={onBack}>
         {t.back}
       </button>
-      <div
-        style={{
-          marginTop: 14,
-          padding: 10,
-          background: "#f8f9fb",
-          borderRadius: 8,
-          fontSize: 11,
-          color: "#6b7280",
-        }}
-      >
-        <strong>{t.demoPins}:</strong>
-        <br />
-        1234 Admin · 2222/3333 {lang === "pt" ? "Atendente" : "Clerk"} · 4444 Pastor
-        <br />
-        5555/6666 GA · 7001–7010 {lang === "pt" ? "Equipes" : "Teams"}
-      </div>
     </div>
   );
 }

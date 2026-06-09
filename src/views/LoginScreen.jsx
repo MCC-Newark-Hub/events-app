@@ -83,9 +83,6 @@ function LoginScreen({ login, lang, setLang }) {
               <Lock size={18} /> {t.teamAccess}
             </button>
           </div>
-          <p style={{ color: "rgba(255,255,255,.3)", fontSize: 12, marginTop: 28 }}>
-            Seminário Para Principiantes 2026 · Philadelphia, PA
-          </p>
         </div>
       ) : (
         <PinLogin

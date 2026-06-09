@@ -101,6 +101,7 @@ export function useAppData({ getUserRef, notify }) {
   const [seq, setSeq] = useState(0);
   const [dbCategories, setDbCategories] = useState([]);
   const [dbFunctions, setDbFunctions] = useState([]);
+  const [dbUsers, setDbUsers] = useState([]);
 
   // ── Load all data from Supabase on mount ─────────────────────────────────
   useEffect(function () {
@@ -108,7 +109,7 @@ export function useAppData({ getUserRef, notify }) {
     async function loadAll() {
       setLoading(true);
       try {
-        var [evRes, memRes, famRes, gaRes, regRes, aprRes, rosRes, chrRes, catRes, fnRes] =
+        var [evRes, memRes, famRes, gaRes, regRes, aprRes, rosRes, chrRes, usrRes, catRes, fnRes] =
           await Promise.all([
             sb.from("events").select("*").order("date"),
             sb.from("members").select("*").order("name"),
@@ -118,6 +119,7 @@ export function useAppData({ getUserRef, notify }) {
             sb.from("approvals").select("*").order("created_at"),
             sb.from("rosters").select("*"),
             sb.from("churches").select("*").order("display"),
+            sb.from("app_users").select("*"),
             sb.from("categories").select("*").order("sort_order"),
             sb.from("functions").select("*").order("sort_order"),
           ]);
@@ -137,6 +139,7 @@ export function useAppData({ getUserRef, notify }) {
         setApprovals((aprRes.data || []).map(mapApproval));
         setRosters((rosRes.data || []).map(mapRoster));
         if (chrRes.data && chrRes.data.length > 0) setChurches(chrRes.data);
+        setDbUsers(usrRes.data || []);
         if (catRes.data && catRes.data.length > 0) setDbCategories(catRes.data);
         if (fnRes.data && fnRes.data.length > 0) setDbFunctions(fnRes.data);
         var maxSeq = (regRes.data || []).reduce(function (m, r) {
@@ -428,6 +431,8 @@ export function useAppData({ getUserRef, notify }) {
     setSeq,
     dbCategories,
     dbFunctions,
+    dbUsers,
+    setDbUsers,
     activeRegs,
     activeCount,
     isFull,

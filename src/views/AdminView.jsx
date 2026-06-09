@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, X, Printer, Plus, ArrowLeft, FolderOpen } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, X, Printer, Plus, ArrowLeft, FolderOpen, KeyRound, Eye, EyeOff } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, ROLE_GROUPS, TEAMS, SERVICE_TEAMS, CHURCHES, ROLE_BADGE, STATUS_CFG, fmt, deadlineStatus, daysSince, isDeadlineExempt } from "@/constants";
 import { sb } from "@/lib/supabase";
@@ -28,6 +28,7 @@ function AdminView(props) {
     { id: "reports", icon: <BarChart2 size={16} />, label: t.reports },
     { id: "events", icon: <Calendar size={16} />, label: t.events },
     { id: "import", icon: <Upload size={16} />, label: "Importar" },
+    { id: "users", icon: <KeyRound size={16} />, label: "Usuários & PINs" },
   ];
   return (
     <div className="app-shell">
@@ -44,6 +45,7 @@ function AdminView(props) {
             {sec === "reports" && <ReportsTab {...props} />}
             {sec === "events" && <EventsTab events={props.events} setEvents={props.setEvents} event={props.event} setEvent={props.setEvent} lang={props.lang} notify={props.notify} />}
             {sec === "import" && <AdminImport members={props.members} setMembers={props.setMembers} families={props.families} setFamilies={props.setFamilies} gas={props.gas} setGas={props.setGas} rosters={props.rosters} setRosters={props.setRosters} churches={props.churches} setChurches={props.setChurches} notify={props.notify} />}
+            {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} notify={props.notify} />}
           </div>
         </div>
       </div>
@@ -287,6 +289,176 @@ function AdminImport({ members, setMembers, families, setFamilies, gas, setGas, 
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Users & PINs Management ───────────────────────────────────────────────────
+const ROLE_LABELS = {
+  admin: "Admin",
+  clerk: "Atendente",
+  pastor: "Pastor",
+  ga_leader: "Líder de GA",
+  team_leader: "Líder de Equipe",
+};
+
+function AdminUsers({ dbUsers, setDbUsers, notify }) {
+  const [editing, setEditing] = useState(null); // { id, name, pin, sysRole, initials, church }
+  const [showPin, setShowPin] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = (u) => {
+    setEditing({ ...u, newPin: "", confirmPin: "" });
+    setShowPin(false);
+  };
+  const startNew = () => {
+    setEditing({ id: null, name: "", sysRole: "clerk", initials: "", church: "", newPin: "", confirmPin: "" });
+    setShowPin(false);
+  };
+  const cancel = () => setEditing(null);
+
+  const save = async () => {
+    if (!editing.name.trim()) { notify("Nome é obrigatório."); return; }
+    if (editing.newPin && editing.newPin.length !== 4) { notify("PIN deve ter 4 dígitos."); return; }
+    if (editing.newPin && editing.newPin !== editing.confirmPin) { notify("PINs não coincidem."); return; }
+    setSaving(true);
+    const row = {
+      name: editing.name.trim(),
+      sys_role: editing.sysRole,
+      initials: editing.initials || editing.name.slice(0, 2).toUpperCase(),
+      church: editing.church || null,
+      ...(editing.newPin ? { pin: editing.newPin } : {}),
+    };
+    if (editing.id) {
+      const { error } = await sb.from("app_users").update(row).eq("id", editing.id);
+      if (error) { notify("Erro ao salvar: " + error.message); setSaving(false); return; }
+      setDbUsers((prev) => prev.map((u) => u.id === editing.id ? { ...u, ...row, pin: editing.newPin || u.pin } : u));
+    } else {
+      if (!editing.newPin) { notify("PIN é obrigatório para novo usuário."); setSaving(false); return; }
+      const { data, error } = await sb.from("app_users").insert({ ...row, pin: editing.newPin }).select().single();
+      if (error) { notify("Erro ao criar: " + error.message); setSaving(false); return; }
+      setDbUsers((prev) => [...prev, data]);
+    }
+    notify(editing.id ? "Usuário atualizado!" : "Usuário criado!");
+    setSaving(false);
+    setEditing(null);
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700 }}>Usuários & PINs</h2>
+        <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={startNew}>
+          <Plus size={14} /> Novo Usuário
+        </button>
+      </div>
+      <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 18 }}>
+        Gerencie quem pode acessar o sistema e redefina PINs individualmente.
+      </p>
+
+      {editing && (
+        <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && cancel()}>
+          <div className="modal" style={{ maxWidth: 440 }}>
+            <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>
+              {editing.id ? "Editar Usuário" : "Novo Usuário"}
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label>Nome completo *</label>
+                <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="Nome do usuário" />
+              </div>
+              <div className="fr">
+                <div>
+                  <label>Iniciais (crachá)</label>
+                  <input value={editing.initials} onChange={(e) => setEditing({ ...editing, initials: e.target.value.toUpperCase().slice(0, 3) })} placeholder="LA" maxLength={3} />
+                </div>
+                <div>
+                  <label>Função *</label>
+                  <select value={editing.sysRole} onChange={(e) => setEditing({ ...editing, sysRole: e.target.value })}>
+                    {Object.entries(ROLE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label>Igreja (opcional)</label>
+                <input value={editing.church || ""} onChange={(e) => setEditing({ ...editing, church: e.target.value })} placeholder="Newark, NJ - EUA" />
+              </div>
+              <div>
+                <label>{editing.id ? "Novo PIN (deixe em branco para manter)" : "PIN *"}</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPin ? "text" : "password"}
+                    maxLength={4}
+                    value={editing.newPin}
+                    onChange={(e) => setEditing({ ...editing, newPin: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+                    placeholder="4 dígitos"
+                    style={{ paddingRight: 40 }}
+                  />
+                  <button onClick={() => setShowPin((v) => !v)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}>
+                    {showPin ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+              {editing.newPin && (
+                <div>
+                  <label>Confirmar PIN *</label>
+                  <input
+                    type={showPin ? "text" : "password"}
+                    maxLength={4}
+                    value={editing.confirmPin}
+                    onChange={(e) => setEditing({ ...editing, confirmPin: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+                    placeholder="Repita o PIN"
+                    style={{ border: editing.confirmPin && editing.confirmPin !== editing.newPin ? "2px solid #c0392b" : undefined }}
+                  />
+                  {editing.confirmPin && editing.confirmPin !== editing.newPin && (
+                    <p style={{ color: "#c0392b", fontSize: 12, marginTop: 4 }}>PINs não coincidem.</p>
+                  )}
+                </div>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={cancel} disabled={saving}>Cancelar</button>
+              <button className="btn btn-primary" style={{ flex: 2 }} onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <table className="table" style={{ tableLayout: "fixed" }}>
+          <thead>
+            <tr>
+              <th style={{ width: 40 }}></th>
+              <th>Nome</th>
+              <th style={{ width: 130 }}>Função</th>
+              <th style={{ width: 160 }}>Igreja</th>
+              <th style={{ width: 80 }}>PIN</th>
+              <th style={{ width: 80 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {dbUsers.map((u) => (
+              <tr key={u.id}>
+                <td>
+                  <div className="avatar" style={{ width: 28, height: 28, fontSize: 10 }}>{u.initials || u.name?.slice(0, 2).toUpperCase()}</div>
+                </td>
+                <td style={{ fontWeight: 600 }}>{u.name}</td>
+                <td><span className="badge badge-blue">{ROLE_LABELS[u.sys_role || u.sysRole] || u.sys_role || u.sysRole}</span></td>
+                <td style={{ fontSize: 12, color: "var(--muted)" }}>{u.church || "—"}</td>
+                <td style={{ fontFamily: "monospace", letterSpacing: 3 }}>••••</td>
+                <td>
+                  <button className="btn btn-ghost btn-sm" onClick={() => startEdit({ id: u.id, name: u.name, sysRole: u.sys_role || u.sysRole, initials: u.initials, church: u.church })}>
+                    Editar
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {dbUsers.length === 0 && (
+              <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>Nenhum usuário cadastrado no banco de dados.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
