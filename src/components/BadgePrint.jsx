@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { churchDisplay, churchCode } from "@/constants";
 
-export default function BadgePrint({ regs, event, lang }) {
+export default function BadgePrint({ regs, lang }) {
   const [pdfDone, setPdfDone] = useState(false);
   const [pdfError, setPdfError] = useState(false);
   const primary = regs[0];

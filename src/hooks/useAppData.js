@@ -395,7 +395,7 @@ export function useAppData({ getUserRef, notify }) {
                 {
                   status: "Confirmado",
                   date: new Date().toISOString().slice(0, 10),
-                  by: user?.name || "Sistema",
+                  by: getUser()?.name || "Sistema",
                   note: "Confirmado da lista de espera",
                 },
               ],

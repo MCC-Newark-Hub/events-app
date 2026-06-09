@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./index.css";
 import { LangContext } from "@/i18n/strings";
 import { ROLES_SYS } from "@/constants";
@@ -28,7 +28,7 @@ export default function App() {
 
   const appData = useAppData({ getUserRef: () => userRef.current, notify });
   const { user, login: authLogin, logout: authLogout } = useAuth(appData.dbUsers || []);
-  userRef.current = user;
+  useEffect(() => { userRef.current = user; });
 
   const login = function (pin) {
     const mapped = authLogin(pin);

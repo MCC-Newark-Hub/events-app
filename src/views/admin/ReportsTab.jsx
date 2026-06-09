@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
-import { CATEGORIES, ROLE_BADGE, fmt } from "@/constants";
+import { fmt, ROLE_BADGE } from "@/constants";
 
 export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
   const t = useT();

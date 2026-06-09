@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { useT } from "@/i18n/strings";
-import { ROLE_BADGE, fmt, isDeadlineExempt, daysSince } from "@/constants";
+import { ROLE_BADGE, fmt } from "@/constants";
 import Topbar from "@/components/Topbar";
 import CapBar from "@/components/CapBar";
 import StatusBadge from "@/components/StatusBadge";

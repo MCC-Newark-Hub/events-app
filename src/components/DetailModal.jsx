@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
-import { ROLE_GROUPS, TEAMS } from "@/constants";
+import { TEAMS, ROLE_GROUPS } from "@/constants";
 
-function DetailModal({ reg, event, onClose, onUpdate, canEditPayment, lang }) {
+function DetailModal({ reg, onClose, onUpdate, canEditPayment, lang }) {
   const t = useT();
   const [f, setF] = useState({ ...reg });
   return (

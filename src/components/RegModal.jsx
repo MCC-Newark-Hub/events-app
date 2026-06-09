@@ -8,7 +8,8 @@ import ChurchSearch from "./ChurchSearch";
 function RegModal({
   event,
   members,
-  families,
+  families: _families,
+  churches,
   isFull,
   existingRegs,
   onClose,
@@ -25,6 +26,7 @@ function RegModal({
   const [overrideNote, setOverrideNote] = useState("");
   const [showOverride, setShowOverride] = useState(false);
   const [pendingData, setPendingData] = useState(null);
+  const [bulkSel, setBulkSel] = useState([]);
   const [f, setF] = useState({
     team:
       prefill?.role === "Pastor"

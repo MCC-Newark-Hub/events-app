@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
-import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, X, Printer, Plus, ArrowLeft, FolderOpen, KeyRound, Eye, EyeOff } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff } from "lucide-react";
 import { useT } from "@/i18n/strings";
-import { CATEGORIES, ROLE_GROUPS, TEAMS, SERVICE_TEAMS, CHURCHES, ROLE_BADGE, STATUS_CFG, fmt, deadlineStatus, daysSince, isDeadlineExempt } from "@/constants";
+import { CATEGORIES, ROLE_GROUPS, TEAMS, CHURCHES, ROLE_BADGE, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
