@@ -188,12 +188,154 @@ function AdminGA({ gas, setGas, members, regs, event, notify }) {
 }
 
 // CSV Import
+const VALID_CATEGORIES = ["0-3","Criança","Intermediário","Adolescente","Jovem","Adulto"];
+const VALID_CODES      = ["EUA","CAN","BRA"];
+
 const CSV_TEMPLATES = {
-  members: { label: "Membros", filename: "template-membros.csv", headers: ["id","name","badgeName","gender","category","church","role","familyId","gaId"], example: ["M100","Silva, João Pedro","João","M","Adulto","Newark, NJ - EUA","Diácono","F005","GA001"], notes: ["id: código único (ex: M100). Deixe em branco para geração automática.","badgeName: nome exibido no crachá.","gender: M ou F.","category: 0-3, Criança, Intermediário, Adolescente, Jovem, Adulto.","church: exatamente como na lista de igrejas.","role: função SGI. Deixe em branco se Participante.","familyId: código da família. Opcional.","gaId: código do GA. Opcional."], validate: (row) => { var e=[]; if(!row.name)e.push("name obrigatório"); if(!row.badgeName)e.push("badgeName obrigatório"); if(!["M","F"].includes(row.gender))e.push("gender deve ser M ou F"); if(!["0-3","Criança","Intermediário","Adolescente","Jovem","Adulto"].includes(row.category))e.push("category inválida: "+row.category); return e; }, transform: (row,idx,existing) => { var id=row.id||"M"+String(existing.length+idx+1).padStart(3,"0"); return {id,name:row.name,badgeName:row.badgeName||row.name.split(",")[1]?.trim()||row.name,gender:row.gender,category:row.category,church:row.church||"",role:row.role||"",familyId:row.familyId||null,gaId:row.gaId||null}; } },
-  families: { label: "Famílias", filename: "template-familias.csv", headers: ["id","name","memberIds"], example: ["F010","Família Silva","M100,M101,M102"], notes: ["id: código único.","name: nome da família.","memberIds: IDs separados por vírgula."], validate: (row) => { var e=[]; if(!row.name)e.push("name obrigatório"); if(!row.memberIds)e.push("memberIds obrigatório"); return e; }, transform: (row,idx,existing) => { var id=row.id||"F"+String(existing.length+idx+1).padStart(3,"0"); return {id,name:row.name,memberIds:row.memberIds?row.memberIds.split(",").map(s=>s.trim()):[]}; } },
-  assistanceGroups: { label: "Grupos de Assistência", filename: "template-grupos-assistencia.csv", headers: ["id","name","church","leaderId"], example: ["GA010","GA Newark","Newark, NJ - EUA","M100"], notes: ["id: código único.","name: nome do grupo.","church: igreja do grupo.","leaderId: ID do membro líder."], validate: (row) => { var e=[]; if(!row.name)e.push("name obrigatório"); if(!row.leaderId)e.push("leaderId obrigatório"); return e; }, transform: (row,idx,existing) => { var id=row.id||"GA"+String(existing.length+idx+1).padStart(3,"0"); return {id,name:row.name,church:row.church||"",leaderId:row.leaderId}; } },
-  teams: { label: "Equipes", filename: "template-equipes.csv", headers: ["eventId","team","memberIds"], example: ["EVT001","Cozinha","M100,M101"], notes: ["eventId: ID do evento.","team: nome da equipe.","memberIds: IDs separados por vírgula."], validate: (row) => { var e=[]; if(!row.eventId)e.push("eventId obrigatório"); if(!row.team)e.push("team obrigatório"); if(!row.memberIds)e.push("memberIds obrigatório"); return e; }, transform: (row) => ({eventId:row.eventId,team:row.team,memberIds:row.memberIds?row.memberIds.split(",").map(s=>s.trim()):[]}) },
-  churches: { label: "Igrejas", filename: "template-igrejas.csv", headers: ["display","code"], example: ["São Paulo, SP","BRA"], notes: ["display: cidade e estado.","code: EUA, CAN ou BRA."], validate: (row) => { var e=[]; if(!row.display)e.push("display obrigatório"); if(!["EUA","CAN","BRA"].includes(row.code))e.push("code deve ser EUA, CAN ou BRA"); return e; }, transform: (row) => ({display:row.display.trim(),code:row.code.trim()}) },
+  // ── Members ──────────────────────────────────────────────────────────────
+  members: {
+    label: "Membros",
+    filename: "template-membros.csv",
+    headers: ["id","firstName","lastName","badgeName","gender","category","church","role","familyId","gaId","allergies","specialNeeds","notes"],
+    example: ["M100","João Pedro","Silva","João","M","Adulto","Newark, NJ - EUA","Diácono","F005","GA001","","",""],
+    notes: [
+      "id: código único (ex: M100). Deixe em branco para geração automática.",
+      "firstName: primeiro nome (ex: João Pedro).",
+      "lastName: sobrenome (ex: Silva).",
+      "badgeName: nome exibido no crachá (ex: João). Pode ser apelido.",
+      "gender: M ou F.",
+      "category: 0-3 | Criança | Intermediário | Adolescente | Jovem | Adulto.",
+      "church: cidade exatamente como na lista de igrejas (ex: Newark, NJ - EUA).",
+      "role: função. Deixe em branco se Participante.",
+      "familyId: código da família. Opcional (ex: F005).",
+      "gaId: código do Grupo de Assistência. Opcional (ex: GA001).",
+      "allergies: alergias e restrições alimentares. Opcional.",
+      "specialNeeds: necessidades especiais. Opcional.",
+      "notes: observações gerais. Opcional.",
+    ],
+    validate: (row) => {
+      var e = [];
+      if (!row.firstName && !row.lastName) e.push("firstName ou lastName obrigatório");
+      if (!row.badgeName) e.push("badgeName obrigatório");
+      if (!["M","F"].includes(row.gender)) e.push("gender deve ser M ou F");
+      if (!VALID_CATEGORIES.includes(row.category)) e.push("category inválida: " + row.category);
+      return e;
+    },
+    transform: (row, idx, existing) => {
+      var id = row.id || "M" + String(existing.length + idx + 1).padStart(3, "0");
+      var firstName = row.firstName || "";
+      var lastName  = row.lastName  || "";
+      var fullName  = [firstName, lastName].filter(Boolean).join(" ") || row.name || "";
+      return {
+        id,
+        name:          fullName,
+        first_name:    firstName,
+        last_name:     lastName,
+        badge_name:    row.badgeName || firstName || fullName,
+        gender:        row.gender,
+        category:      row.category,
+        church:        row.church   || "",
+        role:          row.role     || "",
+        family_id:     row.familyId || null,
+        ga_id:         row.gaId     || null,
+        allergies:     row.allergies     || null,
+        special_needs: row.specialNeeds  || null,
+        notes:         row.notes         || null,
+      };
+    },
+  },
+
+  // ── Families ─────────────────────────────────────────────────────────────
+  families: {
+    label: "Famílias",
+    filename: "template-familias.csv",
+    headers: ["id","name","memberIds"],
+    example: ["F010","Família Silva","M100,M101,M102"],
+    notes: [
+      "id: código único (ex: F010). Deixe em branco para geração automática.",
+      "name: nome da família (ex: Família Silva).",
+      "memberIds: IDs dos membros separados por vírgula (ex: M100,M101,M102).",
+    ],
+    validate: (row) => {
+      var e = [];
+      if (!row.name) e.push("name obrigatório");
+      if (!row.memberIds) e.push("memberIds obrigatório");
+      return e;
+    },
+    transform: (row, idx, existing) => {
+      var id = row.id || "F" + String(existing.length + idx + 1).padStart(3, "0");
+      return { id, name: row.name, member_ids: row.memberIds ? row.memberIds.split(",").map(s => s.trim()) : [] };
+    },
+  },
+
+  // ── Assistance Groups ─────────────────────────────────────────────────────
+  assistanceGroups: {
+    label: "Grupos de Assistência",
+    filename: "template-grupos-assistencia.csv",
+    headers: ["id","name","church","leaderId","description"],
+    example: ["GA010","GA Newark","Newark, NJ - EUA","M100","Grupo da região de Newark"],
+    notes: [
+      "id: código único (ex: GA010). Deixe em branco para geração automática.",
+      "name: nome do grupo.",
+      "church: cidade da igreja do grupo.",
+      "leaderId: ID do membro líder (ex: M100).",
+      "description: descrição opcional.",
+    ],
+    validate: (row) => {
+      var e = [];
+      if (!row.name) e.push("name obrigatório");
+      if (!row.leaderId) e.push("leaderId obrigatório");
+      return e;
+    },
+    transform: (row, idx, existing) => {
+      var id = row.id || "GA" + String(existing.length + idx + 1).padStart(3, "0");
+      return { id, name: row.name, church: row.church || "", leader_id: row.leaderId, description: row.description || "" };
+    },
+  },
+
+  // ── Rosters / Teams ───────────────────────────────────────────────────────
+  teams: {
+    label: "Equipes (Roster)",
+    filename: "template-equipes.csv",
+    headers: ["eventId","team","memberIds"],
+    example: ["EVT001","Cozinha","M100,M101"],
+    notes: [
+      "eventId: ID do evento (ex: EVT001).",
+      "team: nome da equipe — deve ser um dos valores cadastrados no sistema.",
+      "memberIds: IDs dos membros separados por vírgula.",
+    ],
+    validate: (row) => {
+      var e = [];
+      if (!row.eventId)   e.push("eventId obrigatório");
+      if (!row.team)      e.push("team obrigatório");
+      if (!row.memberIds) e.push("memberIds obrigatório");
+      return e;
+    },
+    transform: (row) => ({
+      event_id:   row.eventId,
+      team:       row.team,
+      member_ids: row.memberIds ? row.memberIds.split(",").map(s => s.trim()) : [],
+    }),
+  },
+
+  // ── Churches ─────────────────────────────────────────────────────────────
+  churches: {
+    label: "Igrejas",
+    filename: "template-igrejas.csv",
+    headers: ["display","code"],
+    example: ["Newark, NJ","EUA"],
+    notes: [
+      "display: cidade e estado/província (ex: Newark, NJ). Sem o código do país.",
+      "code: código do país — EUA | CAN | BRA.",
+    ],
+    validate: (row) => {
+      var e = [];
+      if (!row.display) e.push("display obrigatório");
+      if (!VALID_CODES.includes(row.code)) e.push("code deve ser EUA, CAN ou BRA. Encontrado: \"" + row.code + "\"");
+      return e;
+    },
+    transform: (row) => ({ display: row.display.trim(), code: row.code.trim() }),
+  },
 };
 
 function sanitizeText(s) {
@@ -255,17 +397,23 @@ function AdminImport({ members, setMembers, families, setFamilies, gas, setGas, 
     var existing=activeTab==="members"?members:activeTab==="families"?families:activeTab==="assistanceGroups"?gas:rosters;
     var items=valid.map((r,i)=>tpl.transform(r.row,i,existing));
     var dbTable=activeTab==="members"?"members":activeTab==="families"?"families":activeTab==="assistanceGroups"?"assistance_groups":activeTab==="teams"?"rosters":"churches";
-    var dbRows=items.map(item=>{
-      if(activeTab==="members")return{id:item.id,name:item.name,badge_name:item.badgeName,gender:item.gender,category:item.category,church:item.church,role:item.role||"",family_id:item.familyId||null,ga_id:item.gaId||null};
-      if(activeTab==="families")return{id:item.id,name:item.name};
-      if(activeTab==="assistanceGroups")return{id:item.id,name:item.name,church:item.church||"",leader_id:item.leaderId||null,description:item.description||""};
-      if(activeTab==="teams")return{event_id:item.eventId,team:item.team,member_ids:item.memberIds};
-      if(activeTab==="churches")return{display:item.display,code:item.code,allow_custom:false};
-      return item;
-    });
+    // transform() already produces snake_case DB keys; just pass through
+    // For churches, add allow_custom flag
+    var dbRows = items.map(item =>
+      activeTab === "churches" ? { ...item, allow_custom: false } : item
+    );
     sb.from(dbTable).upsert(dbRows).then(res=>{
       if(res.error){console.error(res.error);notify("Erro: "+res.error.message);setImporting(false);return;}
-      const updater=(set)=>set(p=>{var u=[...p];items.forEach(m=>{var i=u.findIndex(x=>x.id===m.id);if(i>=0)u[i]=m;else u.push(m);});return u;});
+      // Re-map snake_case DB rows back to camelCase app objects for local state
+      const toApp = (m) => {
+        if (activeTab === "members") return { id:m.id, name:m.name, firstName:m.first_name||"", lastName:m.last_name||"", badgeName:m.badge_name||m.name, gender:m.gender, category:m.category, church:m.church, role:m.role||"", familyId:m.family_id, gaId:m.ga_id, allergies:m.allergies||"", specialNeeds:m.special_needs||"", notes:m.notes||"" };
+        if (activeTab === "families") return { id:m.id, name:m.name, memberIds:m.member_ids||[] };
+        if (activeTab === "assistanceGroups") return { id:m.id, name:m.name, church:m.church, leaderId:m.leader_id, description:m.description||"" };
+        if (activeTab === "teams") return { id:m.id, eventId:m.event_id, team:m.team, memberIds:m.member_ids||[] };
+        return m;
+      };
+      const appItems = items.map(toApp);
+      const updater = (set) => set(p => { var u=[...p]; appItems.forEach(m => { var i=u.findIndex(x=>x.id===m.id); if(i>=0)u[i]=m; else u.push(m); }); return u; });
       if(activeTab==="members")setMembers(updater);
       else if(activeTab==="families")setFamilies(updater);
       else if(activeTab==="assistanceGroups")setGas(updater);
