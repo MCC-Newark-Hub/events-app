@@ -14,7 +14,7 @@ export default function CheckInScreen({ regNumber, regs, updatePresence }) {
 
   const confirm = async () => {
     setStatus('loading');
-    await updatePresence(reg.id, 'present');
+    await updatePresence(reg.id, 'present', 'qr_clerk');
     setStatus('done');
   };
 

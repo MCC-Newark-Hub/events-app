@@ -60,6 +60,8 @@ export function mapReg(r) {
     timeline: r.timeline || [],
     registeredAt: r.registered_at,
     registeredBy: r.registered_by,
+    checkedInAt: r.checked_in_at || null,
+    checkinMethod: r.checkin_method || null,
   };
 }
 export function mapApproval(a) {
@@ -391,9 +393,19 @@ export function useAppData({ getUserRef, notify }) {
     }
   };
 
-  const updatePresence = async (regId, presence) => {
-    setRegs((p) => p.map((r) => r.id === regId ? { ...r, presence } : r));
-    await sb.from('registrations').update({ presence }).eq('id', regId);
+  const updatePresence = async (regId, presence, method = 'manual') => {
+    const now = new Date().toISOString();
+    setRegs((p) =>
+      p.map((r) =>
+        r.id === regId
+          ? { ...r, presence, checkinMethod: method, checkedInAt: now }
+          : r
+      )
+    );
+    await sb
+      .from('registrations')
+      .update({ presence, checkin_method: method, checked_in_at: now })
+      .eq('id', regId);
   };
 
   const promoteFromWaitlist = (regId) => {

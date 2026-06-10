@@ -44,6 +44,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
           [t.waitlistTab, "waitlist"],
           [t.rosterTab, "roster"],
           [t.badgesTab, "badges"],
+          ["Check-in", "checkin"],
         ].map(([l, k]) => (
           <button
             key={k}
@@ -240,6 +241,125 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
           </div>
         </div>
       )}
+
+      {type === "checkin" && (() => {
+        const present = er.filter((r) => r.presence === 'present');
+        const absent = er.filter((r) => r.presence === 'absent');
+        const walkIn = er.filter((r) => r.presence === 'walk_in');
+        const unknown = er.filter((r) => !r.presence || r.presence === 'unknown');
+        const pct = er.length > 0 ? Math.round((present.length / er.length) * 100) : 0;
+
+        const methodLabel = (m) => {
+          if (m === 'qr_clerk') return 'QR Atendente';
+          if (m === 'self') return 'Auto Check-in';
+          if (m === 'manual') return 'Manual';
+          return m || '—';
+        };
+        const methodColor = (m) => {
+          if (m === 'qr_clerk') return '#1e40af';
+          if (m === 'self') return '#2d8a4e';
+          return '#6b7280';
+        };
+
+        const byMethod = ['qr_clerk', 'self', 'manual'].map((m) => ({
+          m, label: methodLabel(m),
+          count: present.filter((r) => r.checkinMethod === m).length,
+        }));
+
+        const checkedInSorted = [...present].sort((a, b) => {
+          if (!a.checkedInAt) return 1;
+          if (!b.checkedInAt) return -1;
+          return b.checkedInAt.localeCompare(a.checkedInAt);
+        });
+
+        return (
+          <div>
+            {/* Summary stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(130px,1fr))', gap: 10, marginBottom: 16 }}>
+              {[
+                { label: 'Presentes', value: present.length, color: '#2d8a4e' },
+                { label: 'Ausentes', value: absent.length, color: '#991b1b' },
+                { label: 'Desconhecido', value: unknown.length, color: '#6b7280' },
+                { label: 'Walk-in', value: walkIn.length, color: '#1e40af' },
+                { label: '% Presença', value: pct + '%', color: '#8B0000' },
+              ].map((s) => (
+                <div className="stat-card" key={s.label} style={{ textAlign: 'center', borderTop: `3px solid ${s.color}` }}>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Method breakdown */}
+            <div className="card" style={{ padding: '14px 16px', marginBottom: 14 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Por método</div>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                {byMethod.map((b) => (
+                  <div key={b.m} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ background: methodColor(b.m), color: '#fff', borderRadius: 99, padding: '2px 10px', fontSize: 12, fontWeight: 700 }}>{b.label}</span>
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>{b.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Timeline */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 14 }}>
+              <div style={{ padding: '11px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: 13 }}>
+                Histórico de check-in ({present.length})
+              </div>
+              {checkedInSorted.length === 0 ? (
+                <p style={{ padding: 20, color: '#6b7280', textAlign: 'center', fontSize: 13 }}>Nenhum check-in registrado.</p>
+              ) : (
+                <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+                  {checkedInSorted.map((r) => (
+                    <div key={r.id} style={{ padding: '9px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <div>
+                        <span style={{ fontWeight: 600, fontSize: 13 }}>{r.memberName}</span>
+                        <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8 }}>{r.church}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        {r.checkinMethod && (
+                          <span style={{ background: methodColor(r.checkinMethod), color: '#fff', borderRadius: 99, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>{methodLabel(r.checkinMethod)}</span>
+                        )}
+                        <span style={{ fontSize: 11, color: '#9ca3af', fontFamily: 'monospace' }}>
+                          {r.checkedInAt ? new Date(r.checkedInAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Not checked in */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '11px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: 13 }}>
+                Não confirmados ({unknown.length})
+              </div>
+              {unknown.length === 0 ? (
+                <p style={{ padding: 20, color: '#2d8a4e', textAlign: 'center', fontSize: 13 }}>Todos confirmados!</p>
+              ) : (
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead><tr><th>{t.regNum}</th><th>{t.memberName}</th><th>{t.cat}</th><th>{t.churchH}</th></tr></thead>
+                    <tbody>
+                      {unknown.map((r) => (
+                        <tr key={r.id}>
+                          <td style={{ fontFamily: 'monospace', fontSize: 11 }}>{r.regNumber}</td>
+                          <td style={{ fontWeight: 600 }}>{r.memberName}</td>
+                          <td><span className="badge badge-blue">{r.category}</span></td>
+                          <td style={{ fontSize: 12, color: '#6b7280' }}>{r.church}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {type === "badges" && (
         <div>

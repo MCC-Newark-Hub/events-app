@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import LoginScreen from "@/views/LoginScreen";
 import PublicPortal from "@/views/PublicPortal";
 import CheckInScreen from "@/views/CheckInScreen";
+import SelfCheckInScreen from "@/views/SelfCheckInScreen";
 import ClerkView from "@/views/ClerkView";
 import AdminView from "@/views/AdminView";
 import PastorView from "@/views/PastorView";
@@ -19,6 +20,7 @@ export default function App() {
   const [theme, setTheme] = useState("light");
   const urlParams = new URLSearchParams(window.location.search);
   const checkinParam = urlParams.get('checkin');
+  const selfCheckinParam = urlParams.get('selfcheckin');
   const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
   const [view, setView] = useState("login");
   const [toast, setToast] = useState(null);
@@ -53,13 +55,21 @@ export default function App() {
             updatePresence={appData.updatePresence}
           />
         )}
-        {!checkinParam && view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} />}
-        {!checkinParam && view === "public" && <PublicPortal event={appData.event} lang={lang} setLang={setLang} onReset={() => setView("login")} />}
-        {!checkinParam && view === ROLES_SYS.CLERK && <ClerkView {...shared} />}
-        {!checkinParam && view === ROLES_SYS.ADMIN && <AdminView {...shared} />}
-        {!checkinParam && view === ROLES_SYS.PASTOR && <PastorView {...shared} />}
-        {!checkinParam && view === ROLES_SYS.GA_LEADER && <GALeaderView {...shared} />}
-        {!checkinParam && view === ROLES_SYS.TEAM_LEADER && <TeamLeaderView {...shared} />}
+        {selfCheckinParam && !checkinParam && (
+          <SelfCheckInScreen
+            eventId={selfCheckinParam}
+            regs={appData.regs}
+            members={appData.members}
+            updatePresence={appData.updatePresence}
+          />
+        )}
+        {!checkinParam && !selfCheckinParam && view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} />}
+        {!checkinParam && !selfCheckinParam && view === "public" && <PublicPortal event={appData.event} lang={lang} setLang={setLang} onReset={() => setView("login")} />}
+        {!checkinParam && !selfCheckinParam && view === ROLES_SYS.CLERK && <ClerkView {...shared} />}
+        {!checkinParam && !selfCheckinParam && view === ROLES_SYS.ADMIN && <AdminView {...shared} />}
+        {!checkinParam && !selfCheckinParam && view === ROLES_SYS.PASTOR && <PastorView {...shared} />}
+        {!checkinParam && !selfCheckinParam && view === ROLES_SYS.GA_LEADER && <GALeaderView {...shared} />}
+        {!checkinParam && !selfCheckinParam && view === ROLES_SYS.TEAM_LEADER && <TeamLeaderView {...shared} />}
       </div>
     </LangContext.Provider>
   );

@@ -1,70 +1,138 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { churchDisplay, churchCode } from "@/constants";
+import logoSrc from "@/assets/images/logo/icm-logo.png";
 
-export default function BadgePrint({ regs, lang }) {
+export default function BadgePrint({ regs, event, lang }) {
   const [pdfDone, setPdfDone] = useState(false);
   const [pdfError, setPdfError] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const primary = regs[0];
 
   const makePDF = async (JsPDF) => {
-    var W = 216, H = 144;
-    var doc = new JsPDF({ orientation: "landscape", unit: "pt", format: [H, W] });
+    const W = 216, H = 144; // 3"×2" landscape in points (72pt/inch)
+    const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: [H, W] });
+
     // Generate QR data URLs for all regs
-    var qrDataUrls = await Promise.all(
+    const qrDataUrls = await Promise.all(
       regs.map((r) =>
         QRCode.toDataURL(
           `${window.location.origin}?checkin=${r.regNumber}`,
-          { width: 80, margin: 1, color: { dark: '#000000', light: '#ffffff' } }
+          { width: 64, margin: 0, color: { dark: '#000000', light: '#ffffff' } }
         ).catch(() => null)
       )
     );
-    for (var idx = 0; idx < regs.length; idx++) {
-      var r = regs[idx];
+
+    for (let idx = 0; idx < regs.length; idx++) {
+      const r = regs[idx];
       if (idx > 0) doc.addPage([H, W], "landscape");
-      var name = r.badgeName || r.name || r.memberName || "";
-      var fullName = r.name || r.memberName || "";
-      var church = churchDisplay(r.church || "");
-      var ccode = churchCode(r.church || "");
-      var category = r.category || "";
-      var role = r.role || "";
-      var regNum = r.regNumber || "";
-      var cx = W / 2;
-      var nameSize = name.length > 16 ? 18 : name.length > 12 ? 22 : 28;
-      var yPos = 62;
-      doc.setDrawColor(0); doc.setLineWidth(1.5); doc.rect(4, 4, W - 8, H - 8);
-      doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); doc.setTextColor(0);
-      doc.text("IGREJA CRISTA MARANATA", cx, 18, { align: "center" });
-      doc.setLineWidth(0.5); doc.setDrawColor(180); doc.line(20, 22, W - 20, 22);
-      doc.setFont("helvetica", "bold"); doc.setFontSize(nameSize); doc.setTextColor(0);
-      doc.text(name, cx, 52, { align: "center" });
-      doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(100);
-      doc.text(fullName, cx, yPos + 6, { align: "center" });
-      yPos += 12;
-      doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(60);
-      doc.text(church, cx, yPos + 10, { align: "center" });
-      yPos += 14;
-      var pills = [category, role].filter(function(x) { return !!x; });
-      var pillW = 54, pillH = 12, pillGap = 6;
-      var totalPillW = pills.length * pillW + (pills.length - 1) * pillGap;
-      var px = cx - totalPillW / 2;
-      for (var pi = 0; pi < pills.length; pi++) {
-        doc.setDrawColor(0); doc.setLineWidth(0.8); doc.setFillColor(255);
-        doc.roundedRect(px, yPos + 4, pillW, pillH, 3, 3, "FD");
-        doc.setFont("helvetica", "bold"); doc.setFontSize(7); doc.setTextColor(0);
-        doc.text(pills[pi], px + pillW / 2, yPos + 12, { align: "center" });
-        px += pillW + pillGap;
+
+      const cx = W / 2; // center x
+
+      // Derive name parts from badgeName
+      const badgeName = r.badgeName || r.memberName || r.name || "";
+      const parts = badgeName.trim().split(/\s+/);
+      const nome = parts[0] || "";
+      const sobrenome = parts.slice(1).join(" ");
+
+      // Church: just use first part before comma
+      const churchCity = (r.church || "").split(",")[0].replace(/\s*[-–]\s*(EUA|CAN|BRA|USA)$/i, "").trim();
+
+      // Team: skip "Participante"
+      const team = r.team && r.team !== "Participante" ? r.team : "";
+
+      // Event footer
+      const location = event?.location || "";
+      const eventDate = event?.date ? new Date(event.date + "T12:00:00") : new Date();
+      const monthYear = eventDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).toUpperCase();
+      const footerEvent = `SEMINÁRIO ${location.toUpperCase()} · ${monthYear}`;
+
+      // ── Draw badge ──────────────────────────────────────────────────────
+      // White background
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, W, H, "F");
+
+      // Border
+      doc.setDrawColor(200); doc.setLineWidth(1);
+      doc.rect(3, 3, W - 6, H - 6);
+
+      let y = 14;
+
+      // Logo — centered
+      try {
+        doc.addImage(logoSrc, "PNG", cx - 18, y, 36, 14);
+      } catch(e) { /* skip logo if fails */ }
+      y += 22;
+
+      // NOME — very large bold
+      const nomeFontSize = nome.length > 10 ? 28 : nome.length > 7 ? 32 : 36;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(nomeFontSize);
+      doc.setTextColor(0);
+      doc.text(nome.toUpperCase(), cx, y + nomeFontSize * 0.7, { align: "center" });
+      y += nomeFontSize * 0.85;
+
+      // SOBRENOME — lighter, smaller
+      if (sobrenome) {
+        const snSize = sobrenome.length > 12 ? 14 : 18;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(snSize);
+        doc.setTextColor(40);
+        doc.text(sobrenome.toUpperCase(), cx, y + snSize * 0.7, { align: "center" });
+        y += snSize * 0.9 + 4;
+      } else {
+        y += 4;
       }
-      doc.setLineWidth(0.5); doc.setDrawColor(180); doc.line(20, H - 20, W - 20, H - 20);
-      doc.setFont("courier", "normal"); doc.setFontSize(6.5); doc.setTextColor(100);
-      doc.text(regNum, 8, H - 10, { align: "left" });
-      if (ccode) doc.text(ccode, W - 8, H - 10, { align: "right" });
-      // QR code in bottom-right corner
-      var qr = qrDataUrls[idx];
-      if (qr) doc.addImage(qr, 'PNG', W - 28, H - 26, 20, 20);
+
+      y += 4; // gap
+
+      // EQUIPE — bold, if not Participante
+      if (team) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(0);
+        doc.text(team.toUpperCase(), cx, y, { align: "center" });
+        y += 14;
+      }
+
+      // IGREJA · CATEGORIA
+      const churchCat = [churchCity, r.category].filter(Boolean).join("  ·  ");
+      if (churchCat) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text(churchCat, cx, y, { align: "center" });
+        y += 12;
+      }
+
+      // Divider
+      y += 4;
+      doc.setDrawColor(180); doc.setLineWidth(0.5);
+      doc.line(16, y, W - 16, y);
+      y += 8;
+
+      // Footer event line
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(60);
+      doc.text(footerEvent, cx, y, { align: "center" });
+      y += 10;
+
+      // Reg number
+      doc.setFont("courier", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(130);
+      doc.text(r.regNumber || "", cx, y, { align: "center" });
+
+      // QR code — bottom right corner
+      const qr = qrDataUrls[idx];
+      if (qr) {
+        doc.addImage(qr, "PNG", W - 24, H - 24, 20, 20);
+      }
     }
-    doc.save("inscricao-" + (primary.regNumber || "ICM") + ".pdf");
+
+    doc.save("crachas-" + (regs[0]?.regNumber || "ICM") + ".pdf");
     setPdfDone(true);
+    setEmailSent(true);
   };
 
   const generateBadgePDF = async () => {
@@ -114,28 +182,32 @@ export default function BadgePrint({ regs, lang }) {
       </p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }}>
         {regs.map((r, i) => {
-          const name = r.badgeName || r.name || r.memberName || "";
-          const fullName = r.name || r.memberName || "";
-          const church = (r.church || "").replace(/ - EUA$/, "").replace(/ - CAN$/, "");
+          const badgeName = r.badgeName || r.name || r.memberName || "";
+          const parts = badgeName.trim().split(/\s+/);
+          const nome = parts[0] || "";
+          const sobrenome = parts.slice(1).join(" ");
+          const churchCity = (r.church || "").split(",")[0].replace(/\s*[-–]\s*(EUA|CAN|BRA|USA)$/i, "").trim();
+          const team = r.team && r.team !== "Participante" ? r.team : "";
           return (
-            <div key={i} style={{ background: "#fff", border: "1.5px solid #111", borderRadius: 6, padding: "10px 12px", fontFamily: "'Helvetica Neue',Arial,sans-serif", aspectRatio: "3/2", display: "flex", flexDirection: "column", justifyContent: "space-between", boxSizing: "border-box" }}>
+            <div key={i} style={{ background: "#fff", border: "1.5px solid #bbb", borderRadius: 6, padding: "10px 12px", fontFamily: "'Helvetica Neue',Arial,sans-serif", aspectRatio: "3/2", display: "flex", flexDirection: "column", justifyContent: "space-between", boxSizing: "border-box" }}>
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 7, fontWeight: 900, letterSpacing: "0.12em", color: "#000", textTransform: "uppercase" }}>IGREJA CRISTÃ MARANATA</div>
-                <div style={{ height: 1, background: "#ccc", margin: "4px 0" }} />
-                <div style={{ fontSize: name.length > 12 ? 16 : 20, fontWeight: 900, color: "#000", lineHeight: 1.1, marginTop: 4 }}>{name}</div>
-                {fullName && <div style={{ fontSize: 8, color: "#555", marginTop: 2 }}>{fullName}</div>}
-                <div style={{ fontSize: 8, color: "#444", marginTop: 3 }}>{churchDisplay(r.church || "")}</div>
-              </div>
-              <div style={{ display: "flex", justifyContent: "center", gap: 4, flexWrap: "wrap", margin: "4px 0" }}>
-                {[r.category, r.role].filter(Boolean).map((p, pi) => (
-                  <span key={pi} style={{ border: "1px solid #000", borderRadius: 3, padding: "1px 7px", fontSize: 7, fontWeight: 700, color: "#000", background: "#fff" }}>{p}</span>
-                ))}
+                {/* Logo placeholder */}
+                <img src={logoSrc} alt="ICM" style={{ height: 14, marginBottom: 4, objectFit: "contain" }} onError={(e) => { e.target.style.display = 'none'; }} />
+                <div style={{ fontSize: nome.length > 10 ? 16 : nome.length > 7 ? 20 : 24, fontWeight: 900, color: "#000", lineHeight: 1.1 }}>{nome.toUpperCase()}</div>
+                {sobrenome && <div style={{ fontSize: 12, fontWeight: 400, color: "#333", marginTop: 1 }}>{sobrenome.toUpperCase()}</div>}
+                {team && <div style={{ fontSize: 9, fontWeight: 700, color: "#000", marginTop: 3, textTransform: "uppercase" }}>{team}</div>}
+                <div style={{ fontSize: 8, color: "#888", marginTop: 2 }}>
+                  {[churchCity, r.category].filter(Boolean).join(" · ")}
+                </div>
               </div>
               <div>
-                <div style={{ height: 1, background: "#ccc", marginBottom: 3 }} />
+                <div style={{ height: 1, background: "#ccc", margin: "4px 0" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ fontSize: 6.5, color: "#666", fontFamily: "monospace" }}>{r.regNumber}</div>
-                  <div style={{ fontSize: 6.5, color: "#666", fontFamily: "monospace", fontWeight: 700 }}>{churchCode(r.church || "")}</div>
+                  <div style={{ fontSize: 6.5, color: "#999", fontFamily: "monospace" }}>{r.regNumber}</div>
+                  {/* QR placeholder */}
+                  <div style={{ width: 14, height: 14, border: "1px solid #ccc", borderRadius: 2, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: 8 }}>QR</span>
+                  </div>
                 </div>
               </div>
             </div>

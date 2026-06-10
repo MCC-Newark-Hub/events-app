@@ -1,12 +1,25 @@
 import { useState } from "react";
+import QRCode from "qrcode";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES } from "@/constants";
 import { sb } from "@/lib/supabase";
+import Modal from "@/components/Modal";
 
 export default function EventsTab({ events, setEvents, event, setEvent, lang, notify }) {
   const t = useT();
   const [showNew, setShowNew] = useState(false);
   const [editEvt, setEditEvt] = useState(null);
+  const [qrModal, setQrModal] = useState(null); // { eventId, dataUrl }
+
+  const openQrModal = async (eventId) => {
+    const url = `https://mcc-newark-events.vercel.app?selfcheckin=${eventId}`;
+    try {
+      const dataUrl = await QRCode.toDataURL(url, { width: 256, margin: 2 });
+      setQrModal({ eventId, url, dataUrl });
+    } catch (e) {
+      console.error('QR gen error', e);
+    }
+  };
   const isEditing = !!editEvt;
   const [nEvt, setNEvt] = useState({
     name: "",
@@ -89,7 +102,7 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
               ))}
             </div>
           </div>
-          <div style={{ display: "flex", gap: 6 }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <button className="btn btn-ghost btn-sm" onClick={() => setEvent(e)}>
               {event?.id === e.id ? "✓ Ativo" : t.select}
             </button>
@@ -102,9 +115,34 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
             >
               ✏️
             </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => openQrModal(e.id)}
+            >
+              🔗 QR Auto-Check-in
+            </button>
           </div>
         </div>
       ))}
+
+      {qrModal && (
+        <Modal onClose={() => setQrModal(null)}>
+          <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 8 }}>QR Auto-Check-in</h3>
+          <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>Exiba este QR durante o evento para auto-check-in</p>
+          <img src={qrModal.dataUrl} alt="QR Code" style={{ width: 220, height: 220, display: 'block', margin: '0 auto 16px' }} />
+          <p style={{ fontSize: 11, color: '#9ca3af', wordBreak: 'break-all', marginBottom: 16 }}>{qrModal.url}</p>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+            <a
+              href={qrModal.dataUrl}
+              download={`selfcheckin-qr-${qrModal.eventId}.png`}
+              className="btn btn-primary btn-sm"
+            >
+              ⬇️ Baixar QR
+            </a>
+            <button className="btn btn-ghost btn-sm" onClick={() => setQrModal(null)}>Fechar</button>
+          </div>
+        </Modal>
+      )}
 
       {showNew && (
         <div
