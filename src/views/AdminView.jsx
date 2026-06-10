@@ -322,19 +322,37 @@ const CSV_TEMPLATES = {
   churches: {
     label: "Igrejas",
     filename: "template-igrejas.csv",
-    headers: ["display","code"],
-    example: ["Newark, NJ","EUA"],
+    headers: ["display","city","stateCode","stateName","countryCode","country","address","churchName"],
+    example: ["Newark, NJ","Newark","NJ","New Jersey","EUA","United States","",""],
     notes: [
-      "display: cidade e estado/província (ex: Newark, NJ). Sem o código do país.",
-      "code: código do país — EUA | CAN | BRA.",
+      "display: rótulo curto exibido no sistema (ex: Newark, NJ). Obrigatório.",
+      "city: cidade (ex: Newark). Obrigatório.",
+      "stateCode: sigla do estado/província com 2 letras (ex: NJ, ON, SP). Obrigatório.",
+      "stateName: nome completo do estado (ex: New Jersey). Opcional.",
+      "countryCode: código do país — EUA | CAN | BRA. Obrigatório.",
+      "country: nome completo do país (ex: United States). Opcional.",
+      "address: endereço da congregação. Opcional.",
+      "churchName: nome oficial da congregação local. Opcional.",
     ],
     validate: (row) => {
       var e = [];
-      if (!row.display) e.push("display obrigatório");
-      if (!VALID_CODES.includes(row.code)) e.push("code deve ser EUA, CAN ou BRA. Encontrado: \"" + row.code + "\"");
+      if (!row.display)     e.push("display obrigatório");
+      if (!row.city)        e.push("city obrigatório");
+      if (!row.stateCode)   e.push("stateCode obrigatório");
+      if (!VALID_CODES.includes(row.countryCode)) e.push("countryCode deve ser EUA, CAN ou BRA. Encontrado: \"" + row.countryCode + "\"");
       return e;
     },
-    transform: (row) => ({ display: row.display.trim(), code: row.code.trim() }),
+    transform: (row) => ({
+      display:      row.display.trim(),
+      code:         row.countryCode.trim(),   // keep legacy 'code' column in sync
+      city:         row.city.trim(),
+      state_code:   row.stateCode.trim(),
+      state_name:   row.stateName?.trim()   || null,
+      country_code: row.countryCode.trim(),
+      country:      row.country?.trim()     || null,
+      address:      row.address?.trim()     || null,
+      church_name:  row.churchName?.trim()  || null,
+    }),
   },
 };
 
@@ -787,21 +805,45 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
           <>
             {editing !== null && (
               <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
-                <div className="modal" style={{ maxWidth: 400 }}>
+                <div className="modal" style={{ maxWidth: 500 }}>
                   <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Nova Igreja" : "Editar Igreja"}</h3>
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div><label>Cidade / Display *</label><input value={formData.display || ""} onChange={(e) => setFormData({ ...formData, display: e.target.value })} placeholder="Newark, NJ" /></div>
-                    <div><label>Código *</label>
-                      <select value={formData.code || "EUA"} onChange={(e) => setFormData({ ...formData, code: e.target.value })}>
-                        <option value="EUA">EUA</option><option value="CAN">CAN</option><option value="BRA">BRA</option>
-                      </select>
+                    <div><label>Display (rótulo curto) *</label><input value={formData.display || ""} onChange={(e) => setFormData({ ...formData, display: e.target.value })} placeholder="Newark, NJ" /></div>
+                    <div className="fr">
+                      <div><label>Cidade *</label><input value={formData.city || ""} onChange={(e) => setFormData({ ...formData, city: e.target.value })} placeholder="Newark" /></div>
+                      <div><label>Estado / Sigla *</label><input value={formData.stateCode || ""} onChange={(e) => setFormData({ ...formData, stateCode: e.target.value.toUpperCase().slice(0, 3) })} placeholder="NJ" maxLength={3} /></div>
                     </div>
+                    <div><label>Nome do Estado</label><input value={formData.stateName || ""} onChange={(e) => setFormData({ ...formData, stateName: e.target.value })} placeholder="New Jersey" /></div>
+                    <div className="fr">
+                      <div><label>Código do País *</label>
+                        <select value={formData.countryCode || "EUA"} onChange={(e) => setFormData({ ...formData, countryCode: e.target.value })}>
+                          <option value="EUA">EUA — Estados Unidos</option>
+                          <option value="CAN">CAN — Canadá</option>
+                          <option value="BRA">BRA — Brasil</option>
+                        </select>
+                      </div>
+                      <div><label>País (nome completo)</label><input value={formData.country || ""} onChange={(e) => setFormData({ ...formData, country: e.target.value })} placeholder="United States" /></div>
+                    </div>
+                    <div><label>Endereço</label><input value={formData.address || ""} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="123 Main St" /></div>
+                    <div><label>Nome da Congregação</label><input value={formData.churchName || ""} onChange={(e) => setFormData({ ...formData, churchName: e.target.value })} placeholder="ICM Newark" /></div>
                   </div>
                   <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
                     <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
                     <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
                       if (!formData.display?.trim()) { notify("Display obrigatório."); return; }
-                      const row = { display: formData.display.trim(), code: formData.code || "EUA" };
+                      if (!formData.city?.trim())    { notify("Cidade obrigatória."); return; }
+                      if (!formData.stateCode?.trim()) { notify("Sigla do estado obrigatória."); return; }
+                      const row = {
+                        display:      formData.display.trim(),
+                        code:         formData.countryCode || "EUA",
+                        city:         formData.city.trim(),
+                        state_code:   formData.stateCode.trim(),
+                        state_name:   formData.stateName?.trim()  || null,
+                        country_code: formData.countryCode || "EUA",
+                        country:      formData.country?.trim()    || null,
+                        address:      formData.address?.trim()    || null,
+                        church_name:  formData.churchName?.trim() || null,
+                      };
                       if (!isNew) row.id = editing.id;
                       saveRow("churches", row, churches, setChurches, null);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
@@ -826,7 +868,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
                         onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
                     </th>
-                    <th>Cidade / Display</th><th style={{ width: 80 }}>Código</th><th style={{ width: 90 }}></th>
+                    <th>Display</th><th>Cidade</th><th style={{ width: 55 }}>Estado</th><th style={{ width: 70 }}>País</th><th style={{ width: 90 }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -834,10 +876,12 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     <tr key={c.id || c.display} style={{ background: c.id && selected.includes(c.id) ? "var(--sidebar-active-bg)" : "" }}>
                       <td><input type="checkbox" disabled={!c.id} checked={!!(c.id && selected.includes(c.id))} onChange={() => c.id && toggleSel(c.id)} /></td>
                       <td style={{ fontWeight: 500 }}>{c.display}</td>
-                      <td><span className="badge badge-blue">{c.code}</span></td>
+                      <td style={{ fontSize: 12 }}>{c.city || "—"}</td>
+                      <td><span className="badge badge-gray">{c.state_code || c.stateCode || "—"}</span></td>
+                      <td><span className="badge badge-blue">{c.country_code || c.code || "—"}</span></td>
                       <td>
                         <div style={{ display: "flex", gap: 6 }}>
-                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(c, { display: c.display, code: c.code })}><Pencil size={12} /></button>
+                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(c, { display: c.display, city: c.city || "", stateCode: c.state_code || "", stateName: c.state_name || "", countryCode: c.country_code || c.code || "EUA", country: c.country || "", address: c.address || "", churchName: c.church_name || "" })}><Pencil size={12} /></button>
                           {c.id && <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [c.id], label: c.display })}><Trash2 size={12} /></button>}
                         </div>
                       </td>
@@ -848,7 +892,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
               </table>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ display: "", code: "EUA" })}><Plus size={14} /> Nova Igreja</button>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ display: "", city: "", stateCode: "", stateName: "", countryCode: "EUA", country: "", address: "", churchName: "" })}><Plus size={14} /> Nova Igreja</button>
               {(churches || []).filter((c) => c.id).length > 0 && (
                 <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
                   onClick={() => setDeleting({ ids: (churches || []).map((c) => c.id).filter(Boolean), label: "" })}>
