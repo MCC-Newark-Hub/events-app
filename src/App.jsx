@@ -6,6 +6,7 @@ import { useAppData } from "@/hooks/useAppData";
 import { useAuth } from "@/hooks/useAuth";
 import LoginScreen from "@/views/LoginScreen";
 import PublicPortal from "@/views/PublicPortal";
+import CheckInScreen from "@/views/CheckInScreen";
 import ClerkView from "@/views/ClerkView";
 import AdminView from "@/views/AdminView";
 import PastorView from "@/views/PastorView";
@@ -16,6 +17,8 @@ export default function App() {
   const lang = "pt";
   const setLang = () => {};
   const [theme, setTheme] = useState("light");
+  const urlParams = new URLSearchParams(window.location.search);
+  const checkinParam = urlParams.get('checkin');
   const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
   const [view, setView] = useState("login");
   const [toast, setToast] = useState(null);
@@ -43,13 +46,20 @@ export default function App() {
     <LangContext.Provider value={lang}>
       <div data-theme={theme} style={{ minHeight: "100vh", fontFamily: "'Montserrat','Segoe UI',sans-serif" }}>
         {toast && <div className="toast">{toast}</div>}
-        {view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} />}
-        {view === "public" && <PublicPortal event={appData.event} lang={lang} setLang={setLang} onReset={() => setView("login")} />}
-        {view === ROLES_SYS.CLERK && <ClerkView {...shared} />}
-        {view === ROLES_SYS.ADMIN && <AdminView {...shared} />}
-        {view === ROLES_SYS.PASTOR && <PastorView {...shared} />}
-        {view === ROLES_SYS.GA_LEADER && <GALeaderView {...shared} />}
-        {view === ROLES_SYS.TEAM_LEADER && <TeamLeaderView {...shared} />}
+        {checkinParam && (
+          <CheckInScreen
+            regNumber={checkinParam}
+            regs={appData.regs}
+            updatePresence={appData.updatePresence}
+          />
+        )}
+        {!checkinParam && view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} />}
+        {!checkinParam && view === "public" && <PublicPortal event={appData.event} lang={lang} setLang={setLang} onReset={() => setView("login")} />}
+        {!checkinParam && view === ROLES_SYS.CLERK && <ClerkView {...shared} />}
+        {!checkinParam && view === ROLES_SYS.ADMIN && <AdminView {...shared} />}
+        {!checkinParam && view === ROLES_SYS.PASTOR && <PastorView {...shared} />}
+        {!checkinParam && view === ROLES_SYS.GA_LEADER && <GALeaderView {...shared} />}
+        {!checkinParam && view === ROLES_SYS.TEAM_LEADER && <TeamLeaderView {...shared} />}
       </div>
     </LangContext.Provider>
   );

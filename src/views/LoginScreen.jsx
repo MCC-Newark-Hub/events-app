@@ -42,7 +42,7 @@ function LoginScreen({ login, lang, setLang }) {
     >
       {mode === "choose" ? (
         <div style={{ textAlign: "center", maxWidth: 380, width: "100%" }}>
-          <ICMLogo height={60} style={{ marginBottom: 16 }} />
+          <ICMLogo height={150} style={{ marginBottom: 24 }} />
           <h1
             style={{
               fontFamily: "'Lora',Georgia,serif",

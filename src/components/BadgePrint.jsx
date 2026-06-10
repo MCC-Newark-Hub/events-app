@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { churchDisplay, churchCode } from "@/constants";
 
 export default function BadgePrint({ regs, lang }) {
@@ -6,9 +7,18 @@ export default function BadgePrint({ regs, lang }) {
   const [pdfError, setPdfError] = useState(false);
   const primary = regs[0];
 
-  const makePDF = (JsPDF) => {
+  const makePDF = async (JsPDF) => {
     var W = 216, H = 144;
     var doc = new JsPDF({ orientation: "landscape", unit: "pt", format: [H, W] });
+    // Generate QR data URLs for all regs
+    var qrDataUrls = await Promise.all(
+      regs.map((r) =>
+        QRCode.toDataURL(
+          `${window.location.origin}?checkin=${r.regNumber}`,
+          { width: 80, margin: 1, color: { dark: '#000000', light: '#ffffff' } }
+        ).catch(() => null)
+      )
+    );
     for (var idx = 0; idx < regs.length; idx++) {
       var r = regs[idx];
       if (idx > 0) doc.addPage([H, W], "landscape");
@@ -49,22 +59,27 @@ export default function BadgePrint({ regs, lang }) {
       doc.setFont("courier", "normal"); doc.setFontSize(6.5); doc.setTextColor(100);
       doc.text(regNum, 8, H - 10, { align: "left" });
       if (ccode) doc.text(ccode, W - 8, H - 10, { align: "right" });
+      // QR code in bottom-right corner
+      var qr = qrDataUrls[idx];
+      if (qr) doc.addImage(qr, 'PNG', W - 28, H - 26, 20, 20);
     }
     doc.save("inscricao-" + (primary.regNumber || "ICM") + ".pdf");
     setPdfDone(true);
   };
 
-  const generateBadgePDF = () => {
-    if (window.jspdf && window.jspdf.jsPDF) { makePDF(window.jspdf.jsPDF); return; }
-    var s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-    s.onload = function() { makePDF(window.jspdf.jsPDF); };
-    s.onerror = function() { setPdfError(true); setPdfDone(true); };
-    document.head.appendChild(s);
+  const generateBadgePDF = async () => {
+    if (window.jspdf && window.jspdf.jsPDF) { await makePDF(window.jspdf.jsPDF); return; }
+    await new Promise((resolve, reject) => {
+      var s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    }).then(() => makePDF(window.jspdf.jsPDF)).catch(() => { setPdfError(true); setPdfDone(true); });
   };
 
   useEffect(() => {
-    const timer = setTimeout(generateBadgePDF, 800);
+    const timer = setTimeout(() => { generateBadgePDF(); }, 800);
     return () => clearTimeout(timer);
   }, []);
 

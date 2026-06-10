@@ -7,13 +7,18 @@ export function mapMember(m) {
   return {
     id: m.id,
     name: m.name,
+    firstName: m.first_name || '',
+    lastName: m.last_name || '',
     badgeName: m.badge_name,
     gender: m.gender,
     category: m.category,
     church: m.church,
-    role: m.role || "",
+    role: m.role || '',
     familyId: m.family_id,
     gaId: m.ga_id,
+    allergies: m.allergies || '',
+    specialNeeds: m.special_needs || '',
+    notes: m.notes || '',
   };
 }
 export function mapFamily(f) {
@@ -41,6 +46,7 @@ export function mapReg(r) {
     role: r.role,
     familyId: r.family_id,
     team: r.team || "Participante",
+    presence: r.presence || 'unknown',
     fee: Number(r.fee || 0),
     paid: !!r.paid,
     exempt: !!r.exempt,
@@ -102,6 +108,7 @@ export function useAppData({ getUserRef, notify }) {
   const [dbCategories, setDbCategories] = useState([]);
   const [dbFunctions, setDbFunctions] = useState([]);
   const [dbUsers, setDbUsers] = useState([]);
+  const [dbTeams, setDbTeams] = useState([]);
 
   // ── Load all data from Supabase on mount ─────────────────────────────────
   useEffect(function () {
@@ -109,7 +116,7 @@ export function useAppData({ getUserRef, notify }) {
     async function loadAll() {
       setLoading(true);
       try {
-        var [evRes, memRes, famRes, gaRes, regRes, aprRes, rosRes, chrRes, usrRes, catRes, fnRes] =
+        var [evRes, memRes, famRes, gaRes, regRes, aprRes, rosRes, chrRes, usrRes, catRes, fnRes, teamsRes] =
           await Promise.all([
             sb.from("events").select("*").order("date"),
             sb.from("members").select("*").order("name"),
@@ -122,6 +129,7 @@ export function useAppData({ getUserRef, notify }) {
             sb.from("app_users").select("*"),
             sb.from("categories").select("*").order("sort_order"),
             sb.from("functions").select("*").order("sort_order"),
+            sb.from("teams").select("*").order("sort_order"),
           ]);
         if (cancelled) return;
         if (evRes.error) {
@@ -142,6 +150,7 @@ export function useAppData({ getUserRef, notify }) {
         setDbUsers(usrRes.data || []);
         if (catRes.data && catRes.data.length > 0) setDbCategories(catRes.data);
         if (fnRes.data && fnRes.data.length > 0) setDbFunctions(fnRes.data);
+        setDbTeams(teamsRes.data || []);
         var maxSeq = (regRes.data || []).reduce(function (m, r) {
           var n = parseInt((r.reg_number || "").split("-")[2] || "0");
           return n > m ? n : m;
@@ -382,6 +391,11 @@ export function useAppData({ getUserRef, notify }) {
     }
   };
 
+  const updatePresence = async (regId, presence) => {
+    setRegs((p) => p.map((r) => r.id === regId ? { ...r, presence } : r));
+    await sb.from('registrations').update({ presence }).eq('id', regId);
+  };
+
   const promoteFromWaitlist = (regId) => {
     setRegs((p) =>
       p.map((r) =>
@@ -433,6 +447,8 @@ export function useAppData({ getUserRef, notify }) {
     dbFunctions,
     dbUsers,
     setDbUsers,
+    dbTeams,
+    setDbTeams,
     activeRegs,
     activeCount,
     isFull,
@@ -441,6 +457,7 @@ export function useAppData({ getUserRef, notify }) {
     pendingApprovals,
     addReg,
     updateReg,
+    updatePresence,
     submitApproval,
     resolveApproval,
     promoteFromWaitlist,

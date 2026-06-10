@@ -9,7 +9,7 @@ export const useT = () => {
 
 export const STRINGS = {
   pt: {
-    appName: "ICM Maranatha",
+    appName: "Pólo Newark",
     appSub: "Sistema de Inscrições",
     logout: "Sair",
     teamAccess: "Acesso da Equipe",
@@ -250,7 +250,7 @@ export const STRINGS = {
     unverifiedMember: "Não verificado — procure o atendente",
   },
   en: {
-    appName: "ICM Maranatha",
+    appName: "Pólo Newark",
     appSub: "Registration System",
     logout: "Sign Out",
     teamAccess: "Team Access",

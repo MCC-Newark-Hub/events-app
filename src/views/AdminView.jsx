@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, ROLE_GROUPS, TEAMS, CHURCHES, ROLE_BADGE, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
@@ -29,6 +29,7 @@ function AdminView(props) {
     { id: "events", icon: <Calendar size={16} />, label: t.events },
     { id: "import", icon: <Upload size={16} />, label: "Importar" },
     { id: "users", icon: <KeyRound size={16} />, label: "Usuários & PINs" },
+    { id: "directory", icon: <BookOpen size={16} />, label: "Diretório" },
   ];
   return (
     <div className="app-shell">
@@ -46,6 +47,7 @@ function AdminView(props) {
             {sec === "events" && <EventsTab events={props.events} setEvents={props.setEvents} event={props.event} setEvent={props.setEvent} lang={props.lang} notify={props.notify} />}
             {sec === "import" && <AdminImport members={props.members} setMembers={props.setMembers} families={props.families} setFamilies={props.setFamilies} gas={props.gas} setGas={props.setGas} rosters={props.rosters} setRosters={props.setRosters} churches={props.churches} setChurches={props.setChurches} notify={props.notify} />}
             {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} notify={props.notify} />}
+            {sec === "directory" && <AdminDirectory {...props} dbTeams={props.dbTeams} setDbTeams={props.setDbTeams} />}
           </div>
         </div>
       </div>
@@ -194,7 +196,44 @@ const CSV_TEMPLATES = {
   churches: { label: "Igrejas", filename: "template-igrejas.csv", headers: ["display","code"], example: ["São Paulo, SP","BRA"], notes: ["display: cidade e estado.","code: EUA, CAN ou BRA."], validate: (row) => { var e=[]; if(!row.display)e.push("display obrigatório"); if(!["EUA","CAN","BRA"].includes(row.code))e.push("code deve ser EUA, CAN ou BRA"); return e; }, transform: (row) => ({display:row.display.trim(),code:row.code.trim()}) },
 };
 
-function parseCSV(text) { var lines=text.trim().split(/\r?\n/); if(lines.length<2)return[]; var headers=lines[0].split(",").map(h=>h.trim().replace(/^"|"$/g,"")); var rows=[]; for(var i=1;i<lines.length;i++){var cells=lines[i].split(",").map(c=>c.trim().replace(/^"|"$/g,"")); if(cells.every(c=>!c))continue; var obj={}; headers.forEach((h,j)=>{obj[h]=cells[j]||"";}); rows.push(obj);} return rows; }
+function sanitizeText(s) {
+  if (typeof s !== "string") return s;
+  return s
+    .replace(/â/g, "'")   // UTF-8 read as Latin-1 right single quote
+    .replace(/’/g, "'")               // right single quotation mark
+    .replace(/‘/g, "'")               // left single quotation mark
+    .replace(/“/g, '"')               // left double quotation mark
+    .replace(/”/g, '"')               // right double quotation mark
+    .replace(/�/g, "'");              // replacement character (bad decode)
+}
+function splitCSVLine(line) {
+  var cells = [], cur = "", inQ = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i+1] === '"') { cur += '"'; i++; } // escaped quote
+      else inQ = !inQ;
+    } else if (ch === ',' && !inQ) {
+      cells.push(cur.trim()); cur = "";
+    } else cur += ch;
+  }
+  cells.push(cur.trim());
+  return cells;
+}
+function parseCSV(text) {
+  text = sanitizeText(text);
+  var lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  var headers = splitCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, "").trim());
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    var cells = splitCSVLine(lines[i]).map(c => sanitizeText(c.replace(/^"|"$/g, "").trim()));
+    if (cells.every(c => !c)) continue;
+    var obj = {}; headers.forEach((h, j) => { obj[h] = cells[j] || ""; });
+    rows.push(obj);
+  }
+  return rows;
+}
 function makeCSV(headers,rows) { var lines=[headers.join(",")]; rows.forEach(row=>{lines.push(headers.map(h=>{var v=String(row[h]||""); return v.includes(",")?'"'+v+'"':v;}).join(","));}); return lines.join("\n"); }
 function downloadCSV(filename,text) { var blob=new Blob([text],{type:"text/csv"}); var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url); }
 
@@ -459,6 +498,695 @@ function AdminUsers({ dbUsers, setDbUsers, notify }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+
+// ── Directory ─────────────────────────────────────────────────────────────────
+function ConfirmDelete({ label, count, onConfirm, onCancel }) {
+  return (
+    <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && onCancel()}>
+      <div className="modal" style={{ maxWidth: 360, textAlign: "center" }}>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
+        <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 8 }}>Confirmar exclusão</h3>
+        <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 20 }}>
+          {count > 1
+            ? <>Excluir <strong>{count} itens</strong>? Esta ação não pode ser desfeita.</>
+            : <>Remover <strong>{label}</strong>? Esta ação não pode ser desfeita.</>}
+        </p>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>Cancelar</button>
+          <button className="btn btn-danger" style={{ flex: 1 }} onClick={onConfirm}>Excluir</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Shared bulk-action bar shown when rows are selected
+function BulkBar({ selected, total, onSelectAll, onClearAll, onDeleteSelected, label }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 12, padding: "10px 14px",
+      background: "var(--sidebar-active-bg)", border: "1.5px solid var(--primary)",
+      borderRadius: 8, marginBottom: 10, flexWrap: "wrap",
+    }}>
+      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--primary)" }}>
+        {selected} selecionado{selected !== 1 ? "s" : ""}
+      </span>
+      <button className="btn btn-ghost btn-sm" onClick={onSelectAll} disabled={selected === total}>
+        Selecionar todos ({total})
+      </button>
+      <button className="btn btn-ghost btn-sm" onClick={onClearAll}>Limpar seleção</button>
+      <button className="btn btn-danger btn-sm" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5 }}
+        onClick={onDeleteSelected}>
+        <Trash2 size={13} /> Excluir {selected} {label}
+      </button>
+    </div>
+  );
+}
+
+function AdminDirectory({ churches, setChurches, members, setMembers, families, setFamilies, gas, setGas, rosters, setRosters, dbTeams, setDbTeams, notify }) {
+  const TABS = [
+    { id: "churches",  label: "Igrejas",              count: churches?.length },
+    { id: "members",   label: "Membros",              count: members?.length },
+    { id: "families",  label: "Famílias",             count: families?.length },
+    { id: "groups",    label: "Grupos de Assistência",count: gas?.length },
+    { id: "teams",     label: "Equipes / Rosters",    count: rosters?.length },
+    { id: "teams_dir", label: "Equipes (domínio)",    count: dbTeams?.length },
+  ];
+  const [tab, setTab]         = useState("churches");
+  const [search, setSearch]   = useState("");
+  const [editing, setEditing] = useState(null);
+  const [formData, setFormData] = useState({});
+  const [deleting, setDeleting] = useState(null); // { ids:[], label:"" }
+  const [selected, setSelected] = useState([]);
+  const [saving, setSaving]   = useState(false);
+  const [expanded, setExpanded] = useState(null);
+
+  const switchTab = (id) => { setTab(id); setSearch(""); setEditing(null); setSelected([]); setFormData({}); };
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  const toggleSel = (id) => setSelected((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
+  const selAll    = (ids) => setSelected(ids);
+  const clearSel  = () => setSelected([]);
+
+  const openEdit = (row, defaults) => { setEditing(row); setFormData(defaults); };
+  const openNew  = (defaults) => { setEditing({ id: null }); setFormData(defaults); };
+
+  const isNew = !editing?.id;
+
+  const saveRow = async (table, row, stateList, setList, mapFn) => {
+    setSaving(true);
+    if (isNew) {
+      const { data, error } = await sb.from(table).insert(row).select().single();
+      if (error) { notify("Erro: " + error.message); setSaving(false); return; }
+      setList([...stateList, mapFn ? mapFn(data) : data]);
+    } else {
+      const { error } = await sb.from(table).update(row).eq("id", row.id);
+      if (error) { notify("Erro: " + error.message); setSaving(false); return; }
+      setList(stateList.map((r) => r.id === row.id ? (mapFn ? mapFn({ ...r, ...row }) : { ...r, ...row }) : r));
+    }
+    notify(isNew ? "Criado!" : "Atualizado!");
+    setSaving(false);
+    setEditing(null);
+    setFormData({});
+  };
+
+  const deleteRows = async (table, ids, stateList, setList) => {
+    const { error } = await sb.from(table).delete().in("id", ids);
+    if (error) { notify("Erro: " + error.message); setDeleting(null); return; }
+    setList(stateList.filter((r) => !ids.includes(r.id)));
+    notify(`${ids.length} item(s) excluído(s).`);
+    setDeleting(null);
+    clearSel();
+  };
+
+  const mapMember  = (m) => ({ id: m.id, name: m.name, firstName: m.first_name || m.firstName || '', lastName: m.last_name || m.lastName || '', badgeName: m.badge_name || m.badgeName, gender: m.gender, category: m.category, church: m.church, role: m.role || "", familyId: m.family_id || m.familyId, gaId: m.ga_id || m.gaId, allergies: m.allergies || '', specialNeeds: m.special_needs || m.specialNeeds || '', notes: m.notes || '' });
+  const mapFamily  = (f) => ({ id: f.id, name: f.name, memberIds: f.member_ids || f.memberIds || [] });
+  const mapGA      = (g) => ({ id: g.id, name: g.name, church: g.church, leaderId: g.leader_id || g.leaderId, description: g.description || "" });
+  const mapRoster  = (r) => ({ id: r.id, eventId: r.event_id || r.eventId, team: r.team, leaderId: r.leader_id || r.leaderId, memberIds: r.member_ids || r.memberIds || [] });
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700 }}>Diretório</h2>
+      </div>
+      <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 16 }}>Visualize e edite todos os dados de referência do sistema.</p>
+
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+        {TABS.map((tb) => (
+          <button key={tb.id} className={`btn btn-sm ${tab === tb.id ? "btn-primary" : "btn-ghost"}`} onClick={() => switchTab(tb.id)}>
+            {tb.label} <span style={{ opacity: .65, fontWeight: 400, marginLeft: 4 }}>({tb.count ?? 0})</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="sb" style={{ marginBottom: 14, maxWidth: 340 }}>
+        <span className="si-icon" style={{ fontSize: 14 }}>🔍</span>
+        <input value={search} onChange={(e) => { setSearch(e.target.value); setEditing(null); setSelected([]); }} placeholder="Buscar…" />
+        {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}><X size={14} /></button>}
+      </div>
+
+      {/* ── Churches ─────────────────────────────────────────────────────── */}
+      {tab === "churches" && (() => {
+        const list = (churches || []).filter((c) =>
+          (c.display || "").toLowerCase().includes(search.toLowerCase())
+        );
+        const allIds = list.map((c) => c.id).filter(Boolean);
+        return (
+          <>
+            {editing !== null && (
+              <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
+                <div className="modal" style={{ maxWidth: 400 }}>
+                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Nova Igreja" : "Editar Igreja"}</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div><label>Cidade / Display *</label><input value={formData.display || ""} onChange={(e) => setFormData({ ...formData, display: e.target.value })} placeholder="Newark, NJ" /></div>
+                    <div><label>Código *</label>
+                      <select value={formData.code || "EUA"} onChange={(e) => setFormData({ ...formData, code: e.target.value })}>
+                        <option value="EUA">EUA</option><option value="CAN">CAN</option><option value="BRA">BRA</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
+                    <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
+                      if (!formData.display?.trim()) { notify("Display obrigatório."); return; }
+                      const row = { display: formData.display.trim(), code: formData.code || "EUA" };
+                      if (!isNew) row.id = editing.id;
+                      saveRow("churches", row, churches, setChurches, null);
+                    }}>{saving ? "Salvando…" : "Salvar"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {deleting && <ConfirmDelete label={deleting.label} count={deleting.ids.length}
+              onCancel={() => setDeleting(null)}
+              onConfirm={() => deleteRows("churches", deleting.ids, churches, setChurches)} />}
+
+            {selected.length > 0 && (
+              <BulkBar selected={selected.length} total={allIds.length} label="igrejas"
+                onSelectAll={() => selAll(allIds)} onClearAll={clearSel}
+                onDeleteSelected={() => setDeleting({ ids: selected, label: "" })} />
+            )}
+            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 36 }}>
+                      <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
+                        onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
+                    </th>
+                    <th>Cidade / Display</th><th style={{ width: 80 }}>Código</th><th style={{ width: 90 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((c) => (
+                    <tr key={c.id || c.display} style={{ background: c.id && selected.includes(c.id) ? "var(--sidebar-active-bg)" : "" }}>
+                      <td><input type="checkbox" disabled={!c.id} checked={!!(c.id && selected.includes(c.id))} onChange={() => c.id && toggleSel(c.id)} /></td>
+                      <td style={{ fontWeight: 500 }}>{c.display}</td>
+                      <td><span className="badge badge-blue">{c.code}</span></td>
+                      <td>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(c, { display: c.display, code: c.code })}><Pencil size={12} /></button>
+                          {c.id && <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [c.id], label: c.display })}><Trash2 size={12} /></button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {list.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ display: "", code: "EUA" })}><Plus size={14} /> Nova Igreja</button>
+              {(churches || []).filter((c) => c.id).length > 0 && (
+                <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  onClick={() => setDeleting({ ids: (churches || []).map((c) => c.id).filter(Boolean), label: "" })}>
+                  <Trash2 size={13} /> Excluir TODAS ({(churches || []).filter((c) => c.id).length})
+                </button>
+              )}
+            </div>
+          </>
+        );
+      })()}
+
+      {/* ── Members ──────────────────────────────────────────────────────── */}
+      {tab === "members" && (() => {
+        const list = (members || []).filter((m) =>
+          (m.name || "").toLowerCase().includes(search.toLowerCase()) ||
+          (m.church || "").toLowerCase().includes(search.toLowerCase())
+        );
+        const allIds = list.map((m) => m.id).filter(Boolean);
+        return (
+          <>
+            {editing !== null && (
+              <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
+                <div className="modal" style={{ maxWidth: 520 }}>
+                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Novo Membro" : "Editar Membro"}</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div className="fr">
+                      <div><label>Primeiro Nome *</label><input value={formData.firstName || ""} onChange={(e) => { const fn = e.target.value; setFormData((p) => ({ ...p, firstName: fn, name: (fn + ' ' + (p.lastName || '')).trim() })); }} /></div>
+                      <div><label>Sobrenome *</label><input value={formData.lastName || ""} onChange={(e) => { const ln = e.target.value; setFormData((p) => ({ ...p, lastName: ln, name: ((p.firstName || '') + ' ' + ln).trim() })); }} /></div>
+                    </div>
+                    <div className="fr">
+                      <div><label>Nome completo</label><input value={formData.name || ""} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
+                      <div><label>Nome no Crachá</label><input value={formData.badgeName || ""} onChange={(e) => setFormData({ ...formData, badgeName: e.target.value })} /></div>
+                    </div>
+                    <div className="fr">
+                      <div><label>Gênero</label>
+                        <select value={formData.gender || "M"} onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
+                          <option value="M">Masculino</option><option value="F">Feminino</option>
+                        </select>
+                      </div>
+                      <div><label>Categoria</label>
+                        <select value={formData.category || "Adulto"} onChange={(e) => setFormData({ ...formData, category: e.target.value })}>
+                          {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div><label>Igreja</label><input value={formData.church || ""} onChange={(e) => setFormData({ ...formData, church: e.target.value })} placeholder="Newark, NJ - EUA" /></div>
+                    <div className="fr">
+                      <div><label>Função</label>
+                        <select value={formData.role || ""} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
+                          <option value="">—</option>
+                          {ROLE_GROUPS.map((g) => (
+                            <optgroup key={g.group} label={g.group}>
+                              {g.roles.map((r) => <option key={r} value={r}>{r}</option>)}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </div>
+                      <div><label>GA ID</label><input value={formData.gaId || ""} onChange={(e) => setFormData({ ...formData, gaId: e.target.value })} placeholder="GA001" /></div>
+                    </div>
+                    <div><label>Família ID</label><input value={formData.familyId || ""} onChange={(e) => setFormData({ ...formData, familyId: e.target.value })} placeholder="F001" /></div>
+                    <div><label>Alergias</label><textarea rows={2} value={formData.allergies || ""} onChange={(e) => setFormData({ ...formData, allergies: e.target.value })} placeholder="Ex: amendoim, látex…" style={{ resize: "vertical" }} /></div>
+                    <div><label>Necessidades Especiais</label><textarea rows={2} value={formData.specialNeeds || ""} onChange={(e) => setFormData({ ...formData, specialNeeds: e.target.value })} placeholder="Ex: cadeira de rodas…" style={{ resize: "vertical" }} /></div>
+                    <div><label>Notas</label><textarea rows={2} value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} style={{ resize: "vertical" }} /></div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
+                    <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
+                      if (!formData.name?.trim() && !formData.firstName?.trim()) { notify("Nome obrigatório."); return; }
+                      const fullName = formData.name?.trim() || ((formData.firstName || '') + ' ' + (formData.lastName || '')).trim();
+                      const row = { name: fullName, first_name: formData.firstName || null, last_name: formData.lastName || null, badge_name: formData.badgeName || fullName, gender: formData.gender || "M", category: formData.category || "Adulto", church: formData.church || "", role: formData.role || "", family_id: formData.familyId || null, ga_id: formData.gaId || null, allergies: formData.allergies || null, special_needs: formData.specialNeeds || null, notes: formData.notes || null };
+                      if (!isNew) row.id = editing.id;
+                      saveRow("members", row, members, setMembers, mapMember);
+                    }}>{saving ? "Salvando…" : "Salvar"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {deleting && <ConfirmDelete label={deleting.label} count={deleting.ids.length}
+              onCancel={() => setDeleting(null)}
+              onConfirm={() => deleteRows("members", deleting.ids, members, setMembers)} />}
+
+            {selected.length > 0 && (
+              <BulkBar selected={selected.length} total={allIds.length} label="membros"
+                onSelectAll={() => selAll(allIds)} onClearAll={clearSel}
+                onDeleteSelected={() => setDeleting({ ids: selected, label: "" })} />
+            )}
+            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <div style={{ overflowX: "auto" }}>
+                <table className="table" style={{ minWidth: 640 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 36 }}>
+                        <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
+                          onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
+                      </th>
+                      <th>Nome</th><th>Crachá</th><th style={{ width: 55 }}>Gên.</th><th>Categoria</th><th>Igreja</th><th>Função</th><th>Notas</th><th style={{ width: 90 }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {list.map((m) => (
+                      <tr key={m.id} style={{ background: selected.includes(m.id) ? "var(--sidebar-active-bg)" : "" }}>
+                        <td><input type="checkbox" checked={selected.includes(m.id)} onChange={() => toggleSel(m.id)} /></td>
+                        <td style={{ fontWeight: 500 }}>{(m.firstName && m.lastName) ? `${m.firstName} ${m.lastName}` : m.name}</td>
+                        <td style={{ color: "var(--muted)", fontSize: 12 }}>{m.badgeName}</td>
+                        <td><span className="badge badge-gray">{m.gender}</span></td>
+                        <td><span className="badge badge-blue">{m.category}</span></td>
+                        <td style={{ fontSize: 12 }}>{m.church}</td>
+                        <td style={{ fontSize: 12 }}>{m.role || <span style={{ color: "var(--muted)" }}>—</span>}</td>
+                        <td style={{ fontSize: 11, color: "var(--muted)", maxWidth: 160 }}>{m.notes ? m.notes.slice(0, 40) + (m.notes.length > 40 ? '…' : '') : '—'}</td>
+                        <td>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button className="btn btn-ghost btn-xs" onClick={() => openEdit(m, { firstName: m.firstName || '', lastName: m.lastName || '', name: m.name, badgeName: m.badgeName || "", gender: m.gender || "M", category: m.category, church: m.church || "", role: m.role || "", familyId: m.familyId || "", gaId: m.gaId || "", allergies: m.allergies || '', specialNeeds: m.specialNeeds || '', notes: m.notes || '' })}><Pencil size={12} /></button>
+                            <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [m.id], label: m.name })}><Trash2 size={12} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {list.length === 0 && <tr><td colSpan={9} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ firstName: "", lastName: "", name: "", badgeName: "", gender: "M", category: "Adulto", church: "", role: "", familyId: "", gaId: "", allergies: "", specialNeeds: "", notes: "" })}><Plus size={14} /> Novo Membro</button>
+              {(members || []).length > 0 && (
+                <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  onClick={() => setDeleting({ ids: (members || []).map((m) => m.id).filter(Boolean), label: "" })}>
+                  <Trash2 size={13} /> Excluir TODOS ({(members || []).length})
+                </button>
+              )}
+            </div>
+          </>
+        );
+      })()}
+
+      {/* ── Families ─────────────────────────────────────────────────────── */}
+      {tab === "families" && (() => {
+        const list = (families || []).filter((f) =>
+          (f.name || "").toLowerCase().includes(search.toLowerCase())
+        );
+        const allIds = list.map((f) => f.id).filter(Boolean);
+        return (
+          <>
+            {editing !== null && (
+              <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
+                <div className="modal" style={{ maxWidth: 440 }}>
+                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Nova Família" : "Editar Família"}</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div><label>Nome *</label><input value={formData.name || ""} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Família Silva" /></div>
+                    <div><label>IDs dos Membros (separados por vírgula)</label><input value={formData.memberIds || ""} onChange={(e) => setFormData({ ...formData, memberIds: e.target.value })} placeholder="M001, M002, M003" /></div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
+                    <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
+                      if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
+                      const ids = (formData.memberIds || "").split(",").map((s) => s.trim()).filter(Boolean);
+                      const row = { name: formData.name.trim(), member_ids: ids };
+                      if (!isNew) row.id = editing.id;
+                      saveRow("families", row, families, setFamilies, mapFamily);
+                    }}>{saving ? "Salvando…" : "Salvar"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {deleting && <ConfirmDelete label={deleting.label} count={deleting.ids.length}
+              onCancel={() => setDeleting(null)}
+              onConfirm={() => deleteRows("families", deleting.ids, families, setFamilies)} />}
+
+            {selected.length > 0 && (
+              <BulkBar selected={selected.length} total={allIds.length} label="famílias"
+                onSelectAll={() => selAll(allIds)} onClearAll={clearSel}
+                onDeleteSelected={() => setDeleting({ ids: selected, label: "" })} />
+            )}
+            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 36 }}>
+                      <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
+                        onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
+                    </th>
+                    <th>Nome</th><th>Membros</th><th style={{ width: 90 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((f) => (
+                    <tr key={f.id} style={{ background: selected.includes(f.id) ? "var(--sidebar-active-bg)" : "" }}>
+                      <td><input type="checkbox" checked={selected.includes(f.id)} onChange={() => toggleSel(f.id)} /></td>
+                      <td style={{ fontWeight: 500 }}>{f.name}</td>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          {(f.memberIds || []).slice(0, expanded === f.id ? undefined : 3).map((mid) => {
+                            const m = (members || []).find((x) => x.id === mid);
+                            return <span key={mid} className="badge badge-gray">{m ? m.name : mid}</span>;
+                          })}
+                          {(f.memberIds || []).length > 3 && (
+                            <button onClick={() => setExpanded(expanded === f.id ? null : f.id)}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", fontSize: 12, padding: 0 }}>
+                              {expanded === f.id ? <ChevronUp size={14} /> : `+${(f.memberIds || []).length - 3} mais`}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(f, { name: f.name, memberIds: (f.memberIds || []).join(", ") })}><Pencil size={12} /></button>
+                          <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [f.id], label: f.name })}><Trash2 size={12} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {list.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", memberIds: "" })}><Plus size={14} /> Nova Família</button>
+              {(families || []).length > 0 && (
+                <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  onClick={() => setDeleting({ ids: (families || []).map((f) => f.id).filter(Boolean), label: "" })}>
+                  <Trash2 size={13} /> Excluir TODAS ({(families || []).length})
+                </button>
+              )}
+            </div>
+          </>
+        );
+      })()}
+
+      {/* ── GA Groups ────────────────────────────────────────────────────── */}
+      {tab === "groups" && (() => {
+        const list = (gas || []).filter((g) =>
+          (g.name || "").toLowerCase().includes(search.toLowerCase()) ||
+          (g.church || "").toLowerCase().includes(search.toLowerCase())
+        );
+        const allIds = list.map((g) => g.id).filter(Boolean);
+        return (
+          <>
+            {editing !== null && (
+              <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
+                <div className="modal" style={{ maxWidth: 460 }}>
+                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Novo Grupo" : "Editar Grupo"}</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div><label>Nome *</label><input value={formData.name || ""} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
+                    <div><label>Igreja</label><input value={formData.church || ""} onChange={(e) => setFormData({ ...formData, church: e.target.value })} placeholder="Newark, NJ - EUA" /></div>
+                    <div><label>ID do Líder</label><input value={formData.leaderId || ""} onChange={(e) => setFormData({ ...formData, leaderId: e.target.value })} placeholder="M001" /></div>
+                    <div><label>Descrição</label><input value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} /></div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
+                    <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
+                      if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
+                      const row = { name: formData.name.trim(), church: formData.church || "", leader_id: formData.leaderId || null, description: formData.description || "" };
+                      if (!isNew) row.id = editing.id;
+                      saveRow("assistance_groups", row, gas, setGas, mapGA);
+                    }}>{saving ? "Salvando…" : "Salvar"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {deleting && <ConfirmDelete label={deleting.label} count={deleting.ids.length}
+              onCancel={() => setDeleting(null)}
+              onConfirm={() => deleteRows("assistance_groups", deleting.ids, gas, setGas)} />}
+
+            {selected.length > 0 && (
+              <BulkBar selected={selected.length} total={allIds.length} label="grupos"
+                onSelectAll={() => selAll(allIds)} onClearAll={clearSel}
+                onDeleteSelected={() => setDeleting({ ids: selected, label: "" })} />
+            )}
+            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 36 }}>
+                      <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
+                        onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
+                    </th>
+                    <th>Nome</th><th>Igreja</th><th>Líder</th><th style={{ width: 90 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((g) => {
+                    const leader = (members || []).find((m) => m.id === g.leaderId);
+                    return (
+                      <tr key={g.id} style={{ background: selected.includes(g.id) ? "var(--sidebar-active-bg)" : "" }}>
+                        <td><input type="checkbox" checked={selected.includes(g.id)} onChange={() => toggleSel(g.id)} /></td>
+                        <td style={{ fontWeight: 500 }}>{g.name}</td>
+                        <td style={{ fontSize: 12 }}>{g.church}</td>
+                        <td style={{ fontSize: 13 }}>{leader ? leader.name : (g.leaderId || <span style={{ color: "var(--muted)" }}>—</span>)}</td>
+                        <td>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button className="btn btn-ghost btn-xs" onClick={() => openEdit(g, { name: g.name, church: g.church || "", leaderId: g.leaderId || "", description: g.description || "" })}><Pencil size={12} /></button>
+                            <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [g.id], label: g.name })}><Trash2 size={12} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {list.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", church: "", leaderId: "", description: "" })}><Plus size={14} /> Novo Grupo</button>
+              {(gas || []).length > 0 && (
+                <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  onClick={() => setDeleting({ ids: (gas || []).map((g) => g.id).filter(Boolean), label: "" })}>
+                  <Trash2 size={13} /> Excluir TODOS ({(gas || []).length})
+                </button>
+              )}
+            </div>
+          </>
+        );
+      })()}
+
+      {/* ── Teams Domain ─────────────────────────────────────────────────── */}
+      {tab === "teams_dir" && (() => {
+        const list = (dbTeams || []).filter((t) =>
+          (t.name || "").toLowerCase().includes(search.toLowerCase())
+        );
+        const allIds = list.map((t) => t.id).filter(Boolean);
+        const mapTeam = (t) => ({ id: t.id, name: t.name, sortOrder: t.sort_order ?? t.sortOrder ?? 0, isService: t.is_service ?? t.isService ?? true });
+        return (
+          <>
+            {editing !== null && (
+              <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
+                <div className="modal" style={{ maxWidth: 400 }}>
+                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Nova Equipe" : "Editar Equipe"}</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div><label>Nome *</label><input value={formData.name || ""} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
+                    <div><label>Ordem</label><input type="number" value={formData.sortOrder ?? 0} onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })} /></div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <input type="checkbox" id="is-service" checked={!!formData.isService} onChange={(e) => setFormData({ ...formData, isService: e.target.checked })} />
+                      <label htmlFor="is-service" style={{ margin: 0, cursor: "pointer" }}>Equipe de serviço</label>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
+                    <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
+                      if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
+                      const row = { name: formData.name.trim(), sort_order: formData.sortOrder ?? 0, is_service: !!formData.isService };
+                      if (!isNew) row.id = editing.id;
+                      saveRow("teams", row, dbTeams, setDbTeams, mapTeam);
+                    }}>{saving ? "Salvando…" : "Salvar"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {deleting && <ConfirmDelete label={deleting.label} count={deleting.ids.length}
+              onCancel={() => setDeleting(null)}
+              onConfirm={() => deleteRows("teams", deleting.ids, dbTeams, setDbTeams)} />}
+
+            {selected.length > 0 && (
+              <BulkBar selected={selected.length} total={allIds.length} label="equipes"
+                onSelectAll={() => selAll(allIds)} onClearAll={clearSel}
+                onDeleteSelected={() => setDeleting({ ids: selected, label: "" })} />
+            )}
+            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 36 }}>
+                      <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
+                        onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
+                    </th>
+                    <th>Nome</th><th style={{ width: 80 }}>Ordem</th><th style={{ width: 120 }}>Serviço</th><th style={{ width: 90 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((t) => (
+                    <tr key={t.id} style={{ background: t.id && selected.includes(t.id) ? "var(--sidebar-active-bg)" : "" }}>
+                      <td><input type="checkbox" checked={!!(t.id && selected.includes(t.id))} onChange={() => t.id && toggleSel(t.id)} /></td>
+                      <td style={{ fontWeight: 500 }}>{t.name}</td>
+                      <td style={{ fontSize: 12, color: "var(--muted)" }}>{t.sort_order}</td>
+                      <td>{t.is_service ? <span className="badge badge-green">Sim</span> : <span className="badge badge-gray">Não</span>}</td>
+                      <td>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(t, { name: t.name, sortOrder: t.sort_order ?? 0, isService: t.is_service ?? true })}><Pencil size={12} /></button>
+                          {t.id && <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [t.id], label: t.name })}><Trash2 size={12} /></button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {list.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado. Execute a migration 002 no Supabase.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", sortOrder: (dbTeams || []).length, isService: true })}><Plus size={14} /> Nova Equipe</button>
+            </div>
+          </>
+        );
+      })()}
+
+      {/* ── Teams / Rosters ──────────────────────────────────────────────── */}
+      {tab === "teams" && (() => {
+        const list = (rosters || []).filter((r) =>
+          (r.team || "").toLowerCase().includes(search.toLowerCase())
+        );
+        const allIds = list.map((r) => r.id).filter(Boolean);
+        return (
+          <>
+            {editing !== null && (
+              <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
+                <div className="modal" style={{ maxWidth: 460 }}>
+                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Nova Equipe" : "Editar Equipe"}</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div><label>Evento ID *</label><input value={formData.eventId || ""} onChange={(e) => setFormData({ ...formData, eventId: e.target.value })} placeholder="EVT001" /></div>
+                    <div><label>Equipe *</label>
+                      <select value={formData.team || TEAMS[1]} onChange={(e) => setFormData({ ...formData, team: e.target.value })}>
+                        {TEAMS.filter((t) => t !== "Participante").map((t) => <option key={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div><label>IDs dos Membros (separados por vírgula)</label><input value={formData.memberIds || ""} onChange={(e) => setFormData({ ...formData, memberIds: e.target.value })} placeholder="M001, M002" /></div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
+                    <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
+                      if (!formData.eventId?.trim() || !formData.team) { notify("Evento e equipe são obrigatórios."); return; }
+                      const ids = (formData.memberIds || "").split(",").map((s) => s.trim()).filter(Boolean);
+                      const row = { event_id: formData.eventId.trim(), team: formData.team, member_ids: ids };
+                      if (!isNew) row.id = editing.id;
+                      saveRow("rosters", row, rosters, setRosters, mapRoster);
+                    }}>{saving ? "Salvando…" : "Salvar"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {deleting && <ConfirmDelete label={deleting.label} count={deleting.ids.length}
+              onCancel={() => setDeleting(null)}
+              onConfirm={() => deleteRows("rosters", deleting.ids, rosters, setRosters)} />}
+
+            {selected.length > 0 && (
+              <BulkBar selected={selected.length} total={allIds.length} label="equipes"
+                onSelectAll={() => selAll(allIds)} onClearAll={clearSel}
+                onDeleteSelected={() => setDeleting({ ids: selected, label: "" })} />
+            )}
+            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 36 }}>
+                      <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
+                        onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
+                    </th>
+                    <th>Equipe</th><th>Evento</th><th>Membros</th><th style={{ width: 90 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((r, i) => (
+                    <tr key={r.id || i} style={{ background: r.id && selected.includes(r.id) ? "var(--sidebar-active-bg)" : "" }}>
+                      <td><input type="checkbox" checked={!!(r.id && selected.includes(r.id))} onChange={() => r.id && toggleSel(r.id)} /></td>
+                      <td style={{ fontWeight: 500 }}>{r.team}</td>
+                      <td style={{ fontSize: 12, color: "var(--muted)" }}>{r.eventId}</td>
+                      <td>
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                          {(r.memberIds || []).slice(0, 4).map((mid) => {
+                            const m = (members || []).find((x) => x.id === mid);
+                            return <span key={mid} className="badge badge-gray" style={{ fontSize: 10 }}>{m ? m.badgeName || m.name : mid}</span>;
+                          })}
+                          {(r.memberIds || []).length > 4 && <span className="badge badge-gray" style={{ fontSize: 10 }}>+{(r.memberIds || []).length - 4}</span>}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(r, { eventId: r.eventId || "", team: r.team, memberIds: (r.memberIds || []).join(", ") })}><Pencil size={12} /></button>
+                          <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [r.id], label: r.team })}><Trash2 size={12} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {list.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ eventId: "", team: TEAMS[1], memberIds: "" })}><Plus size={14} /> Nova Equipe</button>
+              {(rosters || []).length > 0 && (
+                <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  onClick={() => setDeleting({ ids: (rosters || []).map((r) => r.id).filter(Boolean), label: "" })}>
+                  <Trash2 size={13} /> Excluir TODAS ({(rosters || []).length})
+                </button>
+              )}
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }

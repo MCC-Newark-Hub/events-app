@@ -9,7 +9,7 @@ import RegModal from "@/components/RegModal";
 import DetailModal from "@/components/DetailModal";
 
 function ClerkView(props) {
-  const { event, regs, members, families, addReg, updateReg, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify } = props;
+  const { event, regs, members, families, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify } = props;
   const t = useT();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("active");
@@ -86,9 +86,9 @@ function ClerkView(props) {
             </div>
             <div className="table-wrap">
               <table className="table">
-                <thead><tr><th>{t.regNum}</th><th>{t.memberName}</th><th>{t.cargo}</th><th>{t.cat}</th><th>{t.teamH}</th><th>{t.feeH}</th><th>{t.statusH}</th><th>{t.actions}</th></tr></thead>
+                <thead><tr><th>{t.regNum}</th><th>{t.memberName}</th><th>{t.cargo}</th><th>{t.cat}</th><th>{t.teamH}</th><th>{t.feeH}</th><th>{t.statusH}</th><th>Presença</th><th>{t.actions}</th></tr></thead>
                 <tbody>
-                  {viewRegs.length === 0 && <tr><td colSpan={8} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
+                  {viewRegs.length === 0 && <tr><td colSpan={9} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
                   {viewRegs.map((r) => (
                     <tr key={r.id}>
                       <td style={{ fontFamily: "monospace", fontSize: 11, color: "#1a3a6b", fontWeight: 600, whiteSpace: "nowrap" }}>{r.regNumber}</td>
@@ -98,6 +98,18 @@ function ClerkView(props) {
                       <td style={{ fontSize: 12 }}>{r.team}</td>
                       <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{r.exempt ? <span style={{ color: "#6b7280" }}>{t.exempt}</span> : fmt(r.fee)}</td>
                       <td><StatusBadge r={r} event={event} allRegs={allActive} /></td>
+                      <td>
+                        <select
+                          value={r.presence || 'unknown'}
+                          onChange={(e) => updatePresence && updatePresence(r.id, e.target.value)}
+                          style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--border)", background: r.presence === 'present' ? '#d1fae5' : r.presence === 'absent' ? '#fee2e2' : r.presence === 'walk_in' ? '#dbeafe' : '#f3f4f6', color: r.presence === 'present' ? '#065f46' : r.presence === 'absent' ? '#991b1b' : r.presence === 'walk_in' ? '#1e3a8a' : '#374151' }}
+                        >
+                          <option value="unknown">🔲 Desconhecida</option>
+                          <option value="present">✅ Presente</option>
+                          <option value="absent">❌ Ausente</option>
+                          <option value="walk_in">🚶 Walk-in</option>
+                        </select>
+                      </td>
                       <td>
                         <div style={{ display: "flex", gap: 4 }}>
                           {r.waitlisted && <button className="btn btn-ok btn-sm" onClick={() => promoteFromWaitlist(r.id)}>{t.confirm}</button>}
