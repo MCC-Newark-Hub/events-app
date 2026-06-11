@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useT } from "@/i18n/strings";
 import { TEAMS, ROLE_GROUPS } from "@/constants";
 
-function DetailModal({ reg, onClose, onUpdate, canEditPayment, lang, dbTeams }) {
+function DetailModal({ reg, onClose, onUpdate, canEditPayment, lang, dbTeams, regs, event }) {
   const teamList = dbTeams && dbTeams.length > 0 ? dbTeams.map((t) => t.name) : TEAMS;
   const t = useT();
   const [f, setF] = useState({ ...reg });
@@ -138,6 +138,19 @@ function DetailModal({ reg, onClose, onUpdate, canEditPayment, lang, dbTeams }) 
               onChange={(e) => setF({ ...f, note: e.target.value })}
             />
           </div>
+          {/* Family members */}
+          {reg.familyId && (regs || []).filter((r) => r.familyId === reg.familyId && r.id !== reg.id && !r.cancelled).length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <label>Membros da Família Registrados</label>
+              {(regs || []).filter((r) => r.familyId === reg.familyId && r.id !== reg.id && !r.cancelled).map((fr) => (
+                <div key={fr.id} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
+                  <span style={{ fontWeight: 500 }}>{fr.memberName}</span>
+                  <span style={{ color: "var(--muted)", fontSize: 11, fontFamily: "monospace" }}>{fr.regNumber}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Badge printed */}
           {canEditPayment && (
             <div

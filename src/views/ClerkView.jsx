@@ -19,7 +19,7 @@ function ClerkView(props) {
 
   const myPending = approvals.filter((a) => a.eventId === event?.id && a.requestedById === user?.id && a.status === "pending");
   const allActive = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
-  const viewRegs = (tab === "active" ? allActive : tab === "waitlist" ? wlRegs : regs.filter((r) => r.eventId === event?.id && r.cancelled)).filter((r) => r.memberName.toLowerCase().includes(search.toLowerCase()) || r.regNumber.toLowerCase().includes(search.toLowerCase()) || r.church.toLowerCase().includes(search.toLowerCase()));
+  const viewRegs = (tab === "active" ? allActive : tab === "waitlist" ? wlRegs : regs.filter((r) => r.eventId === event?.id && r.cancelled)).filter((r) => (r.memberName || "").toLowerCase().includes(search.toLowerCase()) || (r.regNumber || "").toLowerCase().includes(search.toLowerCase()) || (r.church || "").toLowerCase().includes(search.toLowerCase()));
   const suggestions = search.length > 1 ? members.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()) && !allActive.find((r) => r.memberId === m.id)).slice(0, 5) : [];
 
   return (
@@ -91,12 +91,12 @@ function ClerkView(props) {
                   {viewRegs.length === 0 && <tr><td colSpan={9} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
                   {viewRegs.map((r) => (
                     <tr key={r.id}>
-                      <td style={{ fontFamily: "monospace", fontSize: 11, color: "#1a3a6b", fontWeight: 600, whiteSpace: "nowrap" }}>{r.regNumber}</td>
-                      <td><div style={{ fontWeight: 600 }}>{r.memberName}</div></td>
-                      <td>{r.role ? <span className={`badge ${ROLE_BADGE[r.role]}`}>{r.role}</span> : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}</td>
-                      <td><span className="badge badge-blue">{r.category}</span></td>
-                      <td style={{ fontSize: 12 }}>{r.team}</td>
-                      <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{r.exempt ? <span style={{ color: "#6b7280" }}>{t.exempt}</span> : fmt(r.fee)}</td>
+                      <td style={{ fontFamily: "monospace", fontSize: 11, color: "#1a3a6b", fontWeight: 600, whiteSpace: "nowrap" }}>{r.regNumber || "—"}</td>
+                      <td><div style={{ fontWeight: 600 }}>{r.memberName || "—"}</div></td>
+                      <td>{r.role ? <span className={`badge ${ROLE_BADGE[r.role] || "badge-gray"}`}>{r.role}</span> : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}</td>
+                      <td><span className="badge badge-blue">{r.category || "—"}</span></td>
+                      <td style={{ fontSize: 12 }}>{r.team || "—"}</td>
+                      <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{r.exempt ? <span style={{ color: "#6b7280" }}>{t.exempt}</span> : fmt(r.fee ?? 0)}</td>
                       <td><StatusBadge r={r} event={event} allRegs={allActive} /></td>
                       <td>
                         <select
@@ -126,7 +126,7 @@ function ClerkView(props) {
         </div>
       </div>
       {showReg && <RegModal event={event} members={members} families={families} dbTeams={dbTeams} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
-      {detail && <DetailModal reg={detail} event={event} dbTeams={dbTeams} canEditPayment={true} onClose={() => setDetail(null)} lang={lang} onUpdate={(u) => { updateReg(detail.id, u); setDetail(null); }} />}
+      {detail && <DetailModal reg={detail} event={event} dbTeams={dbTeams} regs={regs} canEditPayment={true} onClose={() => setDetail(null)} lang={lang} onUpdate={(u) => { updateReg(detail.id, u); setDetail(null); }} />}
     </div>
   );
 }

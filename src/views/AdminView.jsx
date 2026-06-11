@@ -49,7 +49,7 @@ function AdminView(props) {
             {sec === "reports" && <ReportsTab {...props} />}
             {sec === "events" && <EventsTab events={props.events} setEvents={props.setEvents} event={props.event} setEvent={props.setEvent} lang={props.lang} notify={props.notify} />}
             {sec === "import" && <AdminImport members={props.members} setMembers={props.setMembers} families={props.families} setFamilies={props.setFamilies} gas={props.gas} setGas={props.setGas} rosters={props.rosters} setRosters={props.setRosters} churches={props.churches} setChurches={props.setChurches} notify={props.notify} />}
-            {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} notify={props.notify} />}
+            {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} notify={props.notify} />}
             {sec === "directory" && <AdminDirectory {...props} dbTeams={props.dbTeams} setDbTeams={props.setDbTeams} />}
           </div>
         </div>
@@ -563,10 +563,11 @@ const ROLE_LABELS = {
   team_leader: "Líder de Equipe",
 };
 
-function AdminUsers({ dbUsers, setDbUsers, notify }) {
+function AdminUsers({ dbUsers, setDbUsers, churches, notify }) {
   const [editing, setEditing] = useState(null); // { id, name, pin, sysRole, initials, church }
   const [showPin, setShowPin] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [revealPins, setRevealPins] = useState({});
 
   const startEdit = (u) => {
     setEditing({ ...u, newPin: "", confirmPin: "" });
@@ -642,7 +643,14 @@ function AdminUsers({ dbUsers, setDbUsers, notify }) {
               </div>
               <div>
                 <label>Igreja (opcional)</label>
-                <input value={editing.church || ""} onChange={(e) => setEditing({ ...editing, church: e.target.value })} placeholder="Newark, NJ - EUA" />
+                <SearchSelect
+                  value={editing.church || ""}
+                  onSelect={(v) => setEditing({ ...editing, church: v })}
+                  items={churches || []}
+                  getLabel={(c) => c.display || c}
+                  getId={(c) => c.display || c}
+                  placeholder="Buscar igreja…"
+                />
               </div>
               <div>
                 <label>{editing.id ? "Novo PIN (deixe em branco para manter)" : "PIN *"}</label>
@@ -706,9 +714,14 @@ function AdminUsers({ dbUsers, setDbUsers, notify }) {
                 <td style={{ fontWeight: 600 }}>{u.name}</td>
                 <td><span className="badge badge-blue">{ROLE_LABELS[u.sys_role || u.sysRole] || u.sys_role || u.sysRole}</span></td>
                 <td style={{ fontSize: 12, color: "var(--muted)" }}>{u.church || "—"}</td>
-                <td style={{ fontFamily: "monospace", letterSpacing: 3 }}>••••</td>
+                <td style={{ fontFamily: "monospace", letterSpacing: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                  {revealPins[u.id] ? (u.pin || "—") : "••••"}
+                  <button onClick={() => setRevealPins((p) => ({ ...p, [u.id]: !p[u.id] }))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0, lineHeight: 1 }}>
+                    {revealPins[u.id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                  </button>
+                </td>
                 <td>
-                  <button className="btn btn-ghost btn-sm" onClick={() => startEdit({ id: u.id, name: u.name, sysRole: u.sys_role || u.sysRole, initials: u.initials, church: u.church })}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => startEdit({ id: u.id, name: u.name, sysRole: u.sys_role || u.sysRole, initials: u.initials, church: u.church, pin: u.pin })}>
                     Editar
                   </button>
                 </td>
@@ -725,6 +738,24 @@ function AdminUsers({ dbUsers, setDbUsers, notify }) {
 }
 
 
+// ── Sort helpers ──────────────────────────────────────────────────────────────
+function sortData(data, sk, sd) {
+  return [...(data || [])].sort((a, b) => {
+    const av = a[sk] ?? ""; const bv = b[sk] ?? "";
+    const c = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" });
+    return sd === "asc" ? c : -c;
+  });
+}
+function makeTh(sk, sd, toggle) {
+  return function Th({ k, children, style }) {
+    return (
+      <th onClick={() => toggle(k)} style={{ cursor: "pointer", userSelect: "none", ...style }}>
+        {children}{sk === k ? (sd === "asc" ? " ↑" : " ↓") : ""}
+      </th>
+    );
+  };
+}
+
 // ── Directory ─────────────────────────────────────────────────────────────────
 function SearchSelect({ value, onSelect, items, getLabel, getId, placeholder }) {
   const [q, setQ] = useState("");
@@ -733,8 +764,8 @@ function SearchSelect({ value, onSelect, items, getLabel, getId, placeholder }) 
   const label = selected ? getLabel(selected) : "";
   const results = open
     ? (q.length > 0
-        ? items.filter((i) => norm(getLabel(i)).includes(norm(q))).slice(0, 8)
-        : items.slice(0, 8))
+        ? items.filter((i) => norm(getLabel(i)).includes(norm(q))).slice(0, 12)
+        : items.slice(0, 12))
     : [];
   return (
     <div style={{ position: "relative" }}>
@@ -746,6 +777,9 @@ function SearchSelect({ value, onSelect, items, getLabel, getId, placeholder }) 
         placeholder={placeholder || "Buscar…"}
       />
       {value && <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>{value}</div>}
+      {open && items.length === 0 && (
+        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Nenhum item cadastrado.</div>
+      )}
       {open && results.length > 0 && (
         <div style={{ position: "absolute", zIndex: 200, background: "var(--card)", border: "1.5px solid var(--border)", borderRadius: 8, left: 0, right: 0, maxHeight: 200, overflowY: "auto", boxShadow: "var(--shadow-md)" }}>
           <div style={{ padding: "6px 12px", cursor: "pointer", fontSize: 12, color: "var(--muted)" }} onMouseDown={() => { onSelect(""); setOpen(false); setQ(""); }}>— Nenhum —</div>
@@ -824,6 +858,14 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   const [selected, setSelected] = useState([]);
   const [saving, setSaving]   = useState(false);
   const [expanded, setExpanded] = useState(null);
+  // Sort state per table
+  const [chSk, setChSk] = useState("display"); const [chSd, setChSd] = useState("asc");
+  const [mbSk, setMbSk] = useState("name");    const [mbSd, setMbSd] = useState("asc");
+  const [gaSk, setGaSk] = useState("name");    const [gaSd, setGaSd] = useState("asc");
+  const mkToggle = (sk, setSk, sd, setSd) => (k) => { if (sk === k) setSd((d) => d === "asc" ? "desc" : "asc"); else { setSk(k); setSd("asc"); } };
+  const ChTh = makeTh(chSk, chSd, mkToggle(chSk, setChSk, chSd, setChSd));
+  const MbTh = makeTh(mbSk, mbSd, mkToggle(mbSk, setMbSk, mbSd, setMbSd));
+  const GaTh = makeTh(gaSk, gaSd, mkToggle(gaSk, setGaSk, gaSd, setGaSd));
 
   const switchTab = (id) => { setTab(id); setSearch(""); setEditing(null); setSelected([]); setFormData({}); };
 
@@ -891,9 +933,10 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── Churches ─────────────────────────────────────────────────────── */}
       {tab === "churches" && (() => {
-        const list = (churches || []).filter((c) =>
+        const rawList = (churches || []).filter((c) =>
           norm(c.display).includes(norm(search))
         );
+        const list = sortData(rawList, chSk, chSd);
         const allIds = list.map((c) => c.id).filter(Boolean);
         return (
           <>
@@ -985,7 +1028,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
                         onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
                     </th>
-                    <th>Display</th><th>Cidade</th><th style={{ width: 55 }}>Estado</th><th style={{ width: 70 }}>País</th><th>Pastor</th><th style={{ width: 110 }}></th>
+                    <ChTh k="display">Display</ChTh><ChTh k="city">Cidade</ChTh><th style={{ width: 55 }}>Estado</th><th style={{ width: 70 }}>País</th><th>Pastor</th><th style={{ width: 110 }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1025,10 +1068,11 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── Members ──────────────────────────────────────────────────────── */}
       {tab === "members" && (() => {
-        const list = (members || []).filter((m) =>
+        const rawList = (members || []).filter((m) =>
           norm(m.name).includes(norm(search)) ||
           norm(m.church).includes(norm(search))
         );
+        const list = sortData(rawList, mbSk, mbSd);
         const allIds = list.map((m) => m.id).filter(Boolean);
         return (
           <>
@@ -1059,15 +1103,36 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     </div>
                     <div><label>Igreja</label><input value={formData.church || ""} onChange={(e) => setFormData({ ...formData, church: e.target.value })} placeholder="Newark, NJ - EUA" /></div>
                     <div className="fr">
-                      <div><label>Função</label>
-                        <select value={formData.role || ""} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
-                          <option value="">—</option>
+                      <div>
+                        <label>Funções (selecione uma ou mais)</label>
+                        <div style={{ border: "1px solid var(--input-border)", borderRadius: 8, padding: "8px 12px", maxHeight: 180, overflowY: "auto", background: "var(--input-bg)" }}>
                           {ROLE_GROUPS.map((g) => (
-                            <optgroup key={g.group} label={g.group}>
-                              {g.roles.map((r) => <option key={r} value={r}>{r}</option>)}
-                            </optgroup>
+                            <div key={g.group} style={{ marginBottom: 8 }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 3 }}>{g.group}</div>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                {g.roles.map((r) => (
+                                  <label key={r} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, cursor: "pointer", background: (formData.roles || []).includes(r) ? "var(--sidebar-active-bg)" : "transparent", padding: "2px 6px", borderRadius: 4 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={(formData.roles || []).includes(r)}
+                                      onChange={(e) => {
+                                        const cur = formData.roles || [];
+                                        setFormData({ ...formData, roles: e.target.checked ? [...cur, r] : cur.filter((x) => x !== r) });
+                                      }}
+                                      style={{ width: "auto" }}
+                                    />
+                                    {r}
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
                           ))}
-                        </select>
+                        </div>
+                        {(formData.roles || []).length > 0 && (
+                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 5 }}>
+                            {(formData.roles || []).map((r) => <span key={r} className="badge badge-blue">{r}</span>)}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label>GA (Grupo de Assistência)</label>
@@ -1095,13 +1160,25 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     <div><label>Alergias</label><textarea rows={2} value={formData.allergies || ""} onChange={(e) => setFormData({ ...formData, allergies: e.target.value })} placeholder="Ex: amendoim, látex…" style={{ resize: "vertical" }} /></div>
                     <div><label>Necessidades Especiais</label><textarea rows={2} value={formData.specialNeeds || ""} onChange={(e) => setFormData({ ...formData, specialNeeds: e.target.value })} placeholder="Ex: cadeira de rodas…" style={{ resize: "vertical" }} /></div>
                     <div><label>Notas</label><textarea rows={2} value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} style={{ resize: "vertical" }} /></div>
+                    {(() => {
+                      const memberRosters = (rosters || []).filter((r) => (r.memberIds || []).includes(editing?.id));
+                      if (memberRosters.length === 0) return null;
+                      return (
+                        <div>
+                          <label>Equipes</label>
+                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                            {memberRosters.map((r) => <span key={r.id} className="badge badge-green">{r.team}</span>)}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
                     <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
                     <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
                       if (!formData.name?.trim() && !formData.firstName?.trim()) { notify("Nome obrigatório."); return; }
                       const fullName = formData.name?.trim() || ((formData.firstName || '') + ' ' + (formData.lastName || '')).trim();
-                      const row = { name: fullName, first_name: formData.firstName || null, last_name: formData.lastName || null, badge_name: formData.badgeName || fullName, gender: formData.gender || "M", category: formData.category || "Adulto", church: formData.church || "", role: formData.role || "", family_id: formData.familyId || null, ga_id: formData.gaId || null, allergies: formData.allergies || null, special_needs: formData.specialNeeds || null, notes: formData.notes || null };
+                      const row = { name: fullName, first_name: formData.firstName || null, last_name: formData.lastName || null, badge_name: formData.badgeName || fullName, gender: formData.gender || "M", category: formData.category || "Adulto", church: formData.church || "", roles: formData.roles || [], role: (formData.roles || [])[0] || "", family_id: formData.familyId || null, ga_id: formData.gaId || null, allergies: formData.allergies || null, special_needs: formData.specialNeeds || null, notes: formData.notes || null };
                       if (!isNew) row.id = editing.id;
                       saveRow("members", row, members, setMembers, mapMember);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
@@ -1127,7 +1204,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
                           onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
                       </th>
-                      <th>Nome</th><th>Crachá</th><th style={{ width: 55 }}>Gên.</th><th>Categoria</th><th>Igreja</th><th>Função</th><th>Notas</th><th style={{ width: 90 }}></th>
+                      <MbTh k="name">Nome</MbTh><th>Crachá</th><th style={{ width: 55 }}>Gên.</th><MbTh k="category">Categoria</MbTh><th>Igreja</th><th>Função</th><th>Notas</th><th style={{ width: 90 }}></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1139,11 +1216,20 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         <td><span className="badge badge-gray">{m.gender}</span></td>
                         <td><span className="badge badge-blue">{m.category}</span></td>
                         <td style={{ fontSize: 12 }}>{m.church}</td>
-                        <td style={{ fontSize: 12 }}>{m.role || <span style={{ color: "var(--muted)" }}>—</span>}</td>
+                        <td style={{ fontSize: 12 }}>
+                          {(() => {
+                            const roles = m.roles && m.roles.length > 0 ? m.roles : (m.role ? [m.role] : []);
+                            if (roles.length === 0) return <span style={{ color: "var(--muted)" }}>—</span>;
+                            return <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+                              {roles.slice(0, 2).map((r) => <span key={r} className="badge badge-blue" style={{ fontSize: 10 }}>{r}</span>)}
+                              {roles.length > 2 && <span className="badge badge-gray" style={{ fontSize: 10 }}>+{roles.length - 2}</span>}
+                            </div>;
+                          })()}
+                        </td>
                         <td style={{ fontSize: 11, color: "var(--muted)", maxWidth: 160 }}>{m.notes ? m.notes.slice(0, 40) + (m.notes.length > 40 ? '…' : '') : '—'}</td>
                         <td>
                           <div style={{ display: "flex", gap: 6 }}>
-                            <button className="btn btn-ghost btn-xs" onClick={() => openEdit(m, { firstName: m.firstName || '', lastName: m.lastName || '', name: m.name, badgeName: m.badgeName || "", gender: m.gender || "M", category: m.category, church: m.church || "", role: m.role || "", familyId: m.familyId || "", gaId: m.gaId || "", allergies: m.allergies || '', specialNeeds: m.specialNeeds || '', notes: m.notes || '' })}><Pencil size={12} /></button>
+                            <button className="btn btn-ghost btn-xs" onClick={() => openEdit(m, { firstName: m.firstName || '', lastName: m.lastName || '', name: m.name, badgeName: m.badgeName || "", gender: m.gender || "M", category: m.category, church: m.church || "", roles: m.roles || (m.role ? [m.role] : []), role: m.role || "", familyId: m.familyId || "", gaId: m.gaId || "", allergies: m.allergies || '', specialNeeds: m.specialNeeds || '', notes: m.notes || '' })}><Pencil size={12} /></button>
                             <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [m.id], label: m.name })}><Trash2 size={12} /></button>
                           </div>
                         </td>
@@ -1155,7 +1241,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
               </div>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ firstName: "", lastName: "", name: "", badgeName: "", gender: "M", category: "Adulto", church: "", role: "", familyId: "", gaId: "", allergies: "", specialNeeds: "", notes: "" })}><Plus size={14} /> Novo Membro</button>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ firstName: "", lastName: "", name: "", badgeName: "", gender: "M", category: "Adulto", church: "", roles: [], role: "", familyId: "", gaId: "", allergies: "", specialNeeds: "", notes: "" })}><Plus size={14} /> Novo Membro</button>
               {(members || []).length > 0 && (
                 <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
                   onClick={() => setDeleting({ ids: (members || []).map((m) => m.id).filter(Boolean), label: "" })}>
@@ -1289,10 +1375,11 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── GA Groups ────────────────────────────────────────────────────── */}
       {tab === "groups" && (() => {
-        const list = (gas || []).filter((g) =>
+        const rawList = (gas || []).filter((g) =>
           norm(g.name).includes(norm(search)) ||
           norm(g.church).includes(norm(search))
         );
+        const list = sortData(rawList, gaSk, gaSd);
         const allIds = list.map((g) => g.id).filter(Boolean);
         return (
           <>
@@ -1345,7 +1432,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
                         onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
                     </th>
-                    <th>Nome</th><th>Igreja</th><th>Líder</th><th style={{ width: 90 }}></th>
+                    <GaTh k="name">Nome</GaTh><th>Igreja</th><th>Líder</th><th style={{ width: 90 }}></th>
                   </tr>
                 </thead>
                 <tbody>

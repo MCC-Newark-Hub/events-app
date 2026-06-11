@@ -9,6 +9,23 @@ import DetailModal from "@/components/DetailModal";
 
 const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+function useSortable(data, defaultKey) {
+  const [sk, setSk] = useState(defaultKey);
+  const [sd, setSd] = useState("asc");
+  const toggle = (k) => { if (sk === k) setSd((d) => d === "asc" ? "desc" : "asc"); else { setSk(k); setSd("asc"); } };
+  const sorted = [...(data || [])].sort((a, b) => {
+    const av = a[sk] ?? ""; const bv = b[sk] ?? "";
+    const c = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" });
+    return sd === "asc" ? c : -c;
+  });
+  const Th = ({ k, children, style }) => (
+    <th onClick={() => toggle(k)} style={{ cursor: "pointer", userSelect: "none", ...style }}>
+      {children}{sk === k ? (sd === "asc" ? " \u2191" : " \u2193") : ""}
+    </th>
+  );
+  return { sorted, Th };
+}
+
 export default function RegistrationsTab(props) {
   const {
     regs,
@@ -33,7 +50,7 @@ export default function RegistrationsTab(props) {
   const [detail, setDetail] = useState(null);
   const all = regs.filter((r) => r.eventId === event?.id);
   const active = all.filter((r) => !r.cancelled && !r.waitlisted);
-  const filtered = all.filter((r) => {
+  const preFiltered = all.filter((r) => {
     const ms =
       norm(r.memberName).includes(norm(search)) ||
       norm(r.regNumber).includes(norm(search));
@@ -47,6 +64,7 @@ export default function RegistrationsTab(props) {
       (filter === "cancelled" && r.cancelled);
     return ms && mf;
   });
+  const { sorted: filtered, Th } = useSortable(preFiltered, "memberName");
   return (
     <div>
       <div
@@ -97,13 +115,13 @@ export default function RegistrationsTab(props) {
             <thead>
               <tr>
                 <th>{t.regNum}</th>
-                <th>{t.memberName}</th>
+                <Th k="memberName">{t.memberName}</Th>
                 <th>{t.cargo}</th>
-                <th>{t.cat}</th>
+                <Th k="category">{t.cat}</Th>
                 <th>{t.churchH}</th>
-                <th>{t.teamH}</th>
-                <th>{t.feeH}</th>
-                <th>{t.statusH}</th>
+                <Th k="team">{t.teamH}</Th>
+                <Th k="fee">{t.feeH}</Th>
+                <Th k="registeredAt">{t.statusH}</Th>
                 <th></th>
               </tr>
             </thead>
@@ -192,6 +210,7 @@ export default function RegistrationsTab(props) {
           reg={detail}
           event={event}
           dbTeams={dbTeams}
+          regs={regs}
           canEditPayment={true}
           onClose={() => setDetail(null)}
           onUpdate={(u) => {

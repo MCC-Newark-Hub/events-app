@@ -79,6 +79,11 @@ function TeamLeaderView(props) {
             </h2>
             <p style={{ color: "#6b7280", fontSize: 13 }}>{t.teamReadOnly}</p>
           </div>
+          {myTeams.length === 0 && (
+            <div style={{ padding: "24px", background: "var(--card)", borderRadius: 10, border: "1px solid var(--border)", color: "var(--muted)", textAlign: "center" }}>
+              Nenhuma equipe cadastrada para este evento.
+            </div>
+          )}
           {myTeams.map((team) => {
             const roster = rosters.find((r) => r.eventId === event?.id && r.team === team);
             const mids = roster?.memberIds || [];
@@ -192,7 +197,11 @@ function TeamLeaderView(props) {
                       })}
                     </div>
                   )}
-                  {teamMembers.length === 0 ? (
+                  {!roster ? (
+                    <p style={{ padding: 24, color: "#6b7280", textAlign: "center" }}>
+                      Nenhuma equipe cadastrada para este evento.
+                    </p>
+                  ) : teamMembers.length === 0 ? (
                     <p style={{ padding: 24, color: "#6b7280", textAlign: "center" }}>
                       {t.noMembers}
                     </p>

@@ -529,18 +529,18 @@ function RegModal({
                           const m = members.find((x) => x.id === mid);
                           if (m)
                             onSave({
-                              ...m,
                               memberId: m.id,
                               memberName: m.name,
                               badgeName: m.badgeName || m.name,
                               category: m.category,
                               church: m.church || "",
-                              role: m.role || "",
-                              team: f.team,
+                              role: (m.roles || [])[0] || m.role || "",
+                              familyId: sharedFamilyId,
+                              team: m.role === "Pastor" ? "Pastores" : m.role === "Diácono" ? "Diáconos" : m.role === "Ungido" ? "Ungidos" : "Participante",
                               paid: f.paid,
                               exempt: m.role === "Pastor",
+                              needsTranslation: false,
                               note: f.note || "",
-                              familyId: sharedFamilyId,
                             });
                         });
                         onClose();
