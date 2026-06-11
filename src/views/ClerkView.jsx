@@ -9,7 +9,7 @@ import RegModal from "@/components/RegModal";
 import DetailModal from "@/components/DetailModal";
 
 function ClerkView(props) {
-  const { event, regs, members, families, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify } = props;
+  const { event, regs, members, families, dbTeams, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify } = props;
   const t = useT();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("active");
@@ -125,8 +125,8 @@ function ClerkView(props) {
           </div>
         </div>
       </div>
-      {showReg && <RegModal event={event} members={members} families={families} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
-      {detail && <DetailModal reg={detail} event={event} canEditPayment={true} onClose={() => setDetail(null)} lang={lang} onUpdate={(u) => { updateReg(detail.id, u); setDetail(null); }} />}
+      {showReg && <RegModal event={event} members={members} families={families} dbTeams={dbTeams} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
+      {detail && <DetailModal reg={detail} event={event} dbTeams={dbTeams} canEditPayment={true} onClose={() => setDetail(null)} lang={lang} onUpdate={(u) => { updateReg(detail.id, u); setDetail(null); }} />}
     </div>
   );
 }

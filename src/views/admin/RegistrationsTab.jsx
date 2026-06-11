@@ -12,6 +12,7 @@ export default function RegistrationsTab(props) {
     setRegs,
     members,
     families,
+    dbTeams,
     addReg,
     updateReg,
     submitApproval,
@@ -169,6 +170,7 @@ export default function RegistrationsTab(props) {
           event={event}
           members={members}
           families={families}
+          dbTeams={dbTeams}
           isFull={isFull}
           existingRegs={active}
           prefill={null}
@@ -186,6 +188,7 @@ export default function RegistrationsTab(props) {
         <DetailModal
           reg={detail}
           event={event}
+          dbTeams={dbTeams}
           canEditPayment={true}
           onClose={() => setDetail(null)}
           onUpdate={(u) => {

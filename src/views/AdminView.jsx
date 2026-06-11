@@ -1309,32 +1309,79 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── Teams Domain ─────────────────────────────────────────────────── */}
       {tab === "teams_dir" && (() => {
-        const list = (dbTeams || []).filter((t) =>
-          (t.name ||norm( "")).includes(norm(search))
-        );
+        const list = (dbTeams || []).filter((t) => norm(t.name).includes(norm(search)));
         const allIds = list.map((t) => t.id).filter(Boolean);
-        const mapTeam = (t) => ({ id: t.id, name: t.name, sortOrder: t.sort_order ?? t.sortOrder ?? 0, isService: t.is_service ?? t.isService ?? true });
+        const mapTeamRow = (t) => ({
+          id: t.id, name: t.name,
+          sortOrder: t.sort_order ?? t.sortOrder ?? 0,
+          isService: t.is_service ?? t.isService ?? true,
+          description: t.description || "",
+          leaderId: t.leader_id ?? t.leaderId ?? null,
+          responsibilities: t.responsibilities || "",
+        });
         return (
           <>
             {editing !== null && (
               <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
-                <div className="modal" style={{ maxWidth: 400 }}>
-                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Nova Equipe" : "Editar Equipe"}</h3>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div><label>Nome *</label><input value={formData.name || ""} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
-                    <div><label>Ordem</label><input type="number" value={formData.sortOrder ?? 0} onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })} /></div>
+                <div className="modal" style={{ maxWidth: 500 }}>
+                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>
+                    {isNew ? "Nova Equipe" : "Editar Equipe"}
+                  </h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    {/* Name + order */}
+                    <div className="fr">
+                      <div><label>Nome *</label><input value={formData.name || ""} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
+                      <div><label>Ordem</label><input type="number" value={formData.sortOrder ?? 0} onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })} /></div>
+                    </div>
+                    {/* Service flag */}
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <input type="checkbox" id="is-service" checked={!!formData.isService} onChange={(e) => setFormData({ ...formData, isService: e.target.checked })} />
-                      <label htmlFor="is-service" style={{ margin: 0, cursor: "pointer" }}>Equipe de serviço</label>
+                      <label htmlFor="is-service" style={{ margin: 0, cursor: "pointer", fontSize: 13, fontWeight: 500, textTransform: "none", letterSpacing: 0, color: "var(--text)" }}>
+                        Equipe de serviço (aparece em rosters e isenções)
+                      </label>
+                    </div>
+                    {/* Description */}
+                    <div>
+                      <label>Descrição</label>
+                      <textarea rows={2} value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="O que esta equipe faz..." />
+                    </div>
+                    {/* Leader */}
+                    <div>
+                      <label>Líder da Equipe</label>
+                      <SearchSelect
+                        value={formData.leaderId || ""}
+                        onSelect={(id) => setFormData({ ...formData, leaderId: id })}
+                        items={members || []}
+                        getLabel={(m) => m?.name || ""}
+                        getId={(m) => m?.id || ""}
+                        placeholder="Buscar membro..."
+                      />
+                      {formData.leaderId && (
+                        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>ID: {formData.leaderId}</div>
+                      )}
+                    </div>
+                    {/* Responsibilities */}
+                    <div>
+                      <label>Responsabilidades</label>
+                      <textarea rows={3} value={formData.responsibilities || ""} onChange={(e) => setFormData({ ...formData, responsibilities: e.target.value })}
+                        placeholder="Ex: Preparar o salão, limpar após o evento..." />
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+                  <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                     <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
                     <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
                       if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
-                      const row = { name: formData.name.trim(), sort_order: formData.sortOrder ?? 0, is_service: !!formData.isService };
+                      const row = {
+                        name: formData.name.trim(),
+                        sort_order: formData.sortOrder ?? 0,
+                        is_service: !!formData.isService,
+                        description: formData.description || null,
+                        leader_id: formData.leaderId || null,
+                        responsibilities: formData.responsibilities || null,
+                      };
                       if (!isNew) row.id = editing.id;
-                      saveRow("teams", row, dbTeams, setDbTeams, mapTeam);
+                      saveRow("teams", row, dbTeams, setDbTeams, mapTeamRow);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
                   </div>
                 </div>
@@ -1350,37 +1397,58 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                 onDeleteSelected={() => setDeleting({ ids: selected, label: "" })} />
             )}
             <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 36 }}>
-                      <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
-                        onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
-                    </th>
-                    <th>Nome</th><th style={{ width: 80 }}>Ordem</th><th style={{ width: 120 }}>Serviço</th><th style={{ width: 90 }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.map((t) => (
-                    <tr key={t.id} style={{ background: t.id && selected.includes(t.id) ? "var(--sidebar-active-bg)" : "" }}>
-                      <td><input type="checkbox" checked={!!(t.id && selected.includes(t.id))} onChange={() => t.id && toggleSel(t.id)} /></td>
-                      <td style={{ fontWeight: 500 }}>{t.name}</td>
-                      <td style={{ fontSize: 12, color: "var(--muted)" }}>{t.sort_order}</td>
-                      <td>{t.is_service ? <span className="badge badge-green">Sim</span> : <span className="badge badge-gray">Não</span>}</td>
-                      <td>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(t, { name: t.name, sortOrder: t.sort_order ?? 0, isService: t.is_service ?? true })}><Pencil size={12} /></button>
-                          {t.id && <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [t.id], label: t.name })}><Trash2 size={12} /></button>}
-                        </div>
-                      </td>
+              <div style={{ overflowX: "auto" }}>
+                <table className="table" style={{ minWidth: 560 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 36 }}>
+                        <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
+                          onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
+                      </th>
+                      <th>Nome</th>
+                      <th>Líder</th>
+                      <th>Descrição</th>
+                      <th style={{ width: 80 }}>Serviço</th>
+                      <th style={{ width: 90 }}></th>
                     </tr>
-                  ))}
-                  {list.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado. Execute a migration 002 no Supabase.</td></tr>}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {list.map((t) => {
+                      const leader = (members || []).find((m) => m.id === t.leaderId);
+                      return (
+                        <tr key={t.id} style={{ background: t.id && selected.includes(t.id) ? "var(--sidebar-active-bg)" : "" }}>
+                          <td><input type="checkbox" checked={!!(t.id && selected.includes(t.id))} onChange={() => t.id && toggleSel(t.id)} /></td>
+                          <td style={{ fontWeight: 600 }}>{t.name}</td>
+                          <td style={{ fontSize: 12 }}>{leader ? leader.name : (t.leaderId ? <span style={{ color: "var(--muted)" }}>{t.leaderId}</span> : <span style={{ color: "var(--muted)" }}>—</span>)}</td>
+                          <td style={{ fontSize: 12, color: "var(--muted)", maxWidth: 200 }}>
+                            {t.description ? t.description.slice(0, 60) + (t.description.length > 60 ? "…" : "") : "—"}
+                          </td>
+                          <td>{t.isService ? <span className="badge badge-green">Sim</span> : <span className="badge badge-gray">Não</span>}</td>
+                          <td>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <button className="btn btn-ghost btn-xs" onClick={() => openEdit(t, {
+                                name: t.name, sortOrder: t.sortOrder ?? 0, isService: t.isService ?? true,
+                                description: t.description || "", leaderId: t.leaderId || null,
+                                responsibilities: t.responsibilities || "",
+                              })}><Pencil size={12} /></button>
+                              {t.id && <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [t.id], label: t.name })}><Trash2 size={12} /></button>}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {list.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>
+                      Nenhum resultado. Execute a migration 002 no Supabase SQL Editor.
+                    </td></tr>}
+                  </tbody>
+                </table>
+              </div>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", sortOrder: (dbTeams || []).length, isService: true })}><Plus size={14} /> Nova Equipe</button>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }}
+                onClick={() => openNew({ name: "", sortOrder: (dbTeams || []).length, isService: true, description: "", leaderId: null, responsibilities: "" })}>
+                <Plus size={14} /> Nova Equipe
+              </button>
             </div>
           </>
         );

@@ -90,6 +90,18 @@ export function mapRoster(r) {
   };
 }
 
+export function mapTeam(t) {
+  return {
+    id: t.id,
+    name: t.name,
+    sortOrder: t.sort_order ?? 0,
+    isService: t.is_service ?? true,
+    description: t.description || "",
+    leaderId: t.leader_id || null,
+    responsibilities: t.responsibilities || "",
+  };
+}
+
 const OBREIRO_ROLES = ["Pastor", "Ungido", "Diácono", "Obreiro"];
 
 export function useAppData({ getUserRef, notify }) {
@@ -152,7 +164,7 @@ export function useAppData({ getUserRef, notify }) {
         setDbUsers(usrRes.data || []);
         if (catRes.data && catRes.data.length > 0) setDbCategories(catRes.data);
         if (fnRes.data && fnRes.data.length > 0) setDbFunctions(fnRes.data);
-        setDbTeams(teamsRes.data || []);
+        setDbTeams((teamsRes.data || []).map(mapTeam));
         var maxSeq = (regRes.data || []).reduce(function (m, r) {
           var n = parseInt((r.reg_number || "").split("-")[2] || "0");
           return n > m ? n : m;

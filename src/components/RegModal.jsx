@@ -13,6 +13,7 @@ function RegModal({
   members,
   families: _families,
   churches,
+  dbTeams,
   isFull,
   existingRegs,
   onClose,
@@ -20,6 +21,8 @@ function RegModal({
   onRequestOverride,
   prefill,
 }) {
+  // Use DB teams if loaded, fallback to hardcoded constant
+  const teamList = dbTeams && dbTeams.length > 0 ? dbTeams.map((t) => t.name) : TEAMS;
   const t = useT();
   const [mode, setMode] = useState("member");
   const [src, setSrc] = useState(prefill?.name || "");
@@ -313,7 +316,7 @@ function RegModal({
                   <div>
                     <label>{t.team}</label>
                     <select value={f.team} onChange={(e) => setF({ ...f, team: e.target.value })}>
-                      {TEAMS.map((t2) => (
+                      {teamList.map((t2) => (
                         <option key={t2}>{t2}</option>
                       ))}
                     </select>
@@ -499,7 +502,7 @@ function RegModal({
                           value={f.team}
                           onChange={(e) => setF({ ...f, team: e.target.value })}
                         >
-                          {TEAMS.map((t2) => (
+                          {teamList.map((t2) => (
                             <option key={t2}>{t2}</option>
                           ))}
                         </select>
@@ -731,7 +734,7 @@ function RegModal({
             <div>
               <label>{t.team}</label>
               <select value={f.team} onChange={(e) => setF({ ...f, team: e.target.value })}>
-                {TEAMS.map((t2) => (
+                {teamList.map((t2) => (
                   <option key={t2}>{t2}</option>
                 ))}
               </select>

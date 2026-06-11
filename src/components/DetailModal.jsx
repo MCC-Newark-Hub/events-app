@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useT } from "@/i18n/strings";
 import { TEAMS, ROLE_GROUPS } from "@/constants";
 
-function DetailModal({ reg, onClose, onUpdate, canEditPayment, lang }) {
+function DetailModal({ reg, onClose, onUpdate, canEditPayment, lang, dbTeams }) {
+  const teamList = dbTeams && dbTeams.length > 0 ? dbTeams.map((t) => t.name) : TEAMS;
   const t = useT();
   const [f, setF] = useState({ ...reg });
   return (
@@ -62,7 +63,7 @@ function DetailModal({ reg, onClose, onUpdate, canEditPayment, lang }) {
             <div>
               <label>{t.team}</label>
               <select value={f.team} onChange={(e) => setF({ ...f, team: e.target.value })}>
-                {TEAMS.map((t2) => (
+                {teamList.map((t2) => (
                   <option key={t2}>{t2}</option>
                 ))}
               </select>
