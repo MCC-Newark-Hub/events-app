@@ -458,7 +458,7 @@ function AdminImport({ members, setMembers, families, setFamilies, gas, setGas, 
         return m;
       };
       const appItems = items.map(toApp);
-      const updater = (set) => set(p => { var u=[...p]; appItems.forEach(m => { var i=u.findIndex(x=>x.id===m.id); if(i>=0)u[i]=m; else u.push(m); }); return u; });
+      const updater = (p) => { var u=[...p]; appItems.forEach(m => { var i=u.findIndex(x=>x.id===m.id); if(i>=0)u[i]=m; else u.push(m); }); return u; };
       if(activeTab==="members")setMembers(updater);
       else if(activeTab==="families")setFamilies(updater);
       else if(activeTab==="assistanceGroups")setGas(updater);
