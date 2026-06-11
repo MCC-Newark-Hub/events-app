@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
+
 import { ROLE_BADGE, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
 import StatusBadge from "@/components/StatusBadge";
 import RegModal from "@/components/RegModal";
 import DetailModal from "@/components/DetailModal";
+
+const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 export default function RegistrationsTab(props) {
   const {
@@ -32,8 +35,8 @@ export default function RegistrationsTab(props) {
   const active = all.filter((r) => !r.cancelled && !r.waitlisted);
   const filtered = all.filter((r) => {
     const ms =
-      r.memberName.toLowerCase().includes(search.toLowerCase()) ||
-      r.regNumber.toLowerCase().includes(search.toLowerCase());
+      norm(r.memberName).includes(norm(search)) ||
+      norm(r.regNumber).includes(norm(search));
     const mf =
       filter === "all" ||
       (filter === "paid" && r.paid) ||

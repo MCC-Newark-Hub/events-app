@@ -156,8 +156,8 @@ function PublicPortal({ event, members: propMembers, regs, addReg, lang, setLang
 
   const allMembers = propMembers || [];
   const existingMemberIds = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled).map((r) => r.memberId);
-  const primaryResults = primarySearch.length > 1 ? allMembers.filter((m) =>norm( m.name).includes(norm(primarySearch)) && !existingMemberIds.includes(m.id)).slice(0, 20) : [];
-  const famResults = famSearch.length > 1 ? allMembers.filter((m) =>norm( m.name).includes(norm(famSearch)) && m.id !== primary?.id && !familyMembers.find((fm) => fm.id === m.id) && !existingMemberIds.includes(m.id)).slice(0, 6) : [];
+  const primaryResults = primarySearch.length > 1 ? allMembers.filter((m) =>norm(m.name).includes(norm(primarySearch)) && !existingMemberIds.includes(m.id)).slice(0, 20) : [];
+  const famResults = famSearch.length > 1 ? allMembers.filter((m) =>norm(m.name).includes(norm(famSearch)) && m.id !== primary?.id && !familyMembers.find((fm) => fm.id === m.id) && !existingMemberIds.includes(m.id)).slice(0, 6) : [];
 
   const eventFee = (cat) => event?.fees?.[cat] ?? 0;
   const allParticipants = primary ? [primary, ...familyMembers] : [];

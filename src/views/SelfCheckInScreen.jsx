@@ -15,8 +15,8 @@ export default function SelfCheckInScreen({ eventId, regs, members, updatePresen
   // Search members by name
   const results = query.length > 1
     ? members.filter((m) =>
-norm(        m.name).includes(norm(query)) ||
-        (m.firstName + ' ' +norm( m.lastName)).includes(norm(query))
+norm(m.name).includes(norm(query)) ||
+        norm(m.firstName + " " + m.lastName).includes(norm(query))
       ).slice(0, 8)
     : [];
 

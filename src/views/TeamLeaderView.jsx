@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
+
+const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
 import { STATUS_CFG } from "@/constants";
 import Topbar from "@/components/Topbar";
 
@@ -55,7 +57,7 @@ function TeamLeaderView(props) {
   };
   const searchR =
     msearch.length > 1
-      ? members.filter((m) => m.name.toLowerCase().includes(msearch.toLowerCase())).slice(0, 6)
+      ? members.filter((m) => norm(m.name).includes(norm(msearch))).slice(0, 6)
       : [];
   return (
     <div className="app-shell">

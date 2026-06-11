@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { CHURCH_LIST } from "@/constants";
 
+const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+
 export default function ChurchSearch({ value, onChange, placeholder, churches }) {
   var churchList = churches && churches.length > 0 ? churches : CHURCH_LIST;
   var [search, setSearch] = useState(
@@ -13,7 +15,7 @@ export default function ChurchSearch({ value, onChange, placeholder, churches })
 
   var filtered = churchList
     .filter(function (c) {
-      return (c.display || c).toLowerCase().includes(search.toLowerCase());
+      return norm(c.display || c).includes(norm(search));
     })
     .slice(0, 10);
 

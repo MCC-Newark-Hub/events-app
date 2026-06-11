@@ -56,7 +56,7 @@ function RegModal({
   const avail = members.filter((m) => !existingRegs.find((r) => r.memberId === m.id));
   const results =
     src.length > 0
-      ? avail.filter((m) => src.length === 0 ? true :norm( m.name).includes(norm(src))).slice(0, 20)
+      ? avail.filter((m) => src.length === 0 ? true :norm(m.name).includes(norm(src))).slice(0, 20)
       : [];
   const pick = (m) => {
     setSel(m);
@@ -569,7 +569,7 @@ function RegModal({
             >
               {avail
                 .filter(function (m) {
-                  return !src ||norm( m.name).includes(norm(src));
+                  return !src ||norm(m.name).includes(norm(src));
                 })
                 .map(function (m) {
                   var selected = bulkSel.some(function (x) {

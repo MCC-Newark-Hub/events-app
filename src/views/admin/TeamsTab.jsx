@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
+
+const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
 import { SERVICE_TEAMS, STATUS_CFG } from "@/constants";
 
 export default function TeamsTab({ event, regs, members, rosters, setRosters, notify }) {
@@ -56,7 +58,7 @@ export default function TeamsTab({ event, regs, members, rosters, setRosters, no
 
   const searchR =
     msearch.length > 1
-      ? members.filter((m) => m.name.toLowerCase().includes(msearch.toLowerCase())).slice(0, 6)
+      ? members.filter((m) => norm(m.name).includes(norm(msearch))).slice(0, 6)
       : [];
 
   return (
