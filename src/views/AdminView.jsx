@@ -881,7 +881,9 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
   const saveRow = async (table, row, stateList, setList, mapFn) => {
     setSaving(true);
-    if (isNew) {
+    // Derive new-vs-update from row.id so we're not relying on stale closure
+    const creating = !row.id;
+    if (creating) {
       const { data, error } = await sb.from(table).insert(row).select().single();
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setList([...stateList, mapFn ? mapFn(data) : data]);
@@ -890,7 +892,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setList(stateList.map((r) => r.id === row.id ? (mapFn ? mapFn({ ...r, ...row }) : { ...r, ...row }) : r));
     }
-    notify(isNew ? "Criado!" : "Atualizado!");
+    notify(creating ? "Criado!" : "Atualizado!");
     setSaving(false);
     setEditing(null);
     setFormData({});
@@ -939,7 +941,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       {tab === "churches" && (() => {
         const rawList = (churches || []).filter((c) =>
           norm(c.display).includes(norm(search))
-        );
+        ).sort((a, b) => (a.display || '').localeCompare(b.display || ''));
         const list = sortData(rawList, chSk, chSd);
         const allIds = list.map((c) => c.id).filter(Boolean);
         return (
@@ -1075,7 +1077,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
         const rawList = (members || []).filter((m) =>
           norm(m.name).includes(norm(search)) ||
           norm(m.church).includes(norm(search))
-        );
+        ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const list = sortData(rawList, mbSk, mbSd);
         const allIds = list.map((m) => m.id).filter(Boolean);
         return (
@@ -1108,33 +1110,29 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     <div><label>Igreja</label><input value={formData.church || ""} onChange={(e) => setFormData({ ...formData, church: e.target.value })} placeholder="Newark, NJ - EUA" /></div>
                     <div className="fr">
                       <div>
-                        <label>Funções (selecione uma ou mais)</label>
-                        <div style={{ border: "1px solid var(--input-border)", borderRadius: 8, padding: "8px 12px", maxHeight: 180, overflowY: "auto", background: "var(--input-bg)" }}>
-                          {ROLE_GROUPS.map((g) => (
-                            <div key={g.group} style={{ marginBottom: 8 }}>
-                              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 3 }}>{g.group}</div>
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                                {g.roles.map((r) => (
-                                  <label key={r} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, cursor: "pointer", background: (formData.roles || []).includes(r) ? "var(--sidebar-active-bg)" : "transparent", padding: "2px 6px", borderRadius: 4 }}>
-                                    <input
-                                      type="checkbox"
-                                      checked={(formData.roles || []).includes(r)}
-                                      onChange={(e) => {
-                                        const cur = formData.roles || [];
-                                        setFormData({ ...formData, roles: e.target.checked ? [...cur, r] : cur.filter((x) => x !== r) });
-                                      }}
-                                      style={{ width: "auto" }}
-                                    />
-                                    {r}
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <label>Funções</label>
+                        {/* Search-and-chip: same UX as family members */}
+                        <SearchSelect
+                          value=""
+                          onSelect={(r) => {
+                            if (!r) return;
+                            const cur = formData.roles || [];
+                            if (cur.includes(r)) return;
+                            setFormData({ ...formData, roles: [...cur, r] });
+                          }}
+                          items={ROLE_GROUPS.flatMap((g) => g.roles.map((r) => ({ id: r, name: r, group: g.group }))).filter((r) => !(formData.roles || []).includes(r.id)).sort((a, b) => a.name.localeCompare(b.name))}
+                          getLabel={(r) => r.name}
+                          getId={(r) => r.id}
+                          placeholder="Buscar função…"
+                        />
                         {(formData.roles || []).length > 0 && (
-                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 5 }}>
-                            {(formData.roles || []).map((r) => <span key={r} className="badge badge-blue">{r}</span>)}
+                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
+                            {(formData.roles || []).map((r) => (
+                              <span key={r} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "var(--sidebar-active-bg)", border: "1px solid var(--primary)", borderRadius: 12, padding: "2px 8px", fontSize: 12 }}>
+                                {r}
+                                <button onClick={() => setFormData({ ...formData, roles: (formData.roles || []).filter((x) => x !== r) })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                              </span>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -1261,7 +1259,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       {tab === "families" && (() => {
         const list = (families || []).filter((f) =>
           norm(f.name).includes(norm(search))
-        );
+        ).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
         const allIds = list.map((f) => f.id).filter(Boolean);
         return (
           <>
@@ -1306,8 +1304,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
                       const ids = (formData.selectedMembers || []).map((m) => m.id);
                       const row = { name: formData.name.trim(), member_ids: ids };
-                      if (isNew) row.id = "F" + String(Date.now()).slice(-8);
-                      else row.id = editing.id;
+                      row.id = isNew ? ("F" + String(Date.now()).slice(-8)) : editing.id;
                       saveRow("families", row, families, setFamilies, mapFamily);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
                   </div>
@@ -1383,7 +1380,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
         const rawList = (gas || []).filter((g) =>
           norm(g.name).includes(norm(search)) ||
           norm(g.church).includes(norm(search))
-        );
+        ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const list = sortData(rawList, gaSk, gaSd);
         const allIds = list.map((g) => g.id).filter(Boolean);
         return (
@@ -1423,8 +1420,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
                       if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
                       const row = { name: formData.name.trim(), church: formData.church || "", leader_id: formData.leaderId || null, description: formData.description || "" };
-                      if (isNew) row.id = "GA" + String(Date.now()).slice(-8); // client-side ID until migration 009 runs
-                      else row.id = editing.id;
+                      row.id = isNew ? ("GA" + String(Date.now()).slice(-8)) : editing.id;
                       saveRow("assistance_groups", row, gas, setGas, mapGA);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
                   </div>
@@ -1488,7 +1484,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── Teams Domain ─────────────────────────────────────────────────── */}
       {tab === "teams_dir" && (() => {
-        const list = (dbTeams || []).filter((t) => norm(t.name).includes(norm(search)));
+        const list = (dbTeams || []).filter((t) => norm(t.name).includes(norm(search))).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
         const allIds = list.map((t) => t.id).filter(Boolean);
         const mapTeamRow = (t) => ({
           id: t.id, name: t.name,
@@ -1637,7 +1633,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       {tab === "teams" && (() => {
         const list = (rosters || []).filter((r) =>
           norm(r.team).includes(norm(search))
-        );
+        ).sort((a, b) => (a.team || "").localeCompare(b.team || ""));
         const allIds = list.map((r) => r.id).filter(Boolean);
         return (
           <>
