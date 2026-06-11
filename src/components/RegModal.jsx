@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, ROLE_GROUPS, TEAMS, OBREIRO_ROLES, ROLE_BADGE, fmt } from "@/constants";
-import { INIT_MEMBERS, INIT_FAMILIES } from "@/dev/seeds";
 import FeeBox from "./FeeBox";
 import ChurchSearch from "./ChurchSearch";
 
@@ -11,7 +10,7 @@ const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u
 function RegModal({
   event,
   members,
-  families: _families,
+  families,
   churches,
   dbTeams,
   isFull,
@@ -71,6 +70,9 @@ function RegModal({
             : m.role === "Ungido"
               ? "Ungidos"
               : "Participante",
+      church: m.church || p.church,
+      role: m.role || "",
+      category: m.category || p.category,
       exempt: false,
       memberName: "",
       badgeName: "", // clear manual fields when switching to member mode
@@ -415,12 +417,12 @@ function RegModal({
               <select
                 value={selFam?.id || ""}
                 onChange={(e) => {
-                  setSelFam(INIT_FAMILIES.find((x) => x.id === e.target.value) || null);
+                  setSelFam((families || []).find((x) => x.id === e.target.value) || null);
                   setFamIds([]);
                 }}
               >
                 <option value="">{t.selectFamily}</option>
-                {INIT_FAMILIES.map((x) => (
+                {(families || []).map((x) => (
                   <option key={x.id} value={x.id}>
                     {x.name}
                   </option>
@@ -432,7 +434,7 @@ function RegModal({
                 <div>
                   <label>{t.membersLabel}</label>
                   {selFam.memberIds.map((mid) => {
-                    const m = INIT_MEMBERS.find((x) => x.id === mid);
+                    const m = members.find((x) => x.id === mid);
                     const already = existingRegs.find((r) => r.memberId === mid);
                     if (!m) return null;
                     return (
@@ -487,7 +489,7 @@ function RegModal({
                       <strong>Total:</strong>{" "}
                       {fmt(
                         famIds.reduce((s, mid) => {
-                          const m = INIT_MEMBERS.find((x) => x.id === mid);
+                          const m = members.find((x) => x.id === mid);
                           return s + (event?.fees?.[m?.category] ?? 0);
                         }, 0)
                       )}{" "}
@@ -524,7 +526,7 @@ function RegModal({
                       onClick={() => {
                         const sharedFamilyId = selFam.id || ("FAM-" + Date.now());
                         famIds.forEach((mid) => {
-                          const m = INIT_MEMBERS.find((x) => x.id === mid);
+                          const m = members.find((x) => x.id === mid);
                           if (m)
                             onSave({
                               ...m,

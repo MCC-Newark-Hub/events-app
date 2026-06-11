@@ -14,6 +14,7 @@ export function mapMember(m) {
     category: m.category,
     church: m.church,
     role: m.role || '',
+    roles: m.roles || (m.role ? [m.role] : []),
     familyId: m.family_id,
     gaId: m.ga_id,
     allergies: m.allergies || '',
@@ -249,11 +250,14 @@ export function useAppData({ getUserRef, notify }) {
     notify(data.memberName + " " + label + "! (" + regNumber + ")");
     sb.from("registrations")
       .insert(dbRow)
+      .select()
+      .single()
       .then(function (res) {
         if (res.error) {
           console.error("addReg DB error:", res.error);
           return;
         }
+        if (!res.data) return;
         setRegs(function (p) {
           return p.map(function (x) {
             return x.regNumber === regNumber ? mapReg(res.data) : x;
@@ -336,11 +340,14 @@ export function useAppData({ getUserRef, notify }) {
     notify("Solicitacao enviada ao pastor!");
     sb.from("approvals")
       .insert(dbRow)
+      .select()
+      .single()
       .then(function (res) {
         if (res.error) {
           console.error("submitApproval error:", res.error);
           return;
         }
+        if (!res.data) return;
         setApprovals(function (p) {
           return p.map(function (a) {
             return a.id === tmp.id ? mapApproval(res.data) : a;

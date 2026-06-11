@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X } from "lucide-react";
 import { useT } from "@/i18n/strings";
-import { CATEGORIES, ROLE_GROUPS, TEAMS, CHURCHES, ROLE_BADGE, fmt } from "@/constants";
+import { CATEGORIES, ROLE_GROUPS, TEAMS, ROLE_BADGE, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
@@ -109,7 +109,7 @@ function AdminOverview({ event, regs, activeCount, wlRegs, exRegs }) {
   );
 }
 
-function AdminGA({ gas, setGas, members, regs, event, notify }) {
+function AdminGA({ gas, setGas, members, churches, regs, event, notify }) {
   const t = useT();
   const [showNew, setShowNew] = useState(false);
   const [newGA, setNewGA] = useState({ name: "", church: "", leaderId: "" });
@@ -176,10 +176,39 @@ function AdminGA({ gas, setGas, members, regs, event, notify }) {
             <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, marginBottom: 18 }}>{t.newGA}</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
               <div><label>{t.fullName} *</label><input value={newGA.name} onChange={(e) => setNewGA({ ...newGA, name: e.target.value })} /></div>
-              <div><label>{t.church} *</label><select value={newGA.church} onChange={(e) => setNewGA({ ...newGA, church: e.target.value, leaderId: "" })}><option value="">{t.selectChurch}</option>{CHURCHES.map((c) => <option key={c}>{c}</option>)}</select></div>
-              <div><label>{t.leader}</label><select value={newGA.leaderId} onChange={(e) => setNewGA({ ...newGA, leaderId: e.target.value })}><option value="">{t.noLeader}</option>{members.filter((m) => m.church === newGA.church).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
+              <div>
+                <label>{t.church} *</label>
+                <SearchSelect
+                  value={newGA.church}
+                  onSelect={(v) => setNewGA({ ...newGA, church: v, leaderId: "" })}
+                  items={churches || []}
+                  getLabel={(c) => c.display || c}
+                  getId={(c) => c.display || c}
+                  placeholder={t.selectChurch}
+                />
+              </div>
+              <div>
+                <label>{t.leader}</label>
+                <SearchSelect
+                  value={newGA.leaderId}
+                  onSelect={(v) => setNewGA({ ...newGA, leaderId: v })}
+                  items={members || []}
+                  getLabel={(m) => m.name}
+                  getId={(m) => m.id}
+                  placeholder={t.noLeader}
+                />
+              </div>
               <div className="fr">
-                <button className="btn btn-primary" onClick={() => { if (!newGA.name || !newGA.church) return; setGas((p) => [...p, { id: `GA${String(p.length + 1).padStart(3, "0")}`, ...newGA }]); notify(`GA "${newGA.name}" created!`); setShowNew(false); setNewGA({ name: "", church: "", leaderId: "" }); }}>{t.create}</button>
+                <button className="btn btn-primary" onClick={async () => {
+                  if (!newGA.name || !newGA.church) return;
+                  const row = { name: newGA.name, church: newGA.church, leader_id: newGA.leaderId || null, description: "" };
+                  const { data, error } = await sb.from("assistance_groups").insert(row).select().single();
+                  if (error) { notify("Erro: " + error.message); return; }
+                  setGas((p) => [...p, { id: data.id, name: data.name, church: data.church, leaderId: data.leader_id, description: data.description || "" }]);
+                  notify(`GA "${data.name}" criado!`);
+                  setShowNew(false);
+                  setNewGA({ name: "", church: "", leaderId: "" });
+                }}>{t.create}</button>
                 <button className="btn btn-ghost" onClick={() => setShowNew(false)}>{t.cancel}</button>
               </div>
             </div>
@@ -1148,17 +1177,44 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
           <>
             {editing !== null && (
               <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
-                <div className="modal" style={{ maxWidth: 440 }}>
+                <div className="modal" style={{ maxWidth: 480 }}>
                   <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Nova Família" : "Editar Família"}</h3>
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <div><label>Nome *</label><input value={formData.name || ""} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Família Silva" /></div>
-                    <div><label>IDs dos Membros (separados por vírgula)</label><input value={formData.memberIds || ""} onChange={(e) => setFormData({ ...formData, memberIds: e.target.value })} placeholder="M001, M002, M003" /></div>
+                    <div>
+                      <label>Membros</label>
+                      <SearchSelect
+                        value=""
+                        onSelect={(id) => {
+                          if (!id) return;
+                          const sel = (members || []).find((m) => m.id === id);
+                          if (!sel) return;
+                          const cur = formData.selectedMembers || [];
+                          if (cur.find((m) => m.id === id)) return;
+                          setFormData({ ...formData, selectedMembers: [...cur, sel] });
+                        }}
+                        items={(members || []).filter((m) => !(formData.selectedMembers || []).find((s) => s.id === m.id))}
+                        getLabel={(m) => m.name}
+                        getId={(m) => m.id}
+                        placeholder="Buscar membro…"
+                      />
+                      {(formData.selectedMembers || []).length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                          {(formData.selectedMembers || []).map((m) => (
+                            <span key={m.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "var(--sidebar-active-bg)", border: "1px solid var(--primary)", borderRadius: 12, padding: "2px 8px", fontSize: 12 }}>
+                              {m.name}
+                              <button onClick={() => setFormData({ ...formData, selectedMembers: (formData.selectedMembers || []).filter((x) => x.id !== m.id) })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
                     <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
                     <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
                       if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
-                      const ids = (formData.memberIds || "").split(",").map((s) => s.trim()).filter(Boolean);
+                      const ids = (formData.selectedMembers || []).map((m) => m.id);
                       const row = { name: formData.name.trim(), member_ids: ids };
                       if (!isNew) row.id = editing.id;
                       saveRow("families", row, families, setFamilies, mapFamily);
@@ -1208,7 +1264,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       </td>
                       <td>
                         <div style={{ display: "flex", gap: 6 }}>
-                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(f, { name: f.name, memberIds: (f.memberIds || []).join(", ") })}><Pencil size={12} /></button>
+                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(f, { name: f.name, selectedMembers: (f.memberIds || []).map((mid) => (members || []).find((m) => m.id === mid)).filter(Boolean) })}><Pencil size={12} /></button>
                           <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [f.id], label: f.name })}><Trash2 size={12} /></button>
                         </div>
                       </td>
@@ -1219,7 +1275,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
               </table>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", memberIds: "" })}><Plus size={14} /> Nova Família</button>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", selectedMembers: [] })}><Plus size={14} /> Nova Família</button>
               {(families || []).length > 0 && (
                 <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
                   onClick={() => setDeleting({ ids: (families || []).map((f) => f.id).filter(Boolean), label: "" })}>
@@ -1504,13 +1560,40 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         placeholder="Buscar líder…"
                       />
                     </div>
-                    <div><label>IDs dos Membros (separados por vírgula)</label><input value={formData.memberIds || ""} onChange={(e) => setFormData({ ...formData, memberIds: e.target.value })} placeholder="M001, M002" /></div>
+                    <div>
+                      <label>Membros</label>
+                      <SearchSelect
+                        value=""
+                        onSelect={(id) => {
+                          if (!id) return;
+                          const sel = (members || []).find((m) => m.id === id);
+                          if (!sel) return;
+                          const cur = formData.selectedMembers || [];
+                          if (cur.find((m) => m.id === id)) return;
+                          setFormData({ ...formData, selectedMembers: [...cur, sel] });
+                        }}
+                        items={(members || []).filter((m) => !(formData.selectedMembers || []).find((s) => s.id === m.id))}
+                        getLabel={(m) => m.name}
+                        getId={(m) => m.id}
+                        placeholder="Buscar membro…"
+                      />
+                      {(formData.selectedMembers || []).length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                          {(formData.selectedMembers || []).map((m) => (
+                            <span key={m.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "var(--sidebar-active-bg)", border: "1px solid var(--primary)", borderRadius: 12, padding: "2px 8px", fontSize: 12 }}>
+                              {m.name}
+                              <button onClick={() => setFormData({ ...formData, selectedMembers: (formData.selectedMembers || []).filter((x) => x.id !== m.id) })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
                     <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
                     <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
                       if (!formData.eventId?.trim() || !formData.team) { notify("Evento e equipe são obrigatórios."); return; }
-                      const ids = (formData.memberIds || "").split(",").map((s) => s.trim()).filter(Boolean);
+                      const ids = (formData.selectedMembers || []).map((m) => m.id);
                       const row = { event_id: formData.eventId.trim(), team: formData.team, leader_id: formData.leaderId || null, member_ids: ids };
                       if (!isNew) row.id = editing.id;
                       saveRow("rosters", row, rosters, setRosters, mapRoster);
@@ -1557,7 +1640,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       </td>
                       <td>
                         <div style={{ display: "flex", gap: 6 }}>
-                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(r, { eventId: r.eventId || "", team: r.team, leaderId: r.leaderId || "", memberIds: (r.memberIds || []).join(", ") })}><Pencil size={12} /></button>
+                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(r, { eventId: r.eventId || "", team: r.team, leaderId: r.leaderId || "", selectedMembers: (r.memberIds || []).map((mid) => (members || []).find((m) => m.id === mid)).filter(Boolean) })}><Pencil size={12} /></button>
                           <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [r.id], label: r.team })}><Trash2 size={12} /></button>
                         </div>
                       </td>
@@ -1568,7 +1651,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
               </table>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ eventId: "", team: TEAMS[1], leaderId: "", memberIds: "" })}><Plus size={14} /> Nova Equipe</button>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ eventId: "", team: TEAMS[1], leaderId: "", selectedMembers: [] })}><Plus size={14} /> Nova Equipe</button>
               {(rosters || []).length > 0 && (
                 <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
                   onClick={() => setDeleting({ ids: (rosters || []).map((r) => r.id).filter(Boolean), label: "" })}>
