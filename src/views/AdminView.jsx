@@ -841,7 +841,7 @@ function BulkBar({ selected, total, onSelectAll, onClearAll, onDeleteSelected, l
   );
 }
 
-function AdminDirectory({ churches, setChurches, members, setMembers, families, setFamilies, gas, setGas, rosters, setRosters, dbTeams, setDbTeams, notify }) {
+function AdminDirectory({ churches, setChurches, members, setMembers, families, setFamilies, gas, setGas, rosters, setRosters, dbTeams, setDbTeams, events, notify }) {
   const TABS = [
     { id: "churches",  label: "Igrejas",              count: churches?.length },
     { id: "members",   label: "Membros",              count: members?.length },
@@ -914,6 +914,10 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
         <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700 }}>Diretório</h2>
+      </div>
+      <div style={{ background: "var(--bg2)", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: 12, color: "var(--muted)", display: "flex", gap: 8, alignItems: "flex-start" }}>
+        <span style={{ flexShrink: 0 }}>ℹ️</span>
+        <span>O <strong>Diretório</strong> gerencia os dados de referência: membros, igrejas, famílias, grupos e equipes. Para gerenciar <strong>inscrições, presenças e relatórios</strong> use as abas do menu lateral (Inscrições, Equipes, Aprovações, etc.).</span>
       </div>
       <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 16 }}>Visualize e edite todos os dados de referência do sistema.</p>
 
@@ -1302,7 +1306,8 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
                       const ids = (formData.selectedMembers || []).map((m) => m.id);
                       const row = { name: formData.name.trim(), member_ids: ids };
-                      if (!isNew) row.id = editing.id;
+                      if (isNew) row.id = "F" + String(Date.now()).slice(-8);
+                      else row.id = editing.id;
                       saveRow("families", row, families, setFamilies, mapFamily);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
                   </div>
@@ -1389,7 +1394,17 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                   <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Novo Grupo" : "Editar Grupo"}</h3>
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <div><label>Nome *</label><input value={formData.name || ""} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
-                    <div><label>Igreja</label><input value={formData.church || ""} onChange={(e) => setFormData({ ...formData, church: e.target.value })} placeholder="Newark, NJ - EUA" /></div>
+                    <div>
+                      <label>Igreja</label>
+                      <SearchSelect
+                        value={formData.church || ""}
+                        onSelect={(v) => setFormData({ ...formData, church: v })}
+                        items={churches || []}
+                        getLabel={(c) => c.display || c}
+                        getId={(c) => c.display || c}
+                        placeholder="Buscar igreja…"
+                      />
+                    </div>
                     <div>
                       <label>Líder</label>
                       <SearchSelect
@@ -1408,7 +1423,8 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
                       if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
                       const row = { name: formData.name.trim(), church: formData.church || "", leader_id: formData.leaderId || null, description: formData.description || "" };
-                      if (!isNew) row.id = editing.id;
+                      if (isNew) row.id = "GA" + String(Date.now()).slice(-8); // client-side ID until migration 009 runs
+                      else row.id = editing.id;
                       saveRow("assistance_groups", row, gas, setGas, mapGA);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
                   </div>
@@ -1630,7 +1646,12 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                 <div className="modal" style={{ maxWidth: 460 }}>
                   <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Nova Equipe" : "Editar Equipe"}</h3>
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div><label>Evento ID *</label><input value={formData.eventId || ""} onChange={(e) => setFormData({ ...formData, eventId: e.target.value })} placeholder="EVT001" /></div>
+                    <div><label>Evento *</label>
+                      <select value={formData.eventId || ""} onChange={(e) => setFormData({ ...formData, eventId: e.target.value })}>
+                        <option value="">Selecionar evento…</option>
+                        {(events || []).map((ev) => <option key={ev.id} value={ev.id}>{ev.name} ({ev.id})</option>)}
+                      </select>
+                    </div>
                     <div><label>Equipe *</label>
                       <select value={formData.team || TEAMS[1]} onChange={(e) => setFormData({ ...formData, team: e.target.value })}>
                         {TEAMS.filter((t) => t !== "Participante").map((t) => <option key={t}>{t}</option>)}
