@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Search, ArrowLeft, CheckCircle2, ClipboardList, Share2, AlertTriangle, MailOpen } from "lucide-react";
 import { STRINGS } from "@/i18n/strings";
 import { CATEGORIES, ROLE_BADGE, fmt } from "@/constants";
-import { INIT_MEMBERS } from "@/dev/seeds";
 import BadgePrint from "@/components/BadgePrint";
 
 const TERMS_TEXT = `CONDIÇÕES DE INSCRIÇÃO / REGISTRATION CONDITIONS
@@ -132,7 +131,7 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
   );
 }
 
-function PublicPortal({ event, lang, setLang, onReset }) {
+function PublicPortal({ event, members: propMembers, regs, addReg, lang, setLang, onReset }) {
   const t = STRINGS[lang || "pt"];
   const [step, setStep] = useState(1);
   const [primary, setPrimary] = useState(null);
@@ -152,9 +151,10 @@ function PublicPortal({ event, lang, setLang, onReset }) {
   const [submitted, setSubmitted] = useState(null);
   const [errors, setErrors] = useState({});
 
-  const allMembers = INIT_MEMBERS;
-  const primaryResults = primarySearch.length > 1 ? allMembers.filter((m) => m.name.toLowerCase().includes(primarySearch.toLowerCase())).slice(0, 8) : [];
-  const famResults = famSearch.length > 1 ? allMembers.filter((m) => m.name.toLowerCase().includes(famSearch.toLowerCase()) && m.id !== primary?.id && !familyMembers.find((fm) => fm.id === m.id)).slice(0, 6) : [];
+  const allMembers = propMembers || [];
+  const existingMemberIds = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled).map((r) => r.memberId);
+  const primaryResults = primarySearch.length > 1 ? allMembers.filter((m) => m.name.toLowerCase().includes(primarySearch.toLowerCase()) && !existingMemberIds.includes(m.id)).slice(0, 20) : [];
+  const famResults = famSearch.length > 1 ? allMembers.filter((m) => m.name.toLowerCase().includes(famSearch.toLowerCase()) && m.id !== primary?.id && !familyMembers.find((fm) => fm.id === m.id) && !existingMemberIds.includes(m.id)).slice(0, 6) : [];
 
   const eventFee = (cat) => event?.fees?.[cat] ?? 0;
   const allParticipants = primary ? [primary, ...familyMembers] : [];
@@ -170,14 +170,32 @@ function PublicPortal({ event, lang, setLang, onReset }) {
 
   const handleSubmit = () => {
     if (!termsAccepted) { setTermsError(true); return; }
-    const d = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    const loc = event?.locationCode || event?.prefix || "EVT";
-    const seq = String(Math.floor(Math.random() * 900) + 100);
-    const regs = allParticipants.map((m, i) => ({
-      ...m, regNumber: `${loc}-${d}-${seq}-${i + 1}`, fee: m.role === "Pastor" ? 0 : eventFee(m.category),
-      contact, translations, allergies, specialNeeds, familyPos: i + 1, totalInGroup: allParticipants.length,
-    }));
-    setSubmitted({ regs, email: contact.email });
+    if (!addReg) return;
+    const famId = allParticipants.length > 1 ? ("FAM-" + Date.now()) : null;
+    const submittedRegs = allParticipants.map((m) => {
+      const isVerifiedMember = m.verified !== false && m.id && !m.id.startsWith("MANUAL-");
+      const data = {
+        memberId: isVerifiedMember ? m.id : "GUEST",
+        memberName: m.name,
+        badgeName: m.badgeName || m.name,
+        category: m.category || "Adulto",
+        church: m.church || "",
+        role: m.role || "",
+        familyId: famId,
+        team: "Participante",
+        paid: false,
+        exempt: false,
+        needsTranslation: translations.en || translations.es,
+        note: [
+          contact.phone ? "Tel: " + contact.phone : "",
+          contact.email ? "Email: " + contact.email : "",
+          allergies.hasAny ? "Alergias: " + allergies.other : "",
+          specialNeeds.hasAny ? "Nec. especiais: " + specialNeeds.other : "",
+        ].filter(Boolean).join(" | "),
+      };
+      return addReg(data);
+    });
+    setSubmitted({ regs: submittedRegs, email: contact.email });
   };
 
   if (submitted)

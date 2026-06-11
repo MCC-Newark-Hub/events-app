@@ -218,7 +218,8 @@ const CSV_TEMPLATES = {
       if (!row.firstName && !row.lastName) e.push("firstName ou lastName obrigatório");
       if (!row.badgeName) e.push("badgeName obrigatório");
       if (!["M","F"].includes(row.gender)) e.push("gender deve ser M ou F");
-      if (!VALID_CATEGORIES.includes(row.category)) e.push("category inválida: " + row.category);
+      if (!row.category) e.push("category obrigatória");
+      // Non-standard categories are allowed (warn only, don't block)
       return e;
     },
     transform: (row, idx, existing) => {
@@ -358,13 +359,18 @@ const CSV_TEMPLATES = {
 
 function sanitizeText(s) {
   if (typeof s !== "string") return s;
-  return s
-    .replace(/â/g, "'")   // UTF-8 read as Latin-1 right single quote
-    .replace(/’/g, "'")               // right single quotation mark
-    .replace(/‘/g, "'")               // left single quotation mark
-    .replace(/“/g, '"')               // left double quotation mark
-    .replace(/”/g, '"')               // right double quotation mark
-    .replace(/�/g, "'");              // replacement character (bad decode)
+  var result = "";
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charCodeAt(i);
+    // Smart single quotes (U+2018, U+2019) -> straight apostrophe
+    if (c === 0x2018 || c === 0x2019) { result += "'"; continue; }
+    // Smart double quotes (U+201C, U+201D) -> straight double quote
+    if (c === 0x201C || c === 0x201D) { result += '"'; continue; }
+    // Unicode replacement character (U+FFFD) -> skip
+    if (c === 0xFFFD) { continue; }
+    result += s[i];
+  }
+  return result;
 }
 function splitCSVLine(line) {
   var cells = [], cur = "", inQ = false;
@@ -407,7 +413,25 @@ function AdminImport({ members, setMembers, families, setFamilies, gas, setGas, 
   const tpl = CSV_TEMPLATES[activeTab];
 
   const handleDownload = () => { downloadCSV(tpl.filename, makeCSV(tpl.headers, [tpl.headers.reduce((o,h,i)=>{o[h]=tpl.example[i]||"";return o;},{})])); };
-  const handleFile = (e) => { var file=e.target.files[0]; if(!file)return; var reader=new FileReader(); reader.onload=(ev)=>{ var rows=parseCSV(ev.target.result); setPreview({rows:rows.map((row,i)=>({row,errs:tpl.validate(row),idx:i})),template:activeTab}); setImportDone(null); }; reader.readAsText(file); e.target.value=""; };
+  const handleFile = (e) => {
+    var file = e.target.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = (ev) => {
+      // Try UTF-8 first; if replacement chars appear, re-decode as Windows-1252
+      var buffer = ev.target.result;
+      var text;
+      try {
+        text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+      } catch (_) {
+        text = new TextDecoder("windows-1252").decode(buffer);
+      }
+      var rows = parseCSV(text);
+      setPreview({ rows: rows.map((row, i) => ({ row, errs: tpl.validate(row), idx: i })), template: activeTab });
+      setImportDone(null);
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  };
   const handleImport = () => {
     if(!preview)return;
     var valid=preview.rows.filter(r=>r.errs.length===0);
@@ -670,6 +694,40 @@ function AdminUsers({ dbUsers, setDbUsers, notify }) {
 
 
 // ── Directory ─────────────────────────────────────────────────────────────────
+function SearchSelect({ value, onSelect, items, getLabel, getId, placeholder }) {
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const selected = value ? items.find((i) => getId(i) === value) : null;
+  const label = selected ? getLabel(selected) : "";
+  const results = q.length > 0 ? items.filter((i) => getLabel(i).toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        value={open ? q : label}
+        onFocus={() => { setOpen(true); setQ(""); }}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder={placeholder || "Buscar…"}
+      />
+      {value && <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>{value}</div>}
+      {open && results.length > 0 && (
+        <div style={{ position: "absolute", zIndex: 200, background: "var(--card)", border: "1.5px solid var(--border)", borderRadius: 8, left: 0, right: 0, maxHeight: 200, overflowY: "auto", boxShadow: "var(--shadow-md)" }}>
+          <div style={{ padding: "6px 12px", cursor: "pointer", fontSize: 12, color: "var(--muted)" }} onMouseDown={() => { onSelect(""); setOpen(false); setQ(""); }}>— Nenhum —</div>
+          {results.map((item) => (
+            <div key={getId(item)} onMouseDown={() => { onSelect(getId(item)); setOpen(false); setQ(""); }}
+              style={{ padding: "8px 12px", cursor: "pointer", borderTop: "1px solid var(--border)", fontSize: 13 }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "var(--sidebar-active-bg)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = ""}>
+              {getLabel(item)}
+              <span style={{ marginLeft: 8, fontSize: 10, color: "var(--muted)" }}>{getId(item)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ConfirmDelete({ label, count, onConfirm, onCancel }) {
   return (
     <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && onCancel()}>
@@ -720,7 +778,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
     { id: "families",  label: "Famílias",             count: families?.length },
     { id: "groups",    label: "Grupos de Assistência",count: gas?.length },
     { id: "teams",     label: "Equipes / Rosters",    count: rosters?.length },
-    { id: "teams_dir", label: "Equipes (domínio)",    count: dbTeams?.length },
+    { id: "teams_dir", label: "Equipes (Referência)",  count: dbTeams?.length },
   ];
   const [tab, setTab]         = useState("churches");
   const [search, setSearch]   = useState("");
@@ -824,7 +882,15 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       </div>
                       <div><label>País (nome completo)</label><input value={formData.country || ""} onChange={(e) => setFormData({ ...formData, country: e.target.value })} placeholder="United States" /></div>
                     </div>
-                    <div><label>Endereço</label><input value={formData.address || ""} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="123 Main St" /></div>
+                    <div>
+                      <label>Endereço</label>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <input value={formData.address || ""} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="123 Main St" />
+                        {(formData.address || formData.display) && (
+                          <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.address || formData.display)}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm" style={{ whiteSpace: "nowrap" }}>🗺 Maps</a>
+                        )}
+                      </div>
+                    </div>
                     <div><label>Nome da Congregação</label><input value={formData.churchName || ""} onChange={(e) => setFormData({ ...formData, churchName: e.target.value })} placeholder="ICM Newark" /></div>
                   </div>
                   <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
@@ -868,7 +934,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
                         onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
                     </th>
-                    <th>Display</th><th>Cidade</th><th style={{ width: 55 }}>Estado</th><th style={{ width: 70 }}>País</th><th style={{ width: 90 }}></th>
+                    <th>Display</th><th>Cidade</th><th style={{ width: 55 }}>Estado</th><th style={{ width: 70 }}>País</th><th style={{ width: 110 }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -881,6 +947,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       <td><span className="badge badge-blue">{c.country_code || c.code || "—"}</span></td>
                       <td>
                         <div style={{ display: "flex", gap: 6 }}>
+                          <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address || c.display)}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-xs" title="Ver no Maps">🗺</a>
                           <button className="btn btn-ghost btn-xs" onClick={() => openEdit(c, { display: c.display, city: c.city || "", stateCode: c.state_code || "", stateName: c.state_name || "", countryCode: c.country_code || c.code || "EUA", country: c.country || "", address: c.address || "", churchName: c.church_name || "" })}><Pencil size={12} /></button>
                           {c.id && <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [c.id], label: c.display })}><Trash2 size={12} /></button>}
                         </div>
@@ -950,9 +1017,29 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                           ))}
                         </select>
                       </div>
-                      <div><label>GA ID</label><input value={formData.gaId || ""} onChange={(e) => setFormData({ ...formData, gaId: e.target.value })} placeholder="GA001" /></div>
+                      <div>
+                        <label>GA (Grupo de Assistência)</label>
+                        <SearchSelect
+                          value={formData.gaId || ""}
+                          onSelect={(v) => setFormData({ ...formData, gaId: v })}
+                          items={gas || []}
+                          getLabel={(g) => g.name}
+                          getId={(g) => g.id}
+                          placeholder="Buscar GA…"
+                        />
+                      </div>
                     </div>
-                    <div><label>Família ID</label><input value={formData.familyId || ""} onChange={(e) => setFormData({ ...formData, familyId: e.target.value })} placeholder="F001" /></div>
+                    <div>
+                      <label>Família</label>
+                      <SearchSelect
+                        value={formData.familyId || ""}
+                        onSelect={(v) => setFormData({ ...formData, familyId: v })}
+                        items={families || []}
+                        getLabel={(f) => f.name}
+                        getId={(f) => f.id}
+                        placeholder="Buscar família…"
+                      />
+                    </div>
                     <div><label>Alergias</label><textarea rows={2} value={formData.allergies || ""} onChange={(e) => setFormData({ ...formData, allergies: e.target.value })} placeholder="Ex: amendoim, látex…" style={{ resize: "vertical" }} /></div>
                     <div><label>Necessidades Especiais</label><textarea rows={2} value={formData.specialNeeds || ""} onChange={(e) => setFormData({ ...formData, specialNeeds: e.target.value })} placeholder="Ex: cadeira de rodas…" style={{ resize: "vertical" }} /></div>
                     <div><label>Notas</label><textarea rows={2} value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} style={{ resize: "vertical" }} /></div>
@@ -1137,7 +1224,17 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <div><label>Nome *</label><input value={formData.name || ""} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
                     <div><label>Igreja</label><input value={formData.church || ""} onChange={(e) => setFormData({ ...formData, church: e.target.value })} placeholder="Newark, NJ - EUA" /></div>
-                    <div><label>ID do Líder</label><input value={formData.leaderId || ""} onChange={(e) => setFormData({ ...formData, leaderId: e.target.value })} placeholder="M001" /></div>
+                    <div>
+                      <label>Líder</label>
+                      <SearchSelect
+                        value={formData.leaderId || ""}
+                        onSelect={(v) => setFormData({ ...formData, leaderId: v })}
+                        items={members || []}
+                        getLabel={(m) => m.name}
+                        getId={(m) => m.id}
+                        placeholder="Buscar membro…"
+                      />
+                    </div>
                     <div><label>Descrição</label><input value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} /></div>
                   </div>
                   <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
@@ -1305,6 +1402,17 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         {TEAMS.filter((t) => t !== "Participante").map((t) => <option key={t}>{t}</option>)}
                       </select>
                     </div>
+                    <div>
+                      <label>Líder da Equipe</label>
+                      <SearchSelect
+                        value={formData.leaderId || ""}
+                        onSelect={(v) => setFormData({ ...formData, leaderId: v })}
+                        items={members || []}
+                        getLabel={(m) => m.name}
+                        getId={(m) => m.id}
+                        placeholder="Buscar líder…"
+                      />
+                    </div>
                     <div><label>IDs dos Membros (separados por vírgula)</label><input value={formData.memberIds || ""} onChange={(e) => setFormData({ ...formData, memberIds: e.target.value })} placeholder="M001, M002" /></div>
                   </div>
                   <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
@@ -1312,7 +1420,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
                       if (!formData.eventId?.trim() || !formData.team) { notify("Evento e equipe são obrigatórios."); return; }
                       const ids = (formData.memberIds || "").split(",").map((s) => s.trim()).filter(Boolean);
-                      const row = { event_id: formData.eventId.trim(), team: formData.team, member_ids: ids };
+                      const row = { event_id: formData.eventId.trim(), team: formData.team, leader_id: formData.leaderId || null, member_ids: ids };
                       if (!isNew) row.id = editing.id;
                       saveRow("rosters", row, rosters, setRosters, mapRoster);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
@@ -1337,7 +1445,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
                         onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
                     </th>
-                    <th>Equipe</th><th>Evento</th><th>Membros</th><th style={{ width: 90 }}></th>
+                    <th>Equipe</th><th>Evento</th><th>Líder</th><th>Membros</th><th style={{ width: 90 }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1346,6 +1454,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       <td><input type="checkbox" checked={!!(r.id && selected.includes(r.id))} onChange={() => r.id && toggleSel(r.id)} /></td>
                       <td style={{ fontWeight: 500 }}>{r.team}</td>
                       <td style={{ fontSize: 12, color: "var(--muted)" }}>{r.eventId}</td>
+                      <td style={{ fontSize: 12 }}>{r.leaderId ? ((members || []).find((m) => m.id === r.leaderId)?.name || r.leaderId) : <span style={{ color: "var(--muted)" }}>—</span>}</td>
                       <td>
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                           {(r.memberIds || []).slice(0, 4).map((mid) => {
@@ -1357,18 +1466,18 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       </td>
                       <td>
                         <div style={{ display: "flex", gap: 6 }}>
-                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(r, { eventId: r.eventId || "", team: r.team, memberIds: (r.memberIds || []).join(", ") })}><Pencil size={12} /></button>
+                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(r, { eventId: r.eventId || "", team: r.team, leaderId: r.leaderId || "", memberIds: (r.memberIds || []).join(", ") })}><Pencil size={12} /></button>
                           <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [r.id], label: r.team })}><Trash2 size={12} /></button>
                         </div>
                       </td>
                     </tr>
                   ))}
-                  {list.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
+                  {list.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
                 </tbody>
               </table>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ eventId: "", team: TEAMS[1], memberIds: "" })}><Plus size={14} /> Nova Equipe</button>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ eventId: "", team: TEAMS[1], leaderId: "", memberIds: "" })}><Plus size={14} /> Nova Equipe</button>
               {(rosters || []).length > 0 && (
                 <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
                   onClick={() => setDeleting({ ids: (rosters || []).map((r) => r.id).filter(Boolean), label: "" })}>

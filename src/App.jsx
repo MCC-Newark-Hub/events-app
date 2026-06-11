@@ -64,7 +64,17 @@ export default function App() {
           />
         )}
         {!checkinParam && !selfCheckinParam && view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} />}
-        {!checkinParam && !selfCheckinParam && view === "public" && <PublicPortal event={appData.event} lang={lang} setLang={setLang} onReset={() => setView("login")} />}
+        {!checkinParam && !selfCheckinParam && view === "public" && (
+          <PublicPortal
+            event={appData.event}
+            members={appData.members}
+            regs={appData.regs}
+            addReg={appData.addReg}
+            lang={lang}
+            setLang={setLang}
+            onReset={() => setView("login")}
+          />
+        )}
         {!checkinParam && !selfCheckinParam && view === ROLES_SYS.CLERK && <ClerkView {...shared} />}
         {!checkinParam && !selfCheckinParam && view === ROLES_SYS.ADMIN && <AdminView {...shared} />}
         {!checkinParam && !selfCheckinParam && view === ROLES_SYS.PASTOR && <PastorView {...shared} />}

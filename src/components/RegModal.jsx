@@ -49,8 +49,8 @@ function RegModal({
 
   const avail = members.filter((m) => !existingRegs.find((r) => r.memberId === m.id));
   const results =
-    src.length > 1
-      ? avail.filter((m) => m.name.toLowerCase().includes(src.toLowerCase())).slice(0, 8)
+    src.length > 0
+      ? avail.filter((m) => src.length === 0 ? true : m.name.toLowerCase().includes(src.toLowerCase())).slice(0, 20)
       : [];
   const pick = (m) => {
     setSel(m);
@@ -79,7 +79,7 @@ function RegModal({
     if (isFull && !isExempt) {
       setPendingData(data);
       setShowOverride(true);
-    } else onSave(data);
+    } else { onSave(data); onClose(); }
   };
 
   if (showOverride)
@@ -231,7 +231,12 @@ function RegModal({
                 placeholder={t.searchPlaceholder}
                 autoFocus
               />
-              {results.length > 0 && (
+              {src.length === 0 && !sel && (
+                <div style={{ marginTop: 6, fontSize: 12, color: "var(--muted)" }}>
+                  {avail.length} membros disponíveis — digite para buscar
+                </div>
+              )}
+              {results.length > 0 && !sel && (
                 <div
                   style={{
                     border: "1.5px solid var(--border)",
@@ -378,6 +383,7 @@ function RegModal({
                         badgeName: sel.badgeName || sel.name,
                         exempt: false,
                       });
+                      onClose();
                     } else {
                       trySave({
                         ...sel,
@@ -510,19 +516,23 @@ function RegModal({
                     <button
                       className="btn btn-primary"
                       onClick={() => {
+                        const sharedFamilyId = selFam.id || ("FAM-" + Date.now());
                         famIds.forEach((mid) => {
                           const m = INIT_MEMBERS.find((x) => x.id === mid);
                           if (m)
-                            trySave({
+                            onSave({
                               ...m,
                               memberId: m.id,
                               memberName: m.name,
                               badgeName: m.badgeName || m.name,
+                              category: m.category,
+                              church: m.church || "",
+                              role: m.role || "",
                               team: f.team,
                               paid: f.paid,
                               exempt: m.role === "Pastor",
-                              note: f.note,
-                              familyId: selFam.id,
+                              note: f.note || "",
+                              familyId: sharedFamilyId,
                             });
                         });
                         onClose();
@@ -626,7 +636,7 @@ function RegModal({
                   className="btn btn-primary btn-sm"
                   onClick={function () {
                     bulkSel.forEach(function (m) {
-                      trySave({
+                      onSave({
                         ...m,
                         memberId: m.id,
                         memberName: m.name,
@@ -644,6 +654,7 @@ function RegModal({
                         note: "",
                       });
                     });
+                    onClose();
                   }}
                 >
                   Registrar {bulkSel.length} membros

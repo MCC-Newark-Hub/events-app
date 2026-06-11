@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
 import { ROLE_BADGE, fmt } from "@/constants";
+import { sb } from "@/lib/supabase";
 import StatusBadge from "@/components/StatusBadge";
 import RegModal from "@/components/RegModal";
 import DetailModal from "@/components/DetailModal";
@@ -8,6 +9,7 @@ import DetailModal from "@/components/DetailModal";
 export default function RegistrationsTab(props) {
   const {
     regs,
+    setRegs,
     members,
     families,
     addReg,
@@ -17,7 +19,9 @@ export default function RegistrationsTab(props) {
     event,
     user,
     isFull,
+    notify,
   } = props;
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const t = useT();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
@@ -150,6 +154,9 @@ export default function RegistrationsTab(props) {
                     <button className="btn btn-ghost btn-sm" onClick={() => setDetail(r)}>
                       {t.edit}
                     </button>
+                    <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => setConfirmDelete(r)}>
+                      🗑
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -186,6 +193,30 @@ export default function RegistrationsTab(props) {
             setDetail(null);
           }}
         />
+      )}
+      {confirmDelete && (
+        <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setConfirmDelete(null)}>
+          <div className="modal" style={{ maxWidth: 360, textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
+            <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 8 }}>Excluir inscrição?</h3>
+            <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 20 }}>
+              Remover <strong>{confirmDelete.memberName}</strong> ({confirmDelete.regNumber})? Esta ação não pode ser desfeita.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setConfirmDelete(null)}>Cancelar</button>
+              <button className="btn btn-danger" style={{ flex: 1 }} onClick={async () => {
+                const id = confirmDelete.id;
+                const { error } = await sb.from("registrations").delete().eq("id", id);
+                if (error) { notify && notify("Erro ao excluir: " + error.message); }
+                else {
+                  setRegs && setRegs((p) => p.filter((r) => r.id !== id));
+                  notify && notify("Inscrição excluída.");
+                }
+                setConfirmDelete(null);
+              }}>Excluir</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

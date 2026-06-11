@@ -193,7 +193,7 @@ export function useAppData({ getUserRef, notify }) {
     var fee = fees[data.category] != null ? fees[data.category] : 0;
     var n = seq + 1;
     var d = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    var isAutoExempt = OBREIRO_ROLES.includes(data.role);
+    var isAutoExempt = ["Pastor", "Ungido"].includes(data.role);
     var isExempt = isAutoExempt || data.exempt || false;
     var isWaitlisted = !forceExcedente && isFull && !isExempt;
     var today = new Date().toISOString().slice(0, 10);
