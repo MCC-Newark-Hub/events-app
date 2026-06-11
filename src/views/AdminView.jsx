@@ -15,6 +15,9 @@ import TeamsTab from "./admin/TeamsTab";
 import EventsTab from "./admin/EventsTab";
 import ReportsTab from "./admin/ReportsTab";
 
+// Accent-insensitive search: "joao" matches "João"
+const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
 function AdminView(props) {
   const { event, user, logout, pendingApprovals, lang, setLang, theme, toggleTheme } = props;
   const t = useT();
@@ -699,7 +702,7 @@ function SearchSelect({ value, onSelect, items, getLabel, getId, placeholder }) 
   const [open, setOpen] = useState(false);
   const selected = value ? items.find((i) => getId(i) === value) : null;
   const label = selected ? getLabel(selected) : "";
-  const results = q.length > 0 ? items.filter((i) => getLabel(i).toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
+  const results = q.length > 0 ? items.filter((i) =>norm( getLabel(i)).includes(norm(q))).slice(0, 8) : [];
   return (
     <div style={{ position: "relative" }}>
       <input
@@ -856,7 +859,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       {/* ── Churches ─────────────────────────────────────────────────────── */}
       {tab === "churches" && (() => {
         const list = (churches || []).filter((c) =>
-          (c.display || "").toLowerCase().includes(search.toLowerCase())
+          (c.display ||norm( "")).includes(norm(search))
         );
         const allIds = list.map((c) => c.id).filter(Boolean);
         return (
@@ -974,8 +977,8 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       {/* ── Members ──────────────────────────────────────────────────────── */}
       {tab === "members" && (() => {
         const list = (members || []).filter((m) =>
-          (m.name || "").toLowerCase().includes(search.toLowerCase()) ||
-          (m.church || "").toLowerCase().includes(search.toLowerCase())
+          (m.name ||norm( "")).includes(norm(search)) ||
+          (m.church ||norm( "")).includes(norm(search))
         );
         const allIds = list.map((m) => m.id).filter(Boolean);
         return (
@@ -1118,7 +1121,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       {/* ── Families ─────────────────────────────────────────────────────── */}
       {tab === "families" && (() => {
         const list = (families || []).filter((f) =>
-          (f.name || "").toLowerCase().includes(search.toLowerCase())
+          (f.name ||norm( "")).includes(norm(search))
         );
         const allIds = list.map((f) => f.id).filter(Boolean);
         return (
@@ -1211,8 +1214,8 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       {/* ── GA Groups ────────────────────────────────────────────────────── */}
       {tab === "groups" && (() => {
         const list = (gas || []).filter((g) =>
-          (g.name || "").toLowerCase().includes(search.toLowerCase()) ||
-          (g.church || "").toLowerCase().includes(search.toLowerCase())
+          (g.name ||norm( "")).includes(norm(search)) ||
+          (g.church ||norm( "")).includes(norm(search))
         );
         const allIds = list.map((g) => g.id).filter(Boolean);
         return (
@@ -1307,7 +1310,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       {/* ── Teams Domain ─────────────────────────────────────────────────── */}
       {tab === "teams_dir" && (() => {
         const list = (dbTeams || []).filter((t) =>
-          (t.name || "").toLowerCase().includes(search.toLowerCase())
+          (t.name ||norm( "")).includes(norm(search))
         );
         const allIds = list.map((t) => t.id).filter(Boolean);
         const mapTeam = (t) => ({ id: t.id, name: t.name, sortOrder: t.sort_order ?? t.sortOrder ?? 0, isService: t.is_service ?? t.isService ?? true });
@@ -1386,7 +1389,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       {/* ── Teams / Rosters ──────────────────────────────────────────────── */}
       {tab === "teams" && (() => {
         const list = (rosters || []).filter((r) =>
-          (r.team || "").toLowerCase().includes(search.toLowerCase())
+          (r.team ||norm( "")).includes(norm(search))
         );
         const allIds = list.map((r) => r.id).filter(Boolean);
         return (

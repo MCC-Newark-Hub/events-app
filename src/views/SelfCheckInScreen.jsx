@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import ICMLogo from '@/components/ICMLogo';
 
+// Accent-insensitive search: "joao" matches "João"
+const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
 export default function SelfCheckInScreen({ eventId, regs, members, updatePresence }) {
   const [step, setStep] = useState('search');   // search | confirm | done | already
   const [query, setQuery] = useState('');
@@ -12,8 +15,8 @@ export default function SelfCheckInScreen({ eventId, regs, members, updatePresen
   // Search members by name
   const results = query.length > 1
     ? members.filter((m) =>
-        m.name.toLowerCase().includes(query.toLowerCase()) ||
-        (m.firstName + ' ' + m.lastName).toLowerCase().includes(query.toLowerCase())
+norm(        m.name).includes(norm(query)) ||
+        (m.firstName + ' ' +norm( m.lastName)).includes(norm(query))
       ).slice(0, 8)
     : [];
 

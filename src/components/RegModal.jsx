@@ -5,6 +5,9 @@ import { INIT_MEMBERS, INIT_FAMILIES } from "@/dev/seeds";
 import FeeBox from "./FeeBox";
 import ChurchSearch from "./ChurchSearch";
 
+// Accent-insensitive search: "joao" matches "João"
+const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
 function RegModal({
   event,
   members,
@@ -50,7 +53,7 @@ function RegModal({
   const avail = members.filter((m) => !existingRegs.find((r) => r.memberId === m.id));
   const results =
     src.length > 0
-      ? avail.filter((m) => src.length === 0 ? true : m.name.toLowerCase().includes(src.toLowerCase())).slice(0, 20)
+      ? avail.filter((m) => src.length === 0 ? true :norm( m.name).includes(norm(src))).slice(0, 20)
       : [];
   const pick = (m) => {
     setSel(m);
@@ -563,7 +566,7 @@ function RegModal({
             >
               {avail
                 .filter(function (m) {
-                  return !src || m.name.toLowerCase().includes(src.toLowerCase());
+                  return !src ||norm( m.name).includes(norm(src));
                 })
                 .map(function (m) {
                   var selected = bulkSel.some(function (x) {
