@@ -863,11 +863,33 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   const [mbSk, setMbSk] = useState("name");    const [mbSd, setMbSd] = useState("asc");
   const [gaSk, setGaSk] = useState("name");    const [gaSd, setGaSd] = useState("asc");
   const mkToggle = (sk, setSk, sd, setSd) => (k) => { if (sk === k) setSd((d) => d === "asc" ? "desc" : "asc"); else { setSk(k); setSd("asc"); } };
-  const ChTh = makeTh(chSk, chSd, mkToggle(chSk, setChSk, chSd, setChSd));
-  const MbTh = makeTh(mbSk, mbSd, mkToggle(mbSk, setMbSk, mbSd, setMbSd));
-  const GaTh = makeTh(gaSk, gaSd, mkToggle(gaSk, setGaSk, gaSd, setGaSd));
+  const ChTh = FilterTh(chSk, chSd, mkToggle(chSk, setChSk, chSd, setChSd));
+  const MbTh = FilterTh(mbSk, mbSd, mkToggle(mbSk, setMbSk, mbSd, setMbSd));
+  const GaTh = FilterTh(gaSk, gaSd, mkToggle(gaSk, setGaSk, gaSd, setGaSd));
 
-  const switchTab = (id) => { setTab(id); setSearch(""); setEditing(null); setSelected([]); setFormData({}); };
+  const [colFilters, setColFilters] = useState({});
+  const setCol = (k, v) => setColFilters((p) => ({ ...p, [k]: v }));
+  const applyColFilters = (items) =>
+    items.filter((row) =>
+      Object.entries(colFilters).every(([k, v]) => !v || norm(String(row[k] ?? "")).includes(norm(v)))
+    );
+  // FilterTh: clickable sort header + filter input below
+  const FilterTh = (sk, sd, toggle) => ({ k, children, style = {} }) => (
+    <th style={{ padding: "6px 8px 0", ...style }}>
+      <div onClick={() => toggle(k)} style={{ cursor: "pointer", userSelect: "none", fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: ".8px", color: "var(--muted)", display: "flex", alignItems: "center", gap: 3, paddingBottom: 4 }}>
+        {children}{sk === k ? (sd === "asc" ? " ↑" : " ↓") : ""}
+      </div>
+      <input
+        value={colFilters[k] || ""}
+        onChange={(e) => setCol(k, e.target.value)}
+        placeholder="…"
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", padding: "3px 6px", fontSize: 11, border: "1px solid var(--border)", borderRadius: 4, background: "var(--input-bg)", marginBottom: 4 }}
+      />
+    </th>
+  );
+
+  const switchTab = (id) => { setTab(id); setSearch(""); setColFilters({}); setEditing(null); setSelected([]); setFormData({}); };
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   const toggleSel = (id) => setSelected((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
@@ -879,10 +901,8 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
   const isNew = !editing?.id;
 
-  const saveRow = async (table, row, stateList, setList, mapFn) => {
+  const saveRow = async (table, row, creating, stateList, setList, mapFn) => {
     setSaving(true);
-    // Derive new-vs-update from row.id so we're not relying on stale closure
-    const creating = !row.id;
     if (creating) {
       const { data, error } = await sb.from(table).insert(row).select().single();
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
@@ -939,9 +959,9 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── Churches ─────────────────────────────────────────────────────── */}
       {tab === "churches" && (() => {
-        const rawList = (churches || []).filter((c) =>
+        const rawList = applyColFilters((churches || []).filter((c) =>
           norm(c.display).includes(norm(search))
-        ).sort((a, b) => (a.display || '').localeCompare(b.display || ''));
+        ).sort((a, b) => (a.display || '').localeCompare(b.display || '')));
         const list = sortData(rawList, chSk, chSd);
         const allIds = list.map((c) => c.id).filter(Boolean);
         return (
@@ -1011,7 +1031,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         pastor_id:    formData.pastorId           || null,
                       };
                       if (!isNew) row.id = editing.id;
-                      saveRow("churches", row, churches, setChurches, null);
+                      saveRow("churches", row, isNew, churches, setChurches, null);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
                   </div>
                 </div>
@@ -1074,10 +1094,10 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── Members ──────────────────────────────────────────────────────── */}
       {tab === "members" && (() => {
-        const rawList = (members || []).filter((m) =>
+        const rawList = applyColFilters((members || []).filter((m) =>
           norm(m.name).includes(norm(search)) ||
           norm(m.church).includes(norm(search))
-        ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        ).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
         const list = sortData(rawList, mbSk, mbSd);
         const allIds = list.map((m) => m.id).filter(Boolean);
         return (
@@ -1182,7 +1202,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       const fullName = formData.name?.trim() || ((formData.firstName || '') + ' ' + (formData.lastName || '')).trim();
                       const row = { name: fullName, first_name: formData.firstName || null, last_name: formData.lastName || null, badge_name: formData.badgeName || fullName, gender: formData.gender || "M", category: formData.category || "Adulto", church: formData.church || "", roles: formData.roles || [], role: (formData.roles || [])[0] || "", family_id: formData.familyId || null, ga_id: formData.gaId || null, allergies: formData.allergies || null, special_needs: formData.specialNeeds || null, notes: formData.notes || null };
                       if (!isNew) row.id = editing.id;
-                      saveRow("members", row, members, setMembers, mapMember);
+                      saveRow("members", row, isNew, members, setMembers, mapMember);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
                   </div>
                 </div>
@@ -1305,7 +1325,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       const ids = (formData.selectedMembers || []).map((m) => m.id);
                       const row = { name: formData.name.trim(), member_ids: ids };
                       row.id = isNew ? ("F" + String(Date.now()).slice(-8)) : editing.id;
-                      saveRow("families", row, families, setFamilies, mapFamily);
+                      saveRow("families", row, isNew, families, setFamilies, mapFamily);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
                   </div>
                 </div>
@@ -1377,10 +1397,10 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── GA Groups ────────────────────────────────────────────────────── */}
       {tab === "groups" && (() => {
-        const rawList = (gas || []).filter((g) =>
+        const rawList = applyColFilters((gas || []).filter((g) =>
           norm(g.name).includes(norm(search)) ||
           norm(g.church).includes(norm(search))
-        ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        ).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
         const list = sortData(rawList, gaSk, gaSd);
         const allIds = list.map((g) => g.id).filter(Boolean);
         return (
@@ -1421,7 +1441,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
                       const row = { name: formData.name.trim(), church: formData.church || "", leader_id: formData.leaderId || null, description: formData.description || "" };
                       row.id = isNew ? ("GA" + String(Date.now()).slice(-8)) : editing.id;
-                      saveRow("assistance_groups", row, gas, setGas, mapGA);
+                      saveRow("assistance_groups", row, isNew, gas, setGas, mapGA);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
                   </div>
                 </div>
@@ -1556,7 +1576,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         responsibilities: formData.responsibilities || null,
                       };
                       if (!isNew) row.id = editing.id;
-                      saveRow("teams", row, dbTeams, setDbTeams, mapTeamRow);
+                      saveRow("teams", row, isNew, dbTeams, setDbTeams, mapTeamRow);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
                   </div>
                 </div>
@@ -1700,7 +1720,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       const ids = (formData.selectedMembers || []).map((m) => m.id);
                       const row = { event_id: formData.eventId.trim(), team: formData.team, leader_id: formData.leaderId || null, member_ids: ids };
                       if (!isNew) row.id = editing.id;
-                      saveRow("rosters", row, rosters, setRosters, mapRoster);
+                      saveRow("rosters", row, isNew, rosters, setRosters, mapRoster);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
                   </div>
                 </div>
