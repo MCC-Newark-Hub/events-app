@@ -6,6 +6,7 @@ export default function StatusBadge({ r, event, allRegs = [] }) {
   if (r.cancelled) return <span className="badge badge-red">{t.cancelled}</span>;
   if (r.waitlisted) return <span className="wl">{r.waitlistReason || t.waitlisted}</span>;
   if (r.excedente) return <span className="exc">⚡{t.excedente}</span>;
+  if (["Pastor", "Ungido"].includes(r.role) && !r.cancelled) return <span className="badge badge-gray">{t.exempt} (Auto)</span>;
   if (r.exempt) return <span className="badge badge-gray">{t.exempt}</span>;
   if (r.paid) return <span className="badge badge-green">✓ {t.paid}</span>;
   if (event) {

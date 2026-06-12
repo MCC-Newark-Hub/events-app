@@ -869,7 +869,10 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       Object.entries(colFilters).every(([k, v]) => !v || norm(String(row[k] ?? "")).includes(norm(v)))
     );
   const mkToggle = (sk, setSk, sd, setSd) => (k) => { if (sk === k) setSd((d) => d === "asc" ? "desc" : "asc"); else { setSk(k); setSd("asc"); } };
-  // FilterTh: clickable sort header + filter input below — MUST be defined before use
+  const chToggle = mkToggle(chSk, setChSk, chSd, setChSd);
+  const mbToggle = mkToggle(mbSk, setMbSk, mbSd, setMbSd);
+  const gaToggle = mkToggle(gaSk, setGaSk, gaSd, setGaSd);
+  // FilterTh factory — returns a component; create instances AFTER factory is defined
   const FilterTh = (sk, sd, toggle) => ({ k, children, style = {} }) => (
     <th style={{ padding: "6px 8px 0", ...style }}>
       <div onClick={() => toggle(k)} style={{ cursor: "pointer", userSelect: "none", fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: ".8px", color: "var(--muted)", display: "flex", alignItems: "center", gap: 3, paddingBottom: 4 }}>
@@ -884,6 +887,11 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       />
     </th>
   );
+
+  // Instantiate after FilterTh is defined
+  const ChTh = FilterTh(chSk, chSd, chToggle);
+  const MbTh = FilterTh(mbSk, mbSd, mbToggle);
+  const GaTh = FilterTh(gaSk, gaSd, gaToggle);
 
   const switchTab = (id) => { setTab(id); setSearch(""); setColFilters({}); setEditing(null); setSelected([]); setFormData({}); };
 
@@ -1435,7 +1443,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
                     <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
                       if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
-                      const row = { name: formData.name.trim(), church: formData.church || "", leader_id: formData.leaderId || null, description: formData.description || "" };
+                      const row = { name: formData.name.trim(), church: formData.church || "", leader_id: formData.leaderId || null, description: formData.description || "", member_ids: formData.leaderId ? [formData.leaderId] : [] };
                       row.id = isNew ? ("GA" + String(Date.now()).slice(-8)) : editing.id;
                       saveRow("assistance_groups", row, isNew, gas, setGas, mapGA);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>

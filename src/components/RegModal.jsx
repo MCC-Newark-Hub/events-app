@@ -78,12 +78,12 @@ function RegModal({
       badgeName: "", // clear manual fields when switching to member mode
     }));
   };
-  const isAutoPastor = sel?.role === "Pastor";
-  const selFee = sel ? (isAutoPastor ? 0 : (event?.fees?.[sel.category] ?? 0)) : 0;
-  const manFee = f.role === "Pastor" ? 0 : (event?.fees?.[f.category] ?? 0);
+  const isAutoExempt = sel ? ["Pastor", "Ungido"].includes(sel.role) : false;
+  const selFee = isAutoExempt ? 0 : (sel ? (event?.fees?.[sel.category] ?? 0) : 0);
+  const manFee = ["Pastor", "Ungido"].includes(f.role) ? 0 : (event?.fees?.[f.category] ?? 0);
 
   const trySave = (data) => {
-    const isExempt = data.role === "Pastor" || data.exempt || false;
+    const isExempt = ["Pastor", "Ungido"].includes(data.role) || data.exempt || false;
     if (isFull && !isExempt) {
       setPendingData(data);
       setShowOverride(true);
@@ -306,7 +306,7 @@ function RegModal({
                       {sel.role}
                     </span>
                   )}
-                  {isAutoPastor && (
+                  {isAutoExempt && (
                     <span
                       style={{ marginLeft: 8, fontSize: 11, color: "#2d8a4e", fontWeight: 600 }}
                     >
@@ -333,7 +333,7 @@ function RegModal({
                       />
                       <label htmlFor="p1">{t.paidNow}</label>
                     </div>
-                    {!isAutoPastor && (
+                    {!isAutoExempt && (
                       <div className="cb">
                         <input
                           type="checkbox"
@@ -352,8 +352,8 @@ function RegModal({
                   <label>{t.notes}</label>
                   <input value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} />
                 </div>
-                <FeeBox fee={selFee} paid={f.paid} isExempt={isAutoPastor} />
-                {f.exempt && !isAutoPastor && (
+                <FeeBox fee={selFee} paid={f.paid} isExempt={isAutoExempt} />
+                {f.exempt && !isAutoExempt && (
                   <div
                     style={{
                       background: "#fffbeb",
@@ -370,7 +370,7 @@ function RegModal({
                 <button
                   className="btn btn-primary"
                   onClick={() => {
-                    if (f.exempt && !isAutoPastor) {
+                    if (f.exempt && !isAutoExempt) {
                       onRequestOverride({
                         type: "exemption",
                         eventId: event.id,
@@ -538,7 +538,7 @@ function RegModal({
                               familyId: sharedFamilyId,
                               team: m.role === "Pastor" ? "Pastores" : m.role === "Diácono" ? "Diáconos" : m.role === "Ungido" ? "Ungidos" : "Participante",
                               paid: f.paid,
-                              exempt: m.role === "Pastor",
+                              exempt: ["Pastor", "Ungido"].includes(m.role),
                               needsTranslation: false,
                               note: f.note || "",
                             });
@@ -761,7 +761,7 @@ function RegModal({
                 <label htmlFor="me">{t.exempt}</label>
               </div>
             </div>
-            <FeeBox fee={manFee} isExempt={f.role === "Pastor" || f.exempt} />
+            <FeeBox fee={manFee} isExempt={["Pastor", "Ungido"].includes(f.role) || f.exempt} />
             <button
               className="btn btn-primary"
               disabled={!f.memberName}

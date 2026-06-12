@@ -155,7 +155,7 @@ function PublicPortal({ event, members: propMembers, regs, addReg, lang, setLang
   const [errors, setErrors] = useState({});
 
   const allMembers = propMembers || [];
-  const existingMemberIds = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled).map((r) => r.memberId);
+  const existingMemberIds = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled && r.memberId !== "GUEST").map((r) => r.memberId);
   const primaryResults = primarySearch.length > 0 ? allMembers.filter((m) =>norm(m.name).includes(norm(primarySearch)) && !existingMemberIds.includes(m.id)).slice(0, 20) : [];
   const famResults = famSearch.length > 0 ? allMembers.filter((m) =>norm(m.name).includes(norm(famSearch)) && m.id !== primary?.id && !familyMembers.find((fm) => fm.id === m.id) && !existingMemberIds.includes(m.id)).slice(0, 8) : [];
 
@@ -273,7 +273,12 @@ function PublicPortal({ event, members: propMembers, regs, addReg, lang, setLang
                       ))}
                     </div>
                   )}
-                  {!primary && allMembers.length > 0 && (
+                  {allMembers.length === 0 && (
+                    <p style={{ fontSize: 12, color: "#6b7280", marginTop: 6, textAlign: "center" }}>
+                      ⏳ Carregando membros...
+                    </p>
+                  )}
+                  {!primary && allMembers.length > 0 && primarySearch.length === 0 && (
                     <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>
                       {allMembers.length} membros disponíveis — digite para buscar
                     </p>

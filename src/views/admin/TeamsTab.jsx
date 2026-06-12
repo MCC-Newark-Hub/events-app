@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
+import { sb } from "@/lib/supabase";
 
 const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
 import { SERVICE_TEAMS, STATUS_CFG } from "@/constants";
@@ -25,30 +26,60 @@ export default function TeamsTab({ event, regs, members, rosters, setRosters, no
     return r.paid || r.exempt ? "confirmed" : "pending";
   };
 
-  const addToRoster = (team, mid) => {
+  const addToRoster = async (team, mid) => {
+    let updatedRoster = null;
     setRosters((prev) => {
       const ex = prev.find((r) => r.eventId === event?.id && r.team === team);
       if (ex) {
         if (ex.memberIds.includes(mid)) return prev;
+        updatedRoster = { ...ex, memberIds: [...ex.memberIds, mid] };
         return prev.map((r) =>
-          r.eventId === event?.id && r.team === team
-            ? { ...r, memberIds: [...r.memberIds, mid] }
-            : r
+          r.eventId === event?.id && r.team === team ? updatedRoster : r
         );
       }
-      return [...prev, { eventId: event?.id, team, memberIds: [mid] }];
+      updatedRoster = { eventId: event?.id, team, memberIds: [mid], leaderId: null };
+      return [...prev, updatedRoster];
     });
+    setTimeout(async () => {
+      if (!updatedRoster) return;
+      if (updatedRoster.id) {
+        await sb.from("rosters").update({ member_ids: updatedRoster.memberIds }).eq("id", updatedRoster.id);
+      } else {
+        const { data } = await sb.from("rosters").insert({
+          event_id: updatedRoster.eventId,
+          team: updatedRoster.team,
+          member_ids: updatedRoster.memberIds,
+          leader_id: null,
+        }).select().single();
+        if (data) {
+          setRosters((p) =>
+            p.map((r) =>
+              r.eventId === updatedRoster.eventId && r.team === updatedRoster.team && !r.id
+                ? { ...r, id: data.id }
+                : r
+            )
+          );
+        }
+      }
+    }, 0);
     notify("✓");
   };
 
-  const removeFromRoster = (team, mid) =>
+  const removeFromRoster = async (team, mid) => {
+    let updatedIds = [];
+    let rosterId = null;
     setRosters((prev) =>
-      prev.map((r) =>
-        r.eventId === event?.id && r.team === team
-          ? { ...r, memberIds: r.memberIds.filter((x) => x !== mid) }
-          : r
-      )
+      prev.map((r) => {
+        if (r.eventId === event?.id && r.team === team) {
+          updatedIds = r.memberIds.filter((x) => x !== mid);
+          rosterId = r.id;
+          return { ...r, memberIds: updatedIds };
+        }
+        return r;
+      })
     );
+    if (rosterId) await sb.from("rosters").update({ member_ids: updatedIds }).eq("id", rosterId);
+  };
 
   const removeTeam = (team) => {
     setCustomTeams((p) => p.filter((t) => (typeof t === "string" ? t : t.name) !== team));
@@ -297,6 +328,30 @@ export default function TeamsTab({ event, regs, members, rosters, setRosters, no
                   })}
                 </div>
               )}
+              <div style={{ padding: "10px 12px 4px" }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".5px" }}>Líder da Equipe</label>
+                <select
+                  value={roster?.leaderId || ""}
+                  onChange={async (e) => {
+                    const newLeaderId = e.target.value;
+                    setRosters((prev) =>
+                      prev.map((r) =>
+                        r.eventId === event?.id && r.team === team ? { ...r, leaderId: newLeaderId } : r
+                      )
+                    );
+                    if (roster?.id) {
+                      await sb.from("rosters").update({ leader_id: newLeaderId || null }).eq("id", roster.id);
+                    }
+                  }}
+                  style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--input-bg)", marginBottom: 8 }}
+                >
+                  <option value="">— Selecionar líder —</option>
+                  {mids.map((mid) => {
+                    const m = members.find((x) => x.id === mid);
+                    return m ? <option key={mid} value={mid}>{m.name}</option> : null;
+                  })}
+                </select>
+              </div>
               <div style={{ padding: "4px 12px" }}>
                 {mids.length === 0 && (
                   <p style={{ fontSize: 13, color: "#9ca3af", padding: "8px 0" }}>{t.noMembers}</p>
