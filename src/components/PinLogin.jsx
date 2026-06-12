@@ -1,6 +1,9 @@
+import { useEffect, useRef } from "react";
 import { Lock } from "lucide-react";
 
 export default function PinLogin({ onSubmit, onBack, lang, t, pin, setPin, err, setErr }) {
+  const inputRef = useRef(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
   const go = () => onSubmit(pin);
   return (
     <div
@@ -32,6 +35,7 @@ export default function PinLogin({ onSubmit, onBack, lang, t, pin, setPin, err, 
         <p style={{ color: "#6b7280", fontSize: 13 }}>{t.enterPin}</p>
       </div>
       <input
+        ref={inputRef}
         type="password"
         maxLength={4}
         value={pin}

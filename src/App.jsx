@@ -22,7 +22,9 @@ export default function App() {
   const checkinParam = urlParams.get('checkin');
   const selfCheckinParam = urlParams.get('selfcheckin');
   const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
-  const [view, setView] = useState("login");
+  // Restore session from localStorage on mount
+  const [view, setView] = useState(() => localStorage.getItem("mcc_view") || "login");
+  const [savedPin] = useState(() => localStorage.getItem("mcc_pin") || null);
   const [toast, setToast] = useState(null);
   const userRef = useRef(null);
 
@@ -35,12 +37,38 @@ export default function App() {
   const { user, login: authLogin, logout: authLogout } = useAuth(appData.dbUsers || []);
   useEffect(() => { userRef.current = user; });
 
+  // Re-login from saved PIN once DB users have loaded
+  useEffect(() => {
+    if (savedPin && !user && appData.dbUsers && appData.dbUsers.length > 0) {
+      const mapped = authLogin(savedPin);
+      if (mapped) {
+        const restoredView = localStorage.getItem("mcc_view") || mapped.sysRole;
+        setView(restoredView);
+      } else {
+        // PIN no longer valid, clear session
+        localStorage.removeItem("mcc_pin");
+        localStorage.removeItem("mcc_view");
+        setView("login");
+      }
+    }
+  }, [appData.dbUsers]);
+
   const login = function (pin) {
     const mapped = authLogin(pin);
-    if (mapped) { setView(mapped.sysRole); return true; }
+    if (mapped) {
+      localStorage.setItem("mcc_pin", pin);
+      localStorage.setItem("mcc_view", mapped.sysRole);
+      setView(mapped.sysRole);
+      return true;
+    }
     return false;
   };
-  const logout = () => { authLogout(); setView("login"); };
+  const logout = () => {
+    authLogout();
+    localStorage.removeItem("mcc_pin");
+    localStorage.removeItem("mcc_view");
+    setView("login");
+  };
 
   const shared = { ...appData, theme, toggleTheme, user, logout, notify, lang, setLang };
 

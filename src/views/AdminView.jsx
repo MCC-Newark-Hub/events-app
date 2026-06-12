@@ -858,22 +858,18 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   const [selected, setSelected] = useState([]);
   const [saving, setSaving]   = useState(false);
   const [expanded, setExpanded] = useState(null);
-  // Sort state per table
+  // Sort + column-filter state
   const [chSk, setChSk] = useState("display"); const [chSd, setChSd] = useState("asc");
   const [mbSk, setMbSk] = useState("name");    const [mbSd, setMbSd] = useState("asc");
   const [gaSk, setGaSk] = useState("name");    const [gaSd, setGaSd] = useState("asc");
-  const mkToggle = (sk, setSk, sd, setSd) => (k) => { if (sk === k) setSd((d) => d === "asc" ? "desc" : "asc"); else { setSk(k); setSd("asc"); } };
-  const ChTh = FilterTh(chSk, chSd, mkToggle(chSk, setChSk, chSd, setChSd));
-  const MbTh = FilterTh(mbSk, mbSd, mkToggle(mbSk, setMbSk, mbSd, setMbSd));
-  const GaTh = FilterTh(gaSk, gaSd, mkToggle(gaSk, setGaSk, gaSd, setGaSd));
-
   const [colFilters, setColFilters] = useState({});
   const setCol = (k, v) => setColFilters((p) => ({ ...p, [k]: v }));
   const applyColFilters = (items) =>
     items.filter((row) =>
       Object.entries(colFilters).every(([k, v]) => !v || norm(String(row[k] ?? "")).includes(norm(v)))
     );
-  // FilterTh: clickable sort header + filter input below
+  const mkToggle = (sk, setSk, sd, setSd) => (k) => { if (sk === k) setSd((d) => d === "asc" ? "desc" : "asc"); else { setSk(k); setSd("asc"); } };
+  // FilterTh: clickable sort header + filter input below — MUST be defined before use
   const FilterTh = (sk, sd, toggle) => ({ k, children, style = {} }) => (
     <th style={{ padding: "6px 8px 0", ...style }}>
       <div onClick={() => toggle(k)} style={{ cursor: "pointer", userSelect: "none", fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: ".8px", color: "var(--muted)", display: "flex", alignItems: "center", gap: 3, paddingBottom: 4 }}>
