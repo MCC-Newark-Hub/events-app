@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { CHURCH_LIST } from "@/constants";
 import { sb } from "@/lib/supabase";
 
@@ -124,6 +124,7 @@ export function useAppData({ getUserRef, notify }) {
   const [dbFunctions, setDbFunctions] = useState([]);
   const [dbUsers, setDbUsers] = useState([]);
   const [dbTeams, setDbTeams] = useState([]);
+  const seqRef = useRef(0);
 
   // ── Load all data from Supabase on mount ─────────────────────────────────
   useEffect(function () {
@@ -152,10 +153,13 @@ export function useAppData({ getUserRef, notify }) {
           setLoading(false);
           return;
         }
+        if (memRes.error) console.error("Members query failed:", memRes.error);
         var evList = evRes.data || [];
         setEvents(evList);
         setEvent(evList[0] || null);
-        setMembers((memRes.data || []).map(mapMember));
+        var memberList = (memRes.data || []).map(mapMember);
+        if (memberList.length === 0) console.warn("Members loaded as empty — check Supabase RLS on the members table");
+        setMembers(memberList);
         setFamilies((famRes.data || []).map(mapFamily));
         setGas((gaRes.data || []).map(mapGA));
         setRegs((regRes.data || []).map(mapReg));
@@ -171,6 +175,7 @@ export function useAppData({ getUserRef, notify }) {
           return n > m ? n : m;
         }, 0);
         setSeq(maxSeq);
+        seqRef.current = maxSeq;
       } catch (e) {
         if (!cancelled) setDbError(e.message);
       }
@@ -204,7 +209,8 @@ export function useAppData({ getUserRef, notify }) {
     forceExcedente = forceExcedente || false;
     var fees = event.fees || {};
     var fee = fees[data.category] != null ? fees[data.category] : 0;
-    var n = seq + 1;
+    var n = seqRef.current + 1;
+    seqRef.current = n;
     var d = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     var isAutoExempt = ["Pastor", "Ungido"].includes(data.role);
     var isExempt = isAutoExempt || data.exempt || false;
@@ -277,7 +283,10 @@ export function useAppData({ getUserRef, notify }) {
       return p.map(function (r) {
         if (r.id !== id) return r;
         if ((upd.cancelled || upd.waitlisted) && !r.cancelled && !r.waitlisted) freedSlot = true;
-        var updated = Object.assign({}, r, upd);
+        var autoExempt = (upd.role != null && ["Pastor", "Ungido"].includes(upd.role))
+          ? { exempt: true, fee: 0 }
+          : {};
+        var updated = Object.assign({}, r, upd, autoExempt);
         if (timelineEntry) {
           updated.timeline = [].concat(r.timeline || [], [
             Object.assign({}, timelineEntry, { date: today, by: byName }),
@@ -301,16 +310,26 @@ export function useAppData({ getUserRef, notify }) {
       }, 400);
     }
     var dbUpd = {};
-    if (upd.paid != null) dbUpd.paid = upd.paid;
-    if (upd.exempt != null) dbUpd.exempt = upd.exempt;
-    if (upd.cancelled != null) dbUpd.cancelled = upd.cancelled;
-    if (upd.waitlisted != null) dbUpd.waitlisted = upd.waitlisted;
+    if (upd.paid != null)       dbUpd.paid           = upd.paid;
+    if (upd.exempt != null)     dbUpd.exempt         = upd.exempt;
+    if (upd.cancelled != null)  dbUpd.cancelled      = upd.cancelled;
+    if (upd.waitlisted != null) dbUpd.waitlisted     = upd.waitlisted;
     if (upd.waitlistReason != null) dbUpd.waitlist_reason = upd.waitlistReason;
-    if (upd.excedente != null) dbUpd.excedente = upd.excedente;
+    if (upd.excedente != null)  dbUpd.excedente      = upd.excedente;
     if (upd.badgePrinted != null) dbUpd.badge_printed = upd.badgePrinted;
-    if (upd.note != null) dbUpd.note = upd.note;
-    if (upd.fee != null) dbUpd.fee = upd.fee;
-    if (upd.team != null) dbUpd.team = upd.team;
+    if (upd.note != null)       dbUpd.note           = upd.note;
+    if (upd.fee != null)        dbUpd.fee            = upd.fee;
+    if (upd.team != null)       dbUpd.team           = upd.team;
+    if (upd.role != null) {
+      dbUpd.role = upd.role;
+      // Auto-exempt Pastors and Ungidos when role is set
+      if (["Pastor", "Ungido"].includes(upd.role)) {
+        dbUpd.exempt = true;
+        dbUpd.fee = 0;
+      }
+    }
+    if (upd.badgeName != null)  dbUpd.badge_name     = upd.badgeName;
+    if (upd.presence != null)   dbUpd.presence       = upd.presence;
     if (timelineEntry && updatedReg) dbUpd.timeline = updatedReg.timeline;
     if (Object.keys(dbUpd).length > 0) {
       sb.from("registrations")

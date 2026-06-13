@@ -134,7 +134,7 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
   );
 }
 
-function PublicPortal({ event, members: propMembers, regs, addReg, lang, setLang, onReset }) {
+function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang, setLang, onReset }) {
   const t = STRINGS[lang || "pt"];
   const [step, setStep] = useState(1);
   const [primary, setPrimary] = useState(null);
@@ -174,7 +174,7 @@ function PublicPortal({ event, members: propMembers, regs, addReg, lang, setLang
   const handleSubmit = () => {
     if (!termsAccepted) { setTermsError(true); return; }
     if (!addReg) return;
-    const famId = allParticipants.length > 1 ? ("FAM-" + Date.now()) : null;
+    const famId = null; // family_id is a FK to families table; portal registrations don't create family records
     const submittedRegs = allParticipants.map((m) => {
       const isVerifiedMember = m.verified !== false && m.id && !m.id.startsWith("MANUAL-");
       const data = {
@@ -273,10 +273,20 @@ function PublicPortal({ event, members: propMembers, regs, addReg, lang, setLang
                       ))}
                     </div>
                   )}
-                  {allMembers.length === 0 && (
+                  {allMembers.length === 0 && loading && (
                     <p style={{ fontSize: 12, color: "#6b7280", marginTop: 6, textAlign: "center" }}>
-                      ⏳ Carregando membros...
+                      ⏳ Carregando membros... aguarde um momento.
                     </p>
+                  )}
+                  {allMembers.length === 0 && !loading && (
+                    <div style={{ marginTop: 6, textAlign: "center" }}>
+                      <p style={{ fontSize: 12, color: "#c0392b", marginBottom: 4 }}>
+                        Nenhum membro carregado. Verifique sua conexão e tente recarregar.
+                      </p>
+                      <button className="btn btn-ghost btn-sm" onClick={() => window.location.reload()} style={{ fontSize: 12 }}>
+                        ↺ Recarregar
+                      </button>
+                    </div>
                   )}
                   {!primary && allMembers.length > 0 && primarySearch.length === 0 && (
                     <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>

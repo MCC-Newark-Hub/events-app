@@ -91,11 +91,12 @@ export default function App() {
             updatePresence={appData.updatePresence}
           />
         )}
-        {!checkinParam && !selfCheckinParam && view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} />}
+        {!checkinParam && !selfCheckinParam && view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} onPublicRegister={() => setView("public")} />}
         {!checkinParam && !selfCheckinParam && view === "public" && (
           <PublicPortal
             event={appData.event}
             members={appData.members}
+            loading={appData.loading}
             regs={appData.regs}
             addReg={appData.addReg}
             lang={lang}

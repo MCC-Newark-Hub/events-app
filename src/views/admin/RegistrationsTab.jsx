@@ -42,7 +42,9 @@ export default function RegistrationsTab(props) {
     isFull,
     notify,
   } = props;
-  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null); // single reg
+  const [bulkSel, setBulkSel] = useState([]);
+  const toggleBulk = (id) => setBulkSel((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
   const t = useT();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
@@ -76,9 +78,14 @@ export default function RegistrationsTab(props) {
         }}
       >
         <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22 }}>{t.registrations}</h2>
-        <button className="btn btn-primary" onClick={() => setShowReg(true)}>
-          {t.addNew}
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          {bulkSel.length > 0 && (
+            <button className="btn btn-danger btn-sm" onClick={() => setConfirmDelete({ bulk: true, ids: bulkSel })}>
+              🗑 Excluir {bulkSel.length} selecionado(s)
+            </button>
+          )}
+          <button className="btn btn-primary" onClick={() => setShowReg(true)}>{t.addNew}</button>
+        </div>
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <div className="sb" style={{ flex: 1, minWidth: 160 }}>
@@ -114,6 +121,11 @@ export default function RegistrationsTab(props) {
           <table className="table">
             <thead>
               <tr>
+                <th style={{ width: 36 }}>
+                  <input type="checkbox"
+                    checked={filtered.length > 0 && filtered.every((r) => bulkSel.includes(r.id))}
+                    onChange={(e) => setBulkSel(e.target.checked ? filtered.map((r) => r.id) : [])} />
+                </th>
                 <th>{t.regNum}</th>
                 <Th k="memberName">{t.memberName}</Th>
                 <th>{t.cargo}</th>
@@ -127,7 +139,8 @@ export default function RegistrationsTab(props) {
             </thead>
             <tbody>
               {filtered.map((r) => (
-                <tr key={r.id} style={{ opacity: r.cancelled ? 0.5 : 1 }}>
+                <tr key={r.id} style={{ opacity: r.cancelled ? 0.5 : 1, background: bulkSel.includes(r.id) ? "var(--sidebar-active-bg)" : "" }}>
+                  <td><input type="checkbox" checked={bulkSel.includes(r.id)} onChange={() => toggleBulk(r.id)} /></td>
                   <td
                     style={{
                       fontFamily: "monospace",
@@ -221,22 +234,31 @@ export default function RegistrationsTab(props) {
       )}
       {confirmDelete && (
         <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setConfirmDelete(null)}>
-          <div className="modal" style={{ maxWidth: 360, textAlign: "center" }}>
+          <div className="modal" style={{ maxWidth: 380, textAlign: "center" }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
             <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 8 }}>Excluir inscrição?</h3>
             <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 20 }}>
-              Remover <strong>{confirmDelete.memberName}</strong> ({confirmDelete.regNumber})? Esta ação não pode ser desfeita.
+              {confirmDelete.bulk
+                ? <>Excluir <strong>{confirmDelete.ids.length}</strong> inscrições? Esta ação não pode ser desfeita.</>
+                : <>Remover <strong>{confirmDelete.memberName}</strong> ({confirmDelete.regNumber})? Esta ação não pode ser desfeita.</>}
             </p>
             <div style={{ display: "flex", gap: 10 }}>
               <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setConfirmDelete(null)}>Cancelar</button>
               <button className="btn btn-danger" style={{ flex: 1 }} onClick={async () => {
-                const id = confirmDelete.id;
-                const { error } = await sb.from("registrations").delete().eq("id", id);
-                if (error) { notify && notify("Erro ao excluir: " + error.message); }
-                else {
-                  setRegs && setRegs((p) => p.filter((r) => r.id !== id));
-                  notify && notify("Inscrição excluída.");
+                const ids = confirmDelete.bulk ? confirmDelete.ids : [confirmDelete.id];
+                // Separate real UUIDs from optimistic tmp-ids
+                const realIds = ids.filter((id) => id && !String(id).startsWith("tmp-"));
+                const tmpIds  = ids.filter((id) => id && String(id).startsWith("tmp-"));
+                let hadError = false;
+                if (realIds.length > 0) {
+                  const { error } = await sb.from("registrations").delete().in("id", realIds);
+                  if (error) { notify && notify("Erro ao excluir: " + error.message); hadError = true; }
                 }
+                if (!hadError || tmpIds.length > 0) {
+                  setRegs && setRegs((p) => p.filter((r) => !ids.includes(r.id)));
+                  notify && notify(`${ids.length} inscrição(ões) excluída(s).`);
+                }
+                setBulkSel([]);
                 setConfirmDelete(null);
               }}>Excluir</button>
             </div>

@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { ClipboardList, Lock } from "lucide-react";
 import { STRINGS } from "@/i18n/strings";
-import { SAMPLE_EVENT } from "@/dev/seeds";
 import ICMLogo from "@/components/ICMLogo";
 import PinLogin from "@/components/PinLogin";
-import PublicPortal from "./PublicPortal";
 
-function LoginScreen({ login, lang, setLang }) {
+function LoginScreen({ login, lang, setLang, onPublicRegister }) {
   const t = STRINGS[lang];
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
@@ -18,16 +16,6 @@ function LoginScreen({ login, lang, setLang }) {
       setPin("");
     }
   };
-
-  if (mode === "public")
-    return (
-      <PublicPortal
-        event={SAMPLE_EVENT}
-        lang={lang}
-        setLang={setLang}
-        onReset={() => setMode("choose")}
-      />
-    );
 
   return (
     <div
@@ -62,7 +50,7 @@ function LoginScreen({ login, lang, setLang }) {
             <button
               className="btn btn-accent"
               style={{ padding: "14px 24px", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-              onClick={() => setMode("public")}
+              onClick={onPublicRegister}
             >
               <ClipboardList size={18} /> {t.myReg}
             </button>

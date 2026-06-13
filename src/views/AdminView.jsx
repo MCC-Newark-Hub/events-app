@@ -858,42 +858,19 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   const [selected, setSelected] = useState([]);
   const [saving, setSaving]   = useState(false);
   const [expanded, setExpanded] = useState(null);
-  // Sort + column-filter state
+  // Sort state
   const [chSk, setChSk] = useState("display"); const [chSd, setChSd] = useState("asc");
   const [mbSk, setMbSk] = useState("name");    const [mbSd, setMbSd] = useState("asc");
   const [gaSk, setGaSk] = useState("name");    const [gaSd, setGaSd] = useState("asc");
-  const [colFilters, setColFilters] = useState({});
-  const setCol = (k, v) => setColFilters((p) => ({ ...p, [k]: v }));
-  const applyColFilters = (items) =>
-    items.filter((row) =>
-      Object.entries(colFilters).every(([k, v]) => !v || norm(String(row[k] ?? "")).includes(norm(v)))
-    );
   const mkToggle = (sk, setSk, sd, setSd) => (k) => { if (sk === k) setSd((d) => d === "asc" ? "desc" : "asc"); else { setSk(k); setSd("asc"); } };
   const chToggle = mkToggle(chSk, setChSk, chSd, setChSd);
   const mbToggle = mkToggle(mbSk, setMbSk, mbSd, setMbSd);
   const gaToggle = mkToggle(gaSk, setGaSk, gaSd, setGaSd);
-  // FilterTh factory — returns a component; create instances AFTER factory is defined
-  const FilterTh = (sk, sd, toggle) => ({ k, children, style = {} }) => (
-    <th style={{ padding: "6px 8px 0", ...style }}>
-      <div onClick={() => toggle(k)} style={{ cursor: "pointer", userSelect: "none", fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: ".8px", color: "var(--muted)", display: "flex", alignItems: "center", gap: 3, paddingBottom: 4 }}>
-        {children}{sk === k ? (sd === "asc" ? " ↑" : " ↓") : ""}
-      </div>
-      <input
-        value={colFilters[k] || ""}
-        onChange={(e) => setCol(k, e.target.value)}
-        placeholder="…"
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: "100%", padding: "3px 6px", fontSize: 11, border: "1px solid var(--border)", borderRadius: 4, background: "var(--input-bg)", marginBottom: 4 }}
-      />
-    </th>
-  );
+  const ChTh = makeTh(chSk, chSd, chToggle);
+  const MbTh = makeTh(mbSk, mbSd, mbToggle);
+  const GaTh = makeTh(gaSk, gaSd, gaToggle);
 
-  // Instantiate after FilterTh is defined
-  const ChTh = FilterTh(chSk, chSd, chToggle);
-  const MbTh = FilterTh(mbSk, mbSd, mbToggle);
-  const GaTh = FilterTh(gaSk, gaSd, gaToggle);
-
-  const switchTab = (id) => { setTab(id); setSearch(""); setColFilters({}); setEditing(null); setSelected([]); setFormData({}); };
+  const switchTab = (id) => { setTab(id); setSearch(""); setEditing(null); setSelected([]); setFormData({}); };
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   const toggleSel = (id) => setSelected((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
@@ -957,15 +934,15 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       <div className="sb" style={{ marginBottom: 14, maxWidth: 340 }}>
         <span className="si-icon" style={{ fontSize: 14 }}>🔍</span>
-        <input value={search} onChange={(e) => { setSearch(e.target.value); setEditing(null); setSelected([]); }} placeholder="Buscar…" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar…" />
         {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}><X size={14} /></button>}
       </div>
 
       {/* ── Churches ─────────────────────────────────────────────────────── */}
       {tab === "churches" && (() => {
-        const rawList = applyColFilters((churches || []).filter((c) =>
-          norm(c.display).includes(norm(search))
-        ).sort((a, b) => (a.display || '').localeCompare(b.display || '')));
+        const rawList = (churches || []).filter((c) =>
+          ["display", "city", "state_name", "country"].some((f) => norm(c[f]).includes(norm(search)))
+        ).sort((a, b) => (a.display || '').localeCompare(b.display || ''));
         const list = sortData(rawList, chSk, chSd);
         const allIds = list.map((c) => c.id).filter(Boolean);
         return (
@@ -1098,10 +1075,9 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── Members ──────────────────────────────────────────────────────── */}
       {tab === "members" && (() => {
-        const rawList = applyColFilters((members || []).filter((m) =>
-          norm(m.name).includes(norm(search)) ||
-          norm(m.church).includes(norm(search))
-        ).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+        const rawList = (members || []).filter((m) =>
+          ["name", "firstName", "lastName", "church", "category", "role", "badgeName"].some((f) => norm(m[f]).includes(norm(search)))
+        ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const list = sortData(rawList, mbSk, mbSd);
         const allIds = list.map((m) => m.id).filter(Boolean);
         return (
@@ -1282,7 +1258,11 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       {/* ── Families ─────────────────────────────────────────────────────── */}
       {tab === "families" && (() => {
         const list = (families || []).filter((f) =>
-          norm(f.name).includes(norm(search))
+          norm(f.name).includes(norm(search)) ||
+          (search.length > 0 && (f.memberIds || []).some((mid) => {
+            const m = (members || []).find((x) => x.id === mid);
+            return m && norm(m.name).includes(norm(search));
+          }))
         ).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
         const allIds = list.map((f) => f.id).filter(Boolean);
         return (
@@ -1401,10 +1381,9 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── GA Groups ────────────────────────────────────────────────────── */}
       {tab === "groups" && (() => {
-        const rawList = applyColFilters((gas || []).filter((g) =>
-          norm(g.name).includes(norm(search)) ||
-          norm(g.church).includes(norm(search))
-        ).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+        const rawList = (gas || []).filter((g) =>
+          ["name", "church"].some((f) => norm(g[f]).includes(norm(search)))
+        ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const list = sortData(rawList, gaSk, gaSd);
         const allIds = list.map((g) => g.id).filter(Boolean);
         return (
