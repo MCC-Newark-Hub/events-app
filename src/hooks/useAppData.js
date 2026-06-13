@@ -447,27 +447,22 @@ export function useAppData({ getUserRef, notify }) {
   };
 
   const promoteFromWaitlist = (regId) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const byName = getUser()?.name || "Sistema";
+    const entry = { status: "Confirmado", date: today, by: byName, note: "Confirmado da lista de espera" };
+    let updatedTimeline;
     setRegs((p) =>
-      p.map((r) =>
-        r.id === regId
-          ? {
-              ...r,
-              waitlisted: false,
-              waitlistReason: null,
-              timeline: [
-                ...(r.timeline || []),
-                {
-                  status: "Confirmado",
-                  date: new Date().toISOString().slice(0, 10),
-                  by: getUser()?.name || "Sistema",
-                  note: "Confirmado da lista de espera",
-                },
-              ],
-            }
-          : r
-      )
+      p.map((r) => {
+        if (r.id !== regId) return r;
+        updatedTimeline = [...(r.timeline || []), entry];
+        return { ...r, waitlisted: false, waitlistReason: null, timeline: updatedTimeline };
+      })
     );
     notify("Participante confirmado da lista de espera!");
+    sb.from("registrations")
+      .update({ waitlisted: false, waitlist_reason: null, timeline: updatedTimeline })
+      .eq("id", regId)
+      .then(({ error }) => { if (error) console.error("promoteFromWaitlist DB error:", error); });
   };
 
   return {
