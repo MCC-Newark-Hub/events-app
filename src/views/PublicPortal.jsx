@@ -14,8 +14,8 @@ Sua inscrição está PENDENTE até que o pagamento seja confirmado. A vaga no e
 Your registration is PENDING until payment is confirmed. Your spot at the event is not guaranteed until payment is received.
 
 2. PAGAMENTO / PAYMENT
-O pagamento deve ser efetuado presencialmente, com um dos responsáveis pelas inscrições. Sua vaga só será confirmada após o pagamento da taxa de inscrição. Não aceitamos pagamentos online.
-Payment must be made in person with one of the registration coordinators. Your spot will only be confirmed after the registration fee is paid. We do not accept online payments.
+O pagamento deve ser efetuado presencialmente junto a um atendente, secretário(a), tesoureiro(a) ou líder de grupo autorizado pela organização do evento. O participante é responsável pela sua inscrição, mas o recebimento do pagamento é de competência exclusiva da equipe autorizada. Sua vaga só será confirmada após a efetivação do pagamento. Não aceitamos pagamentos online.
+Payment must be made in person to an authorized clerk, secretary, treasurer, or group leader designated by the event organization. The participant is responsible for their own registration, but only authorized staff may receive payments. Your spot will only be confirmed after the fee is paid. We do not accept online payments.
 
 3. CANCELAMENTO / CANCELLATION
 Cancelamentos devem ser comunicados com pelo menos 48 horas de antecedência. Após esse prazo, a taxa de inscrição não será reembolsada.
