@@ -152,6 +152,8 @@ Migrations in `migrations/001–010`.
 - Bilingual UI (PT/EN strings in `i18n/strings.js`)
 - Real-time sync between clerks (Supabase postgres_changes on registrations + approvals)
 - Admin bulk delete (checkbox column + confirmation modal in RegistrationsTab)
+- **Consultar Inscrição** — self-service lookup by reg number OR name; cancel individual or full family group; add a new family member to an existing registration; batch-token grouping keeps family submissions together even without contact info; paid regs blocked from self-cancel with "fale com um atendente" message
+- **Terms of Acceptance** — rich formatting (headings, bold, bullets, italic); pt/en language tabs; payment deadline callout (⚠️ highlighted, shows actual days from event config); separate amber acknowledgement checkbox required before submit
 
 ---
 
@@ -172,6 +174,10 @@ Migrations in `migrations/001–010`.
 | Portal shows "not found" for already-registered members | `primaryResults` filtered out members in `existingMemberIds`, so searching your name returned nothing | Removed exclusion filter from primary search; now shows "Já inscrito" card with reg number, date, and status (Pago/Pendente/Isento/Excedente/Lista de Espera) |
 | Portal phone field blocked registration | Phone was marked required in step 1 | Made phone optional; moved phone + email + translation needs to step 4 ("Contato & Termos") so step 1 is just name search |
 | No self-service cancellation | Participants had no way to cancel without contacting a clerk | Added "Consultar inscrição" on home screen: enter reg number → see status → cancel (individual or full family group). Paid regs blocked from self-cancel with "fale com um atendente" message |
+| Family grouping broken when phone omitted | Batch token `[B{ts}]` approach meant empty `note` field when no phone provided, breaking `resolveRelated` | Batch token now always prepended; falls back to `note === note` match for legacy regs |
+| "Notificação Atualizado!" shown on public cancel | `updateReg` always called `notify("Atualizado!")` | Added `opts.silent` 4th param; public-facing calls pass `{ silent: true }` |
+| Terms text unformatted, no deadline emphasis | Plain string constant, no deadline integration | Replaced with `TermsContent` JSX component: pt/en tabs, rich formatting, ⚠️ deadline callout with amber checkbox |
+| Build crash (vite:oxc syntax error line 61) | Typographic `"..."` curly-quote characters inside a JSX string literal broke the parser | Replaced both branches of the JSX ternary with `<>...</>` fragments using `<em>` for emphasis |
 
 ---
 
@@ -213,6 +219,6 @@ To avoid testing against production data:
 
 ## Next Steps
 
-1. **Paid status on portal confirmation** — fee amount and payment instructions could be more prominent on the post-submit screen
-2. **Vercel staging** — set up staging Supabase project and wire Preview env vars (steps above)
+1. **Paid status on portal confirmation** — fee amount and payment instructions could be more prominent on the post-submit screen; include payment method / who to pay
+2. **Vercel staging** — set up staging Supabase project and wire Preview env vars (steps above); defer non-critical merges until after staging is in place
 3. **`addReg` / portal submit tests** — requires mocking the Supabase client; defer until staging env is set up
