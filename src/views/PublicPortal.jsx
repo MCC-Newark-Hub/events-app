@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, ArrowLeft, CheckCircle2, ClipboardList, Share2, AlertTriangle, MailOpen } from "lucide-react";
+import { Search, ArrowLeft, CheckCircle2, ClipboardList, Share2, AlertTriangle } from "lucide-react";
 import { STRINGS } from "@/i18n/strings";
 import { CATEGORIES, ROLE_BADGE, fmt } from "@/constants";
 import BadgePrint from "@/components/BadgePrint";
@@ -114,7 +114,8 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
   const primary = regs[0];
   const family = regs.slice(1);
   const totalFee = regs.reduce((s, r) => s + r.fee, 0);
-  const [pdfDone, setPdfDone] = useState(false);
+  const deadlineDays = event?.payment_deadline_days ?? event?.paymentDeadlineDays ?? null;
+  const pt = lang !== "en";
 
   const handleShare = () => {
     const text =
@@ -145,6 +146,7 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
             <p style={{ color: "#6b7280", fontSize: 13 }}>{t.confirmationSub}</p>
           </div>
 
+          {/* Primary registrant */}
           <div style={{ background: "#f8f9fb", borderRadius: 12, padding: "14px 18px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>{t.primaryRegistrant}</div>
             <div style={{ fontWeight: 700, fontSize: 16 }}>{primary.name || primary.memberName}</div>
@@ -152,6 +154,7 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
             <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{primary.category} · {primary.church}</div>
           </div>
 
+          {/* Family members */}
           {family.length > 0 && (
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", marginBottom: 8, textTransform: "uppercase", letterSpacing: ".5px" }}>{t.familyMembers}</div>
@@ -168,26 +171,75 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
             </div>
           )}
 
-          <div style={{ background: "#fdf5f5", borderRadius: 10, padding: "12px 14px", marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 13 }}>{t.totalMembers}</span>
-              <strong>{regs.length}</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 13 }}>{t.totalFee}</span>
-              <strong style={{ color: totalFee === 0 ? "#2d8a4e" : "#d4820a" }}>{totalFee === 0 ? "Grátis / Free" : fmt(totalFee)}</strong>
-            </div>
-          </div>
+          {/* Payment card */}
+          {totalFee > 0 ? (
+            <div style={{ border: "2px solid #b41926", borderRadius: 14, overflow: "hidden", marginBottom: 16 }}>
+              {/* Fee amount — hero element */}
+              <div style={{ background: "#b41926", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ color: "rgba(255,255,255,.75)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>
+                    {pt ? "Total a Pagar" : "Total Due"}
+                  </div>
+                  <div style={{ color: "rgba(255,255,255,.65)", fontSize: 11 }}>
+                    {regs.length === 1
+                      ? (pt ? "1 participante" : "1 participant")
+                      : (pt ? `${regs.length} participantes` : `${regs.length} participants`)}
+                  </div>
+                </div>
+                <div style={{ color: "#fff", fontSize: 30, fontWeight: 800, fontFamily: "monospace", letterSpacing: "-.5px" }}>
+                  {fmt(totalFee)}
+                </div>
+              </div>
 
-          <div style={{ background: "#fef3c7", borderRadius: 8, padding: "10px 14px", marginBottom: 18, fontSize: 12, color: "#92400e", display: "flex", alignItems: "flex-start", gap: 6 }}>
-            <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} /> {t.pendingPaymentNote}
-          </div>
+              {/* How to pay */}
+              <div style={{ padding: "14px 18px" }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#1a1e2e", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>
+                  {pt ? "Como efetuar o pagamento" : "How to pay"}
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <li style={{ fontSize: 13, color: "#374151", lineHeight: 1.5 }}>
+                    {pt
+                      ? "Procure um atendente, secretário(a), tesoureiro(a) ou líder de grupo autorizado pelo evento"
+                      : "Find an authorized clerk, secretary, treasurer, or group leader at the event"}
+                  </li>
+                  <li style={{ fontSize: 13, color: "#374151", fontWeight: 600, lineHeight: 1.5 }}>
+                    {pt ? "Pagamento somente presencial — não aceitamos pagamentos online" : "In-person payment only — we do not accept online payments"}
+                  </li>
+                  <li style={{ fontSize: 13, color: "#374151", lineHeight: 1.5 }}>
+                    {pt
+                      ? <>Informe o número de inscrição <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#b41926" }}>{primary.regNumber}</span> ao efetuar o pagamento</>
+                      : <>Provide your registration number <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#b41926" }}>{primary.regNumber}</span> when paying</>}
+                  </li>
+                </ul>
+
+                {/* Deadline warning inside payment card */}
+                {deadlineDays && (
+                  <div style={{ marginTop: 12, background: "#fef2f2", border: "1.5px solid #fca5a5", borderRadius: 8, padding: "10px 12px", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1.4 }}>⚠️</span>
+                    <p style={{ margin: 0, fontSize: 13, color: "#991b1b", lineHeight: 1.5 }}>
+                      {pt
+                        ? <><strong>Efetue o pagamento em até {deadlineDays} dias.</strong> Após esse prazo, sua inscrição será cancelada automaticamente.</>
+                        : <><strong>Complete payment within {deadlineDays} days.</strong> After this period, your registration will be automatically cancelled.</>}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div style={{ background: "#d1fae5", border: "1.5px solid #6ee7b7", borderRadius: 12, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+              <CheckCircle2 size={28} color="#059669" style={{ flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 700, color: "#065f46", fontSize: 15 }}>
+                  {pt ? "Isento de Pagamento" : "No Payment Required"}
+                </div>
+                <div style={{ fontSize: 12, color: "#047857", marginTop: 2 }}>
+                  {pt ? "Sua inscrição não requer pagamento de taxa." : "Your registration does not require a fee."}
+                </div>
+              </div>
+            </div>
+          )}
 
           <BadgePrint regs={regs} event={event} lang={lang} />
-
-          <div style={{ background: "#d1fae5", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#065f46", marginBottom: 10, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            <MailOpen size={14} /> {lang === "en" ? "Confirmation will be sent to registration team." : "Confirmação será enviada para a equipe de inscrições."}
-          </div>
 
           <button className="btn btn-ghost" style={{ width: "100%", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={handleShare}>
             <Share2 size={14} /> {t.shareConfirmation}
