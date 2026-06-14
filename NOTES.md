@@ -106,10 +106,10 @@ A reg is exempt from payment deadline if: already paid/exempt/cancelled/waitlist
 `{event.prefix}-{YYYYMMDD}-{0001}` — sequence tracked via `seqRef` (useRef), derived from max reg number on load.
 
 ### Public Portal (4-step flow)
-1. Search member + phone/email + translation needs
+1. Search member by name (translation needs moved to step 4)
 2. Add family members (verified from DB or manual unverified)
 3. Health info (allergies, special needs)
-4. Terms acceptance + submit
+4. Contact info (phone optional, email optional) + translation needs + terms acceptance + submit
 
 ---
 
@@ -170,6 +170,8 @@ Migrations in `migrations/001–010`.
 | `promoteFromWaitlist` not persisting | Only updated local state; no DB write | Added `sb.from("registrations").update(...)` |
 | Real-time not delivering events | RLS blocked SELECT for anon role; Realtime checks RLS before delivering events | Fixed by disabling RLS entirely |
 | Portal shows "not found" for already-registered members | `primaryResults` filtered out members in `existingMemberIds`, so searching your name returned nothing | Removed exclusion filter from primary search; now shows "Já inscrito" card with reg number, date, and status (Pago/Pendente/Isento/Excedente/Lista de Espera) |
+| Portal phone field blocked registration | Phone was marked required in step 1 | Made phone optional; moved phone + email + translation needs to step 4 ("Contato & Termos") so step 1 is just name search |
+| No self-service cancellation | Participants had no way to cancel without contacting a clerk | Added "Consultar inscrição" on home screen: enter reg number → see status → cancel (individual or full family group). Paid regs blocked from self-cancel with "fale com um atendente" message |
 
 ---
 
@@ -189,7 +191,7 @@ Migrations in `migrations/001–010`.
 
 ## Next Steps (priority order)
 
-1. **Portal: "Já inscrito" for family members** — currently family search still filters out registered members silently; should show same status card if a searched family member is already registered
+1. **Portal: "Já inscrito" for family members** — family search still filters out registered members silently; should show a status message if a searched family member is already registered
 2. **Error feedback to users** — DB errors log to console only; users see no feedback on failure (toast or inline message on save error)
 3. **Vercel dev workflow** — set up a Preview environment pointing to a dev/staging Supabase project so production data is never touched during development
 4. **Test coverage** — vitest setup exists but coverage is unknown; at minimum test `addReg`, `updateReg`, and the portal submit flow

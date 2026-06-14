@@ -182,7 +182,6 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
     const e = {};
     if (!primary) e.primary = "Por favor, pesquise e selecione o seu nome.";
     if (existingReg) e.primary = "Este participante já está inscrito neste evento.";
-    if (!contact.phone) e.phone = t.phoneRequired;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -349,25 +348,6 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                   {errors.primary && <p style={{ color: "#c0392b", fontSize: 12, marginTop: 4 }}>{errors.primary}</p>}
                 </div>
 
-                <div>
-                  <label>{t.phone} * <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 400, textTransform: "none" }}>(WhatsApp?)</span></label>
-                  <input value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} placeholder="+1 (555) 000-0000" />
-                  {errors.phone && <p style={{ color: "#c0392b", fontSize: 12, marginTop: 4 }}>{errors.phone}</p>}
-                </div>
-                <div>
-                  <label>{t.email}</label>
-                  <input type="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} placeholder="your@email.com" />
-                  <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>Optional — used to send your confirmation.</p>
-                </div>
-
-                <div>
-                  <label>{t.translationNeededLabel}</label>
-                  <div style={{ display: "flex", gap: 16, marginTop: 4 }}>
-                    <div className="cb"><input type="checkbox" id="ten" checked={translations.en} onChange={(e) => setTranslations({ ...translations, en: e.target.checked })} /><label htmlFor="ten">{t.translationEN}</label></div>
-                    <div className="cb"><input type="checkbox" id="tes" checked={translations.es} onChange={(e) => setTranslations({ ...translations, es: e.target.checked })} /><label htmlFor="tes">{t.translationES}</label></div>
-                  </div>
-                </div>
-
                 <button className="btn btn-primary" style={{ padding: 12, fontSize: 15 }} onClick={() => { if (validateStep1()) setStep(2); }}>
                   {lang === "en" ? "Next: Family →" : "Próximo: Família →"}
                 </button>
@@ -485,15 +465,34 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
               </div>
               <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
                 <button className="btn btn-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }} onClick={() => setStep(2)}><ArrowLeft size={14} /> {t.back}</button>
-                <button className="btn btn-primary" style={{ flex: 2 }} onClick={() => setStep(4)}>{lang === "en" ? "Next: Terms →" : "Próximo: Termos →"}</button>
+                <button className="btn btn-primary" style={{ flex: 2 }} onClick={() => setStep(4)}>{lang === "en" ? "Next: Contact & Terms →" : "Próximo: Contato & Termos →"}</button>
               </div>
             </div>
           )}
 
           {step === 4 && (
             <div>
-              <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 14 }}>4. {t.termsTitle}</h3>
-              <div style={{ background: "#f8f9fb", border: "1px solid var(--border)", borderRadius: 10, padding: "16px", maxHeight: 320, overflowY: "auto", marginBottom: 16 }}>
+              <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 14 }}>4. {t.step4}</h3>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+                <div>
+                  <label>{t.phone} <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400, textTransform: "none" }}>(WhatsApp — {lang === "en" ? "optional" : "opcional"})</span></label>
+                  <input value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} placeholder="+1 (555) 000-0000" />
+                </div>
+                <div>
+                  <label>{t.email} <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400, textTransform: "none" }}>({lang === "en" ? "optional" : "opcional"})</span></label>
+                  <input type="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} placeholder="seu@email.com" />
+                </div>
+                <div>
+                  <label>{t.translationNeededLabel}</label>
+                  <div style={{ display: "flex", gap: 16, marginTop: 4 }}>
+                    <div className="cb"><input type="checkbox" id="ten" checked={translations.en} onChange={(e) => setTranslations({ ...translations, en: e.target.checked })} /><label htmlFor="ten">{t.translationEN}</label></div>
+                    <div className="cb"><input type="checkbox" id="tes" checked={translations.es} onChange={(e) => setTranslations({ ...translations, es: e.target.checked })} /><label htmlFor="tes">{t.translationES}</label></div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: "#f8f9fb", border: "1px solid var(--border)", borderRadius: 10, padding: "16px", maxHeight: 280, overflowY: "auto", marginBottom: 16 }}>
                 <pre style={{ fontFamily: "inherit", fontSize: 12, color: "#374151", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{TERMS_TEXT}</pre>
               </div>
               <div className="cb" style={{ marginBottom: 8 }}>
