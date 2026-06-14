@@ -189,29 +189,31 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
   const handleSubmit = () => {
     if (!termsAccepted) { setTermsError(true); return; }
     if (!addReg) return;
-    const famId = null; // family_id is a FK to families table; portal registrations don't create family records
+    // Batch token groups all regs from this submission for family lookup, even when contact info is empty
+    const batchId = "B" + Date.now();
+    const sharedNote = [
+      "[" + batchId + "]",
+      contact.phone ? "Tel: " + contact.phone : "",
+      contact.email ? "Email: " + contact.email : "",
+      allergies.hasAny ? "Alergias: " + allergies.other : "",
+      specialNeeds.hasAny ? "Nec. especiais: " + specialNeeds.other : "",
+    ].filter(Boolean).join(" | ");
     const submittedRegs = allParticipants.map((m) => {
       const isVerifiedMember = m.verified !== false && m.id && !m.id.startsWith("MANUAL-");
-      const data = {
+      return addReg({
         memberId: isVerifiedMember ? m.id : "GUEST",
         memberName: m.name,
         badgeName: m.badgeName || m.name,
         category: m.category || "Adulto",
         church: m.church || "",
         role: m.role || "",
-        familyId: famId,
+        familyId: null,
         team: "Participante",
         paid: false,
         exempt: false,
         needsTranslation: translations.en || translations.es,
-        note: [
-          contact.phone ? "Tel: " + contact.phone : "",
-          contact.email ? "Email: " + contact.email : "",
-          allergies.hasAny ? "Alergias: " + allergies.other : "",
-          specialNeeds.hasAny ? "Nec. especiais: " + specialNeeds.other : "",
-        ].filter(Boolean).join(" | "),
-      };
-      return addReg(data);
+        note: sharedNote,
+      });
     });
     setSubmitted({ regs: submittedRegs, email: contact.email });
   };

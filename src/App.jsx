@@ -97,7 +97,9 @@ export default function App() {
           <RegistrationLookup
             event={appData.event}
             regs={appData.regs}
+            members={appData.members}
             updateReg={appData.updateReg}
+            addReg={appData.addReg}
             lang={lang}
             onBack={() => setView("login")}
           />

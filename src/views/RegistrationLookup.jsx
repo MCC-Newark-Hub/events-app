@@ -1,6 +1,13 @@
 import { useState } from "react";
-import { Search, ArrowLeft, XCircle, CheckCircle2, AlertTriangle } from "lucide-react";
-import { fmt } from "@/constants";
+import { Search, ArrowLeft, XCircle, CheckCircle2, AlertTriangle, UserPlus } from "lucide-react";
+import { fmt, CATEGORIES, ROLE_BADGE } from "@/constants";
+
+const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+function extractBatchId(note) {
+  const m = (note || "").match(/\[B\d+\]/);
+  return m ? m[0] : null;
+}
 
 function getRegStatus(reg) {
   if (reg.cancelled)  return { label: "Cancelado",       color: "#6b7280", bg: "#f3f4f6" };
@@ -54,10 +61,10 @@ function RegCard({ reg, onCancel, lang }) {
             </div>
           </div>
         )}
-        {reg.fee === 0 && !reg.exempt && (
+        {reg.fee === 0 && (
           <div>
             <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 1, textTransform: "uppercase", letterSpacing: ".5px" }}>Taxa</div>
-            <div style={{ fontSize: 13, color: "#065f46" }}>Grátis</div>
+            <div style={{ fontSize: 13, color: "#065f46" }}>{reg.exempt ? "Isento" : "Grátis"}</div>
           </div>
         )}
       </div>
@@ -81,13 +88,32 @@ function RegCard({ reg, onCancel, lang }) {
   );
 }
 
-export default function RegistrationLookup({ event, regs, updateReg, lang, onBack }) {
+export default function RegistrationLookup({ event, regs, members, updateReg, addReg, lang, onBack }) {
   const [query, setQuery] = useState("");
   const [found, setFound] = useState(null);
   const [related, setRelated] = useState([]);
   const [notFound, setNotFound] = useState(false);
-  const [cancelTarget, setCancelTarget] = useState(null); // reg id(s) or "all"
+  const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelDone, setCancelDone] = useState(false);
+
+  // Add family state
+  const [showAddFamily, setShowAddFamily] = useState(false);
+  const [famSearch, setFamSearch] = useState("");
+  const [famSelected, setFamSelected] = useState(null);
+  const [showManual, setShowManual] = useState(false);
+  const [manualMember, setManualMember] = useState({ name: "", category: "Adulto" });
+  const [addDone, setAddDone] = useState(false);
+
+  const registeredIds = (regs || [])
+    .filter((r) => r.eventId === event?.id && !r.cancelled)
+    .map((r) => r.memberId);
+
+  const famResults =
+    famSearch.length > 1
+      ? (members || [])
+          .filter((m) => norm(m.name).includes(norm(famSearch)) && !registeredIds.includes(m.id))
+          .slice(0, 8)
+      : [];
 
   const handleSearch = () => {
     const q = query.trim().toUpperCase();
@@ -98,33 +124,62 @@ export default function RegistrationLookup({ event, regs, updateReg, lang, onBac
       setRelated([]);
       setNotFound(true);
       setCancelDone(false);
+      setAddDone(false);
       return;
     }
     setNotFound(false);
     setCancelDone(false);
+    setAddDone(false);
     setFound(reg);
-    // Group family by shared phone/contact note from the same portal submission
-    if (reg.note) {
-      const rels = (regs || []).filter(
-        (r) => r.id !== reg.id && r.eventId === reg.eventId && r.note === reg.note && !r.cancelled
-      );
-      setRelated(rels);
-    } else {
-      setRelated([]);
-    }
+    setShowAddFamily(false);
+
+    // Group by batch ID token first; fall back to exact note match for older regs
+    const batchId = extractBatchId(reg.note);
+    const rels = batchId
+      ? (regs || []).filter(
+          (r) => r.id !== reg.id && r.eventId === reg.eventId && extractBatchId(r.note) === batchId && !r.cancelled
+        )
+      : reg.note
+      ? (regs || []).filter(
+          (r) => r.id !== reg.id && r.eventId === reg.eventId && r.note === reg.note && !r.cancelled
+        )
+      : [];
+    setRelated(rels);
   };
 
   const doCancel = (ids) => {
     ids.forEach((id) => {
       updateReg(id, { cancelled: true }, { status: "Cancelado", note: "Cancelado pelo portal público" });
     });
-    // Optimistically update local state
-    if (found && ids.includes(found.id)) {
-      setFound((prev) => ({ ...prev, cancelled: true }));
-    }
+    if (found && ids.includes(found.id)) setFound((prev) => ({ ...prev, cancelled: true }));
     setRelated((prev) => prev.filter((r) => !ids.includes(r.id)));
     setCancelTarget(null);
     setCancelDone(true);
+  };
+
+  const handleAddFamily = () => {
+    if (!famSelected || !found || !addReg) return;
+    const isVerified = !famSelected.id?.startsWith("MANUAL-");
+    const newReg = addReg({
+      memberId: isVerified ? famSelected.id : "GUEST",
+      memberName: famSelected.name,
+      badgeName: famSelected.name,
+      category: famSelected.category || "Adulto",
+      church: famSelected.church || "",
+      role: famSelected.role || "",
+      familyId: null,
+      team: "Participante",
+      paid: false,
+      exempt: false,
+      note: found.note, // inherit batch token + contact info from existing registration
+    });
+    setRelated((prev) => [...prev, newReg]);
+    setAddDone(true);
+    setShowAddFamily(false);
+    setFamSelected(null);
+    setFamSearch("");
+    setManualMember({ name: "", category: "Adulto" });
+    setShowManual(false);
   };
 
   const activeRelated = related.filter((r) => !r.cancelled);
@@ -145,19 +200,19 @@ export default function RegistrationLookup({ event, regs, updateReg, lang, onBac
           </h1>
           <p style={{ color: "rgba(255,255,255,.75)", fontSize: 13 }}>
             {lang === "en"
-              ? "Enter your registration number to check your status or cancel."
-              : "Digite seu número de inscrição para consultar o status ou cancelar."}
+              ? "Enter your registration number to check your status, cancel, or add family members."
+              : "Digite seu número de inscrição para consultar, cancelar ou adicionar familiares."}
           </p>
         </div>
 
         <div style={{ background: "#fff", borderRadius: 20, padding: "24px 20px" }}>
-          {/* Search input */}
+          {/* Search */}
           <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
             <input
               value={query}
               onChange={(e) => { setQuery(e.target.value.toUpperCase()); setNotFound(false); }}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder={event?.prefix ? `ex: ${event.prefix}-20260613-0001` : "ex: MCC-20260613-0001"}
+              placeholder={event?.prefix ? `ex: ${event.prefix}-20260614-0001` : "ex: MCC-20260614-0001"}
               style={{ flex: 1, fontFamily: "monospace", letterSpacing: ".04em", textTransform: "uppercase" }}
             />
             <button className="btn btn-primary" onClick={handleSearch} style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
@@ -165,51 +220,188 @@ export default function RegistrationLookup({ event, regs, updateReg, lang, onBac
             </button>
           </div>
           <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 16 }}>
-            {lang === "en" ? "Your reg number was shown on the confirmation screen." : "O número de inscrição foi exibido na tela de confirmação."}
+            {lang === "en" ? "Your reg number was shown on the confirmation screen." : "O número foi exibido na tela de confirmação."}
           </p>
 
           {notFound && (
             <div style={{ padding: "12px 14px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, fontSize: 13, color: "#991b1b", marginBottom: 12 }}>
-              {lang === "en"
-                ? "Registration not found. Check the number and try again."
-                : "Inscrição não encontrada. Verifique o número e tente novamente."}
+              {lang === "en" ? "Registration not found. Check the number and try again." : "Inscrição não encontrada. Verifique o número e tente novamente."}
             </div>
           )}
 
           {cancelDone && (
             <div style={{ padding: "12px 14px", background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, fontSize: 13, color: "#065f46", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-              <CheckCircle2 size={15} />
-              {lang === "en" ? "Registration cancelled successfully." : "Inscrição cancelada com sucesso."}
+              <CheckCircle2 size={15} /> {lang === "en" ? "Registration cancelled successfully." : "Inscrição cancelada com sucesso."}
             </div>
           )}
 
-          {/* Result */}
+          {addDone && (
+            <div style={{ padding: "12px 14px", background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, fontSize: 13, color: "#065f46", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+              <CheckCircle2 size={15} /> {lang === "en" ? "Family member added successfully." : "Familiar adicionado com sucesso."}
+            </div>
+          )}
+
           {found && (
             <div>
               <RegCard reg={found} onCancel={() => setCancelTarget([found.id])} lang={lang} />
 
-              {activeRelated.length > 0 && !found.cancelled && (
+              {/* Family / same group */}
+              {(activeRelated.length > 0 || found.cancelled === false) && (
                 <div style={{ marginTop: 4 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".5px", margin: "12px 0 8px" }}>
-                    {lang === "en" ? "Family / Same group" : "Família / Mesmo grupo"}
-                  </div>
-                  {activeRelated.map((r) => (
-                    <RegCard key={r.id} reg={r} onCancel={() => setCancelTarget([r.id])} lang={lang} />
-                  ))}
-                  <button
-                    className="btn btn-ghost"
-                    style={{ width: "100%", marginTop: 4, color: "#991b1b", borderColor: "#fca5a5", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-                    onClick={() => setCancelTarget([found.id, ...activeRelated.map((r) => r.id)])}
-                  >
-                    <XCircle size={14} />
-                    {lang === "en"
-                      ? `Cancel all ${activeRelated.length + 1} registrations`
-                      : `Cancelar todas as ${activeRelated.length + 1} inscrições do grupo`}
-                  </button>
+                  {activeRelated.length > 0 && (
+                    <>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".5px", margin: "12px 0 8px" }}>
+                        {lang === "en" ? "Family / Same group" : "Família / Mesmo grupo"}
+                      </div>
+                      {activeRelated.map((r) => (
+                        <RegCard key={r.id} reg={r} onCancel={() => setCancelTarget([r.id])} lang={lang} />
+                      ))}
+                      {!found.cancelled && (
+                        <button
+                          className="btn btn-ghost"
+                          style={{ width: "100%", marginTop: 4, color: "#991b1b", borderColor: "#fca5a5", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                          onClick={() => setCancelTarget([found.id, ...activeRelated.map((r) => r.id)])}
+                        >
+                          <XCircle size={14} />
+                          {lang === "en"
+                            ? `Cancel all ${activeRelated.length + 1} registrations`
+                            : `Cancelar todas as ${activeRelated.length + 1} inscrições do grupo`}
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  {/* Add family member */}
+                  {!found.cancelled && !showAddFamily && (
+                    <button
+                      className="btn btn-ghost"
+                      style={{ width: "100%", marginTop: 8, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                      onClick={() => { setShowAddFamily(true); setAddDone(false); }}
+                    >
+                      <UserPlus size={14} />
+                      {lang === "en" ? "Add family member" : "Adicionar familiar"}
+                    </button>
+                  )}
                 </div>
               )}
 
-              {/* Cancel confirmation inline */}
+              {/* Add family member panel */}
+              {showAddFamily && !found.cancelled && (
+                <div style={{ marginTop: 12, border: "1.5px solid #bfdbfe", borderRadius: 10, padding: "16px" }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#1e40af", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                    <UserPlus size={16} /> {lang === "en" ? "Add family member" : "Adicionar familiar"}
+                  </div>
+
+                  {!famSelected && (
+                    <>
+                      <label style={{ fontSize: 13 }}>{lang === "en" ? "Search by name" : "Buscar pelo nome"}</label>
+                      <div style={{ position: "relative", marginTop: 4, marginBottom: 8 }}>
+                        <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }}><Search size={14} /></span>
+                        <input
+                          value={famSearch}
+                          onChange={(e) => setFamSearch(e.target.value)}
+                          placeholder={lang === "en" ? "Type name..." : "Digite o nome..."}
+                          style={{ paddingLeft: 32, width: "100%", boxSizing: "border-box" }}
+                          autoFocus
+                        />
+                      </div>
+
+                      {famResults.length > 0 && (
+                        <div style={{ border: "1.5px solid var(--border)", borderRadius: 8, overflow: "hidden", maxHeight: 180, overflowY: "auto", marginBottom: 8 }}>
+                          {famResults.map((m) => (
+                            <div
+                              key={m.id}
+                              onClick={() => { setFamSelected(m); setFamSearch(""); }}
+                              style={{ padding: "9px 14px", cursor: "pointer", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+                            >
+                              <div>
+                                <span style={{ fontWeight: 600 }}>{m.name}</span>
+                                <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{m.church}</span>
+                              </div>
+                              <span className="badge badge-blue">{m.category}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {famSearch.length > 1 && famResults.length === 0 && (
+                        <p style={{ fontSize: 12, color: "#b45309", background: "#fef3c7", borderRadius: 6, padding: "8px 10px", marginBottom: 8 }}>
+                          {lang === "en" ? "Not found in directory." : "Não encontrado no diretório."}
+                        </p>
+                      )}
+
+                      <div className="cb" style={{ marginTop: 4 }}>
+                        <input type="checkbox" id="lk-manual" checked={showManual} onChange={(e) => setShowManual(e.target.checked)} />
+                        <label htmlFor="lk-manual" style={{ fontSize: 13 }}>
+                          {lang === "en" ? "Member not found — add manually" : "Membro não encontrado — adicionar manualmente"}
+                        </label>
+                      </div>
+
+                      {showManual && (
+                        <div style={{ marginTop: 10, background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 8, padding: "12px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <div>
+                              <label style={{ fontSize: 13 }}>{lang === "en" ? "Full name" : "Nome completo"}</label>
+                              <input value={manualMember.name} onChange={(e) => setManualMember({ ...manualMember, name: e.target.value })} />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: 13 }}>{lang === "en" ? "Category" : "Categoria"}</label>
+                              <select value={manualMember.category} onChange={(e) => setManualMember({ ...manualMember, category: e.target.value })}>
+                                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                              </select>
+                            </div>
+                            <button
+                              className="btn btn-warn btn-sm"
+                              onClick={() => {
+                                if (!manualMember.name.trim()) return;
+                                setFamSelected({ id: "MANUAL-" + Date.now(), name: manualMember.name.trim(), category: manualMember.category, church: "", role: "", verified: false });
+                                setShowManual(false);
+                              }}
+                            >
+                              {lang === "en" ? "Use this name" : "Usar este nome"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Selected member preview */}
+                  {famSelected && (
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <span style={{ fontWeight: 600 }}>{famSelected.name}</span>
+                          {famSelected.verified === false && (
+                            <span style={{ marginLeft: 6, fontSize: 10, background: "#fef3c7", color: "#92400e", padding: "1px 6px", borderRadius: 99, fontWeight: 700 }}>Não verificado</span>
+                          )}
+                          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{famSelected.category}{famSelected.church ? ` · ${famSelected.church}` : ""}</div>
+                        </div>
+                        <button onClick={() => { setFamSelected(null); setFamSearch(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 18 }}>×</button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: 8, marginTop: famSelected ? 0 : 12 }}>
+                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setShowAddFamily(false); setFamSelected(null); setFamSearch(""); setShowManual(false); }}>
+                      {lang === "en" ? "Cancel" : "Cancelar"}
+                    </button>
+                    <button
+                      className="btn btn-primary"
+                      style={{ flex: 2 }}
+                      disabled={!famSelected}
+                      onClick={handleAddFamily}
+                    >
+                      <UserPlus size={14} style={{ marginRight: 4 }} />
+                      {lang === "en" ? "Add to registration" : "Adicionar à inscrição"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Cancel confirmation */}
               {cancelTarget && (
                 <div style={{ marginTop: 12, padding: "16px", background: "#fef2f2", border: "1.5px solid #fca5a5", borderRadius: 10 }}>
                   <div style={{ fontWeight: 700, color: "#991b1b", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
@@ -240,7 +432,7 @@ export default function RegistrationLookup({ event, regs, updateReg, lang, onBac
                 </div>
               )}
 
-              {!cancelTarget && (
+              {!cancelTarget && !showAddFamily && (
                 <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 14, textAlign: "center" }}>
                   {lang === "en"
                     ? "For other changes, please speak with a registration clerk."
