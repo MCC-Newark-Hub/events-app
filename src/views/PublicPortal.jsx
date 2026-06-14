@@ -33,6 +33,19 @@ By attending this event, you agree to respect the values and culture of Igreja C
 O evento poderá ser fotografado e filmado para fins institucionais. Ao se inscrever, você consente com o uso de sua imagem para fins internos da igreja.
 The event may be photographed and filmed for institutional purposes. By registering, you consent to the use of your image for internal church purposes.`;
 
+function getRegStatus(reg) {
+  if (reg.waitlisted) return { label: "Lista de Espera", color: "#92400e", bg: "#fef3c7" };
+  if (reg.excedente)  return { label: "Excedente",       color: "#7c3aed", bg: "#ede9fe" };
+  if (reg.exempt)     return { label: "Isento",          color: "#065f46", bg: "#d1fae5" };
+  if (reg.paid)       return { label: "Pago",            color: "#065f46", bg: "#d1fae5" };
+  return               { label: "Pendente",              color: "#b45309", bg: "#fef3c7" };
+}
+
+function dateFromRegNumber(regNumber) {
+  const d = (regNumber || "").split("-")[1] || "";
+  return d.length === 8 ? `${d.slice(6, 8)}/${d.slice(4, 6)}/${d.slice(0, 4)}` : "";
+}
+
 const CLERK_EMAIL = "mccnewark.registrations@gmail.com";
 
 function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome }) {
@@ -156,8 +169,10 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
 
   const allMembers = propMembers || [];
   const existingMemberIds = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled && r.memberId !== "GUEST").map((r) => r.memberId);
-  const primaryResults = primarySearch.length > 0 ? allMembers.filter((m) =>norm(m.name).includes(norm(primarySearch)) && !existingMemberIds.includes(m.id)).slice(0, 20) : [];
+  // Include already-registered members in primary search so we can show their status
+  const primaryResults = primarySearch.length > 0 ? allMembers.filter((m) => norm(m.name).includes(norm(primarySearch))).slice(0, 20) : [];
   const famResults = famSearch.length > 0 ? allMembers.filter((m) =>norm(m.name).includes(norm(famSearch)) && m.id !== primary?.id && !familyMembers.find((fm) => fm.id === m.id) && !existingMemberIds.includes(m.id)).slice(0, 8) : [];
+  const existingReg = primary ? (regs || []).find((r) => r.eventId === event?.id && r.memberId === primary.id && !r.cancelled) : null;
 
   const eventFee = (cat) => event?.fees?.[cat] ?? 0;
   const allParticipants = primary ? [primary, ...familyMembers] : [];
@@ -165,7 +180,8 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
 
   const validateStep1 = () => {
     const e = {};
-    if (!primary) e.primary = "Please search for and select your name.";
+    if (!primary) e.primary = "Por favor, pesquise e selecione o seu nome.";
+    if (existingReg) e.primary = "Este participante já está inscrito neste evento.";
     if (!contact.phone) e.phone = t.phoneRequired;
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -265,12 +281,19 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                   </div>
                   {primaryResults.length > 0 && !primary && (
                     <div style={{ border: "1.5px solid var(--border)", borderRadius: 8, marginTop: 4, overflow: "hidden", maxHeight: 200, overflowY: "auto" }}>
-                      {primaryResults.map((m) => (
-                        <div key={m.id} onClick={() => { setPrimary(m); setPrimarySearch(m.name); setPrimaryNotFound(false); }} style={{ padding: "10px 14px", cursor: "pointer", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}>
-                          <div><span style={{ fontWeight: 600 }}>{m.name}</span><span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{m.church}</span></div>
-                          <div style={{ display: "flex", gap: 5 }}><span className="badge badge-blue">{m.category}</span>{m.role && <span className={`badge ${ROLE_BADGE[m.role]}`}>{m.role}</span>}</div>
-                        </div>
-                      ))}
+                      {primaryResults.map((m) => {
+                        const alreadyReg = existingMemberIds.includes(m.id);
+                        return (
+                          <div key={m.id} onClick={() => { setPrimary(m); setPrimarySearch(m.name); setPrimaryNotFound(false); }} style={{ padding: "10px 14px", cursor: "pointer", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", background: alreadyReg ? "#fff7ed" : "" }} onMouseEnter={(e) => (e.currentTarget.style.background = alreadyReg ? "#fef3c7" : "#eff6ff")} onMouseLeave={(e) => (e.currentTarget.style.background = alreadyReg ? "#fff7ed" : "")}>
+                            <div>
+                              <span style={{ fontWeight: 600 }}>{m.name}</span>
+                              <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{m.church}</span>
+                              {alreadyReg && <span style={{ marginLeft: 6, fontSize: 10, background: "#fee2e2", color: "#991b1b", padding: "1px 6px", borderRadius: 99, fontWeight: 700 }}>Já inscrito</span>}
+                            </div>
+                            <div style={{ display: "flex", gap: 5 }}><span className="badge badge-blue">{m.category}</span>{m.role && <span className={`badge ${ROLE_BADGE[m.role]}`}>{m.role}</span>}</div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                   {allMembers.length === 0 && loading && (
@@ -296,7 +319,28 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                   {primarySearch.length > 0 && primaryResults.length === 0 && !primary && (
                     <div style={{ marginTop: 8, padding: "10px 14px", background: "#fef3c7", borderRadius: 8, fontSize: 13, color: "#92400e" }}>{t.nameNotFound} {t.nameNotFoundClerk}</div>
                   )}
-                  {primary && (
+                  {primary && existingReg && (() => {
+                    const status = getRegStatus(existingReg);
+                    return (
+                      <div style={{ marginTop: 8, background: "#fff7ed", border: "1.5px solid #f59e0b", borderRadius: 10, padding: "14px 16px" }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: "#78350f", marginBottom: 8 }}>Participante já inscrito neste evento</div>
+                        <div style={{ fontWeight: 600, fontSize: 15 }}>{primary.name}</div>
+                        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{primary.category} · {primary.church}</div>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
+                          <span style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: "#b41926" }}>{existingReg.regNumber}</span>
+                          <span style={{ fontSize: 12, color: "#6b7280" }}>{dateFromRegNumber(existingReg.regNumber)}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 99, background: status.bg, color: status.color }}>{status.label}</span>
+                        </div>
+                        <p style={{ fontSize: 12, color: "#78350f", marginTop: 10, marginBottom: 8 }}>
+                          Se precisar de ajuda, fale com um atendente.
+                        </p>
+                        <button onClick={() => { setPrimary(null); setPrimarySearch(""); }} style={{ background: "none", border: "1px solid #f59e0b", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", color: "#92400e" }}>
+                          Buscar outro nome
+                        </button>
+                      </div>
+                    );
+                  })()}
+                  {primary && !existingReg && (
                     <div style={{ marginTop: 8, background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: "10px 14px", fontSize: 13, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div><strong>{primary.name}</strong><span style={{ marginLeft: 8, color: "#6b7280" }}>{primary.category} · {primary.church}</span></div>
                       <button onClick={() => { setPrimary(null); setPrimarySearch(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 18 }}>×</button>

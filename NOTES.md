@@ -38,7 +38,7 @@ src/
     PublicPortal.jsx         # 4-step self-registration flow
     CheckInScreen.jsx        # URL-param: ?checkin=<regNumber>
     SelfCheckInScreen.jsx    # URL-param: ?selfcheckin=<eventId>
-    AdminView.jsx            # Full admin panel (1773 lines)
+    AdminView.jsx            # Full admin panel
     ClerkView.jsx
     PastorView.jsx
     GALeaderView.jsx
@@ -77,6 +77,9 @@ All mutations update local React state immediately, then fire Supabase async. Er
 ### Derived state via `useMemo`
 `activeRegs`, `wlRegs`, `exRegs`, `pendingApprovals`, `isFull` are memos off `regs + event`.
 
+### Supabase RLS disabled
+All 12 tables have RLS disabled (`ALTER TABLE ... DISABLE ROW LEVEL SECURITY`). The app uses PIN-based auth (not Supabase Auth), so all users share the same anon key — RLS cannot distinguish between roles. Security is enforced entirely at the app layer.
+
 ---
 
 ## Business Logic
@@ -100,7 +103,7 @@ A reg is exempt from payment deadline if: already paid/exempt/cancelled/waitlist
 6. Cancellations notify clerk if there's a waitlisted person
 
 ### Registration number format
-`{event.prefix}-{YYYYMMDD}-{0001}` — sequence tracked in `seq` state, derived from max reg number on load.
+`{event.prefix}-{YYYYMMDD}-{0001}` — sequence tracked via `seqRef` (useRef), derived from max reg number on load.
 
 ### Public Portal (4-step flow)
 1. Search member + phone/email + translation needs
@@ -147,31 +150,26 @@ Migrations in `migrations/001–010`.
 - Session persistence across page reloads
 - Dark/light theme toggle
 - Bilingual UI (PT/EN strings in `i18n/strings.js`)
+- Real-time sync between clerks (Supabase postgres_changes on registrations + approvals)
+- Admin bulk delete (checkbox column + confirmation modal in RegistrationsTab)
 
 ---
 
-## Recently Fixed (session 2026-06-13)
+## Fixed Bugs — Session 2026-06-13/14
 
 | Bug | Root Cause | Fix |
 |-----|-----------|-----|
 | Public portal "Nenhum membro encontrado" | `LoginScreen` rendered its own internal `PublicPortal` with `SAMPLE_EVENT` and no `members`/`regs`/`addReg` props — bypassing App.jsx entirely | Wired "Fazer minha inscrição" button to `onPublicRegister` callback → App.jsx renders the real PublicPortal with live data |
-| Family registration 409 Conflict | `famId = "FAM-" + Date.now()` violated FK constraint `registrations_family_id_fkey` (must reference `families.id`) | Set `famId = null` in portal submit — family grouping on confirmation screen uses the `regs` array directly |
-| Registration sequence duplicates | `addReg` read stale `seq` state in concurrent family submissions | Replaced `seq` state reads with `seqRef.current` (useRef) for always-current value |
-| Pastor/Ungido not auto-exempt on role change | `updateReg` didn't apply exempt/fee=0 when role was updated to Pastor/Ungido | Added `autoExempt` object merged into the updated reg when role is Pastor/Ungido |
-| Admin directory column filters caused crash | `FilterTh` factory pattern broke React hook rules | Refactored to `makeTh` helper, removed per-column filter inputs (global search still works) |
-| Admin bulk delete missing | No way to delete multiple registrations at once | Added checkbox column + bulk delete button with confirmation modal in RegistrationsTab |
-
----
-
-## Known Issues / Pending
-
-| Issue | Notes |
-|-------|-------|
-| `teams` table returns 401 | Supabase RLS blocks anon reads on the `teams` table — add `CREATE POLICY "anon_read" ON teams FOR SELECT USING (true);` or disable RLS |
-| Vercel deployment broken | Prod env has wrong `VITE_SUPABASE_KEY` — update in Vercel Dashboard → Settings → Environment Variables, then redeploy |
-| `promoteFromWaitlist` no DB write | Only updates local state; DB record stays `waitlisted=true` — needs `sb.from("registrations").update(...)` call |
-| No real-time updates | Two clerks editing simultaneously will diverge — no Supabase subscriptions |
-| Silent DB errors | Most query errors log to console only; users see no feedback on failure |
+| Family registration 409 Conflict | `famId = "FAM-" + Date.now()` violated FK constraint `registrations_family_id_fkey` (must reference `families.id`) | Set `famId = null` in portal submit |
+| Registration sequence duplicates | `addReg` read stale `seq` state in concurrent family submissions | Replaced `seq` state reads with `seqRef.current` (useRef) |
+| Pastor/Ungido not auto-exempt on role change | `updateReg` didn't apply exempt/fee=0 when role was updated to Pastor/Ungido | Added `autoExempt` object merged into the updated reg |
+| Admin directory column filters caused crash | `FilterTh` factory pattern broke React hook rules | Refactored to `makeTh` helper |
+| Admin bulk delete missing | No way to delete multiple registrations at once | Added checkbox column + bulk delete with confirmation modal in RegistrationsTab |
+| All DB writes silently failing (Pago not saving) | Supabase RLS enabled on all 12 tables with no anon write policies; optimistic UI hid the failure | Disabled RLS on all 12 tables (`ALTER TABLE ... DISABLE ROW LEVEL SECURITY`) |
+| `updateReg` crashing with `sb.from(...).eq is not a function` | Supabase JS v2 requires `.update(data).eq(col, val)` — code had `.eq().update()` (reversed) | Swapped to `.update(dbUpd).eq("id", id)` in both `updateReg` and `resolveApproval` |
+| `promoteFromWaitlist` not persisting | Only updated local state; no DB write | Added `sb.from("registrations").update(...)` |
+| Real-time not delivering events | RLS blocked SELECT for anon role; Realtime checks RLS before delivering events | Fixed by disabling RLS entirely |
+| Portal shows "not found" for already-registered members | `primaryResults` filtered out members in `existingMemberIds`, so searching your name returned nothing | Removed exclusion filter from primary search; now shows "Já inscrito" card with reg number, date, and status (Pago/Pendente/Isento/Excedente/Lista de Espera) |
 
 ---
 
@@ -184,15 +182,15 @@ Migrations in `migrations/001–010`.
 - `registrations.family_id` is a FK to `families.id` — do NOT use temp string IDs here
 - Optimistic temp IDs: `"tmp-" + n` for regs, `"tmp-apr-" + Date.now()` for approvals
 - `seqRef.current` (not `seq` state) is the authoritative sequence counter in `addReg`
-- `submitApproval` embeds `Date.now()` in a tmp id — fine since it's replaced after DB insert
+- Supabase JS v2: always `.update(data).eq(col, val)` — filter AFTER mutation, never before
+- RLS is disabled on all tables — if Supabase Auth is ever added, re-evaluate policies
 
 ---
 
-## Next Steps (pick what to tackle)
+## Next Steps (priority order)
 
-1. **Fix `teams` RLS** — quick Supabase SQL fix; unblocks teams data loading
-2. **Fix Vercel deployment** — update `VITE_SUPABASE_KEY` in Vercel env vars + redeploy
-3. **Fix `promoteFromWaitlist` DB write** — ~5 line fix in `useAppData.js`
-4. **Real-time sync** — Supabase subscriptions so two clerks stay in sync
-5. **Error feedback** — surface DB errors to users instead of silent console logs
-6. **Test coverage** — vitest setup exists but coverage is unknown
+1. **Portal: "Já inscrito" for family members** — currently family search still filters out registered members silently; should show same status card if a searched family member is already registered
+2. **Error feedback to users** — DB errors log to console only; users see no feedback on failure (toast or inline message on save error)
+3. **Vercel dev workflow** — set up a Preview environment pointing to a dev/staging Supabase project so production data is never touched during development
+4. **Test coverage** — vitest setup exists but coverage is unknown; at minimum test `addReg`, `updateReg`, and the portal submit flow
+5. **Paid status on portal confirmation** — show fee amount due and payment instructions more prominently on the confirmation screen
