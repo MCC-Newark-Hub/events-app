@@ -13,6 +13,7 @@ import AdminView from "@/views/AdminView";
 import PastorView from "@/views/PastorView";
 import GALeaderView from "@/views/GALeaderView";
 import TeamLeaderView from "@/views/TeamLeaderView";
+import RegistrationLookup from "@/views/RegistrationLookup";
 
 export default function App() {
   const lang = "pt";
@@ -91,7 +92,16 @@ export default function App() {
             updatePresence={appData.updatePresence}
           />
         )}
-        {!checkinParam && !selfCheckinParam && view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} onPublicRegister={() => setView("public")} />}
+        {!checkinParam && !selfCheckinParam && view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} onPublicRegister={() => setView("public")} onLookup={() => setView("lookup")} />}
+        {!checkinParam && !selfCheckinParam && view === "lookup" && (
+          <RegistrationLookup
+            event={appData.event}
+            regs={appData.regs}
+            updateReg={appData.updateReg}
+            lang={lang}
+            onBack={() => setView("login")}
+          />
+        )}
         {!checkinParam && !selfCheckinParam && view === "public" && (
           <PublicPortal
             event={appData.event}

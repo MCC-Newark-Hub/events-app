@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { ClipboardList, Lock } from "lucide-react";
+import { ClipboardList, Lock, Search } from "lucide-react";
 import { STRINGS } from "@/i18n/strings";
 import ICMLogo from "@/components/ICMLogo";
 import PinLogin from "@/components/PinLogin";
 
-function LoginScreen({ login, lang, setLang, onPublicRegister }) {
+function LoginScreen({ login, lang, setLang, onPublicRegister, onLookup }) {
   const t = STRINGS[lang];
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
@@ -53,6 +53,22 @@ function LoginScreen({ login, lang, setLang, onPublicRegister }) {
               onClick={onPublicRegister}
             >
               <ClipboardList size={18} /> {t.myReg}
+            </button>
+            <button
+              className="btn btn-ghost"
+              style={{
+                padding: "14px 24px",
+                fontSize: 15,
+                borderColor: "rgba(255,255,255,.3)",
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+              onClick={onLookup}
+            >
+              <Search size={18} /> {lang === "en" ? "Manage my registration" : "Consultar inscrição"}
             </button>
             <button
               className="btn btn-ghost"
