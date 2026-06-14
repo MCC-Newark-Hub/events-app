@@ -89,7 +89,9 @@ function RegCard({ reg, onCancel, lang }) {
 }
 
 export default function RegistrationLookup({ event, regs, members, updateReg, addReg, lang, onBack }) {
+  const [searchMode, setSearchMode] = useState("number"); // "number" | "name"
   const [query, setQuery] = useState("");
+  const [nameQuery, setNameQuery] = useState("");
   const [found, setFound] = useState(null);
   const [related, setRelated] = useState([]);
   const [notFound, setNotFound] = useState(false);
@@ -115,6 +117,36 @@ export default function RegistrationLookup({ event, regs, members, updateReg, ad
           .slice(0, 8)
       : [];
 
+  const nameResults =
+    nameQuery.length > 1
+      ? (regs || [])
+          .filter((r) => r.eventId === event?.id && norm(r.memberName).includes(norm(nameQuery)))
+          .slice(0, 10)
+      : [];
+
+  const resolveRelated = (reg) => {
+    const batchId = extractBatchId(reg.note);
+    return batchId
+      ? (regs || []).filter(
+          (r) => r.id !== reg.id && r.eventId === reg.eventId && extractBatchId(r.note) === batchId && !r.cancelled
+        )
+      : reg.note
+      ? (regs || []).filter(
+          (r) => r.id !== reg.id && r.eventId === reg.eventId && r.note === reg.note && !r.cancelled
+        )
+      : [];
+  };
+
+  const selectReg = (reg) => {
+    setFound(reg);
+    setRelated(resolveRelated(reg));
+    setNotFound(false);
+    setCancelDone(false);
+    setAddDone(false);
+    setShowAddFamily(false);
+    setNameQuery("");
+  };
+
   const handleSearch = () => {
     const q = query.trim().toUpperCase();
     if (!q) return;
@@ -127,24 +159,18 @@ export default function RegistrationLookup({ event, regs, members, updateReg, ad
       setAddDone(false);
       return;
     }
+    selectReg(reg);
+  };
+
+  const switchMode = (mode) => {
+    setSearchMode(mode);
+    setFound(null);
+    setRelated([]);
     setNotFound(false);
+    setQuery("");
+    setNameQuery("");
     setCancelDone(false);
     setAddDone(false);
-    setFound(reg);
-    setShowAddFamily(false);
-
-    // Group by batch ID token first; fall back to exact note match for older regs
-    const batchId = extractBatchId(reg.note);
-    const rels = batchId
-      ? (regs || []).filter(
-          (r) => r.id !== reg.id && r.eventId === reg.eventId && extractBatchId(r.note) === batchId && !r.cancelled
-        )
-      : reg.note
-      ? (regs || []).filter(
-          (r) => r.id !== reg.id && r.eventId === reg.eventId && r.note === reg.note && !r.cancelled
-        )
-      : [];
-    setRelated(rels);
   };
 
   const doCancel = (ids) => {
@@ -206,22 +232,94 @@ export default function RegistrationLookup({ event, regs, members, updateReg, ad
         </div>
 
         <div style={{ background: "#fff", borderRadius: 20, padding: "24px 20px" }}>
-          {/* Search */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
-            <input
-              value={query}
-              onChange={(e) => { setQuery(e.target.value.toUpperCase()); setNotFound(false); }}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder={event?.prefix ? `ex: ${event.prefix}-20260614-0001` : "ex: MCC-20260614-0001"}
-              style={{ flex: 1, fontFamily: "monospace", letterSpacing: ".04em", textTransform: "uppercase" }}
-            />
-            <button className="btn btn-primary" onClick={handleSearch} style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-              <Search size={15} /> {lang === "en" ? "Search" : "Buscar"}
-            </button>
+          {/* Mode tabs */}
+          <div style={{ display: "flex", background: "#f3f4f6", borderRadius: 8, padding: 3, marginBottom: 16, gap: 2 }}>
+            {[
+              { key: "number", label: lang === "en" ? "By reg number" : "Por número" },
+              { key: "name",   label: lang === "en" ? "By name"       : "Por nome" },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => switchMode(key)}
+                style={{
+                  flex: 1, padding: "7px 0", fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer", borderRadius: 6,
+                  background: searchMode === key ? "#fff" : "transparent",
+                  color: searchMode === key ? "#1a1e2e" : "#6b7280",
+                  boxShadow: searchMode === key ? "0 1px 3px rgba(0,0,0,.1)" : "none",
+                }}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-          <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 16 }}>
-            {lang === "en" ? "Your reg number was shown on the confirmation screen." : "O número foi exibido na tela de confirmação."}
-          </p>
+
+          {/* Search by number */}
+          {searchMode === "number" && (
+            <>
+              <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+                <input
+                  value={query}
+                  onChange={(e) => { setQuery(e.target.value.toUpperCase()); setNotFound(false); }}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  placeholder={event?.prefix ? `ex: ${event.prefix}-20260614-0001` : "ex: MCC-20260614-0001"}
+                  style={{ flex: 1, fontFamily: "monospace", letterSpacing: ".04em", textTransform: "uppercase" }}
+                />
+                <button className="btn btn-primary" onClick={handleSearch} style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <Search size={15} /> {lang === "en" ? "Search" : "Buscar"}
+                </button>
+              </div>
+              <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 16 }}>
+                {lang === "en" ? "Your reg number was shown on the confirmation screen." : "O número foi exibido na tela de confirmação."}
+              </p>
+            </>
+          )}
+
+          {/* Search by name */}
+          {searchMode === "name" && (
+            <>
+              <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+                <input
+                  value={nameQuery}
+                  onChange={(e) => { setNameQuery(e.target.value); setNotFound(false); setFound(null); }}
+                  placeholder={lang === "en" ? "Type your name..." : "Digite seu nome..."}
+                  style={{ flex: 1 }}
+                  autoFocus
+                />
+              </div>
+              <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: nameResults.length ? 8 : 16 }}>
+                {lang === "en" ? "Type at least 2 characters to search." : "Digite ao menos 2 caracteres para buscar."}
+              </p>
+              {nameResults.length > 0 && !found && (
+                <div style={{ border: "1.5px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
+                  {nameResults.map((r) => {
+                    const st = getRegStatus(r);
+                    return (
+                      <div
+                        key={r.id}
+                        onClick={() => selectReg(r)}
+                        style={{ padding: "11px 14px", cursor: "pointer", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8faff")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 14 }}>{r.memberName}</div>
+                          <div style={{ fontFamily: "monospace", fontSize: 11, color: "#b41926", marginTop: 1 }}>{r.regNumber}</div>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: st.bg, color: st.color, whiteSpace: "nowrap" }}>
+                          {st.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {nameQuery.length > 1 && nameResults.length === 0 && !found && (
+                <div style={{ padding: "12px 14px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, fontSize: 13, color: "#991b1b", marginBottom: 12 }}>
+                  {lang === "en" ? "No registrations found for that name." : "Nenhuma inscrição encontrada com esse nome."}
+                </div>
+              )}
+            </>
+          )}
 
           {notFound && (
             <div style={{ padding: "12px 14px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, fontSize: 13, color: "#991b1b", marginBottom: 12 }}>
