@@ -302,6 +302,7 @@ export function useAppData({ getUserRef, notify }) {
       .then(function (res) {
         if (res.error) {
           console.error("addReg DB error:", res.error);
+          notify("Erro ao salvar inscrição. Verifique sua conexão e tente novamente.");
           return;
         }
         if (!res.data) return;
@@ -314,8 +315,9 @@ export function useAppData({ getUserRef, notify }) {
     return r;
   };
 
-  const updateReg = function (id, upd, timelineEntry) {
+  const updateReg = function (id, upd, timelineEntry, opts) {
     timelineEntry = timelineEntry || null;
+    opts = opts || {};
     var freedSlot = false;
     var today = new Date().toISOString().slice(0, 10);
     var byName = getUser() ? getUser().name : "Sistema";
@@ -337,7 +339,7 @@ export function useAppData({ getUserRef, notify }) {
         return updated;
       });
     });
-    notify("Atualizado!");
+    if (!opts.silent) notify("Atualizado!");
     if (freedSlot) {
       setTimeout(function () {
         setRegs(function (curr) {
@@ -377,7 +379,7 @@ export function useAppData({ getUserRef, notify }) {
         .update(dbUpd)
         .eq("id", id)
         .then(function (res) {
-          if (res.error) console.error("updateReg DB error:", res.error);
+          if (res.error) { console.error("updateReg DB error:", res.error); if (!opts.silent) notify("Erro ao salvar alteração. Verifique sua conexão e tente novamente."); }
         });
     }
   };

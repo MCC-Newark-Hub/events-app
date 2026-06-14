@@ -189,10 +189,30 @@ Migrations in `migrations/001–010`.
 
 ---
 
-## Next Steps (priority order)
+## Vercel Dev/Staging Setup (manual steps — not yet done)
 
-1. **Portal: "Já inscrito" for family members** — family search still filters out registered members silently; should show a status message if a searched family member is already registered
-2. **Error feedback to users** — DB errors log to console only; users see no feedback on failure (toast or inline message on save error)
-3. **Vercel dev workflow** — set up a Preview environment pointing to a dev/staging Supabase project so production data is never touched during development
-4. **Test coverage** — vitest setup exists but coverage is unknown; at minimum test `addReg`, `updateReg`, and the portal submit flow
-5. **Paid status on portal confirmation** — show fee amount due and payment instructions more prominently on the confirmation screen
+To avoid testing against production data:
+1. Create a second Supabase project (e.g. "mcc-newark-events-staging")
+2. Run all migrations from `migrations/` on the staging project
+3. In Vercel Dashboard → Project → Settings → Environment Variables:
+   - Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_KEY` for the **Preview** environment pointing to the staging Supabase project
+   - Keep Production env vars pointing to the real project
+4. Feature branches auto-deploy as Vercel Preview URLs and will use staging DB; `master` deploys to Production
+
+---
+
+## Test Coverage
+
+- **41 tests passing** as of 2026-06-14
+- `src/test/constants.test.js` — `fmt`, `daysSince`, `isDeadlineExempt`, `deadlineStatus`, `churchDisplay`, `churchCode`
+- `src/test/registration.test.js` — `mapReg`, `extractBatchId`, `dateFromRegNumber`, `getRegStatus`
+- Run with: `npx vitest run`
+- Not yet covered: `addReg` (requires Supabase mock), portal submit flow (requires React Testing Library)
+
+---
+
+## Next Steps
+
+1. **Paid status on portal confirmation** — fee amount and payment instructions could be more prominent on the post-submit screen
+2. **Vercel staging** — set up staging Supabase project and wire Preview env vars (steps above)
+3. **`addReg` / portal submit tests** — requires mocking the Supabase client; defer until staging env is set up

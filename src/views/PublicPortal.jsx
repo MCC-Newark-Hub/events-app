@@ -171,7 +171,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
   const existingMemberIds = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled && r.memberId !== "GUEST").map((r) => r.memberId);
   // Include already-registered members in primary search so we can show their status
   const primaryResults = primarySearch.length > 0 ? allMembers.filter((m) => norm(m.name).includes(norm(primarySearch))).slice(0, 20) : [];
-  const famResults = famSearch.length > 0 ? allMembers.filter((m) =>norm(m.name).includes(norm(famSearch)) && m.id !== primary?.id && !familyMembers.find((fm) => fm.id === m.id) && !existingMemberIds.includes(m.id)).slice(0, 8) : [];
+  const famResults = famSearch.length > 0 ? allMembers.filter((m) => norm(m.name).includes(norm(famSearch)) && m.id !== primary?.id && !familyMembers.find((fm) => fm.id === m.id)).slice(0, 8) : [];
   const existingReg = primary ? (regs || []).find((r) => r.eventId === event?.id && r.memberId === primary.id && !r.cancelled) : null;
 
   const eventFee = (cat) => event?.fees?.[cat] ?? 0;
@@ -402,12 +402,27 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                 </div>
                 {famResults.length > 0 && (
                   <div style={{ border: "1.5px solid var(--border)", borderRadius: 8, marginTop: 4, overflow: "hidden", maxHeight: 180, overflowY: "auto" }}>
-                    {famResults.map((m) => (
-                      <div key={m.id} onClick={() => { setFamilyMembers((prev) => [...prev, { ...m, verified: true }]); setFamSearch(""); }} style={{ padding: "9px 14px", cursor: "pointer", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}>
-                        <span style={{ fontWeight: 600 }}>{m.name}</span>
-                        <div style={{ display: "flex", gap: 5 }}><span className="badge badge-blue">{m.category}</span><span style={{ fontSize: 12, color: "#6b7280" }}>{m.gender}</span></div>
-                      </div>
-                    ))}
+                    {famResults.map((m) => {
+                      const alreadyReg = existingMemberIds.includes(m.id);
+                      return (
+                        <div
+                          key={m.id}
+                          onClick={() => { if (!alreadyReg) { setFamilyMembers((prev) => [...prev, { ...m, verified: true }]); setFamSearch(""); } }}
+                          style={{ padding: "9px 14px", cursor: alreadyReg ? "default" : "pointer", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", background: alreadyReg ? "#f9fafb" : "" }}
+                          onMouseEnter={(e) => { if (!alreadyReg) e.currentTarget.style.background = "#eff6ff"; }}
+                          onMouseLeave={(e) => { if (!alreadyReg) e.currentTarget.style.background = ""; }}
+                        >
+                          <div>
+                            <span style={{ fontWeight: 600, color: alreadyReg ? "#6b7280" : "inherit" }}>{m.name}</span>
+                            {alreadyReg && <span style={{ marginLeft: 6, fontSize: 10, background: "#fee2e2", color: "#991b1b", padding: "1px 6px", borderRadius: 99, fontWeight: 700 }}>Já inscrito</span>}
+                          </div>
+                          <div style={{ display: "flex", gap: 5 }}>
+                            <span className="badge badge-blue">{m.category}</span>
+                            <span style={{ fontSize: 12, color: "#6b7280" }}>{m.gender}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 {famSearch.length > 1 && famResults.length === 0 && <div style={{ marginTop: 8, padding: "10px 14px", background: "#fef3c7", borderRadius: 8, fontSize: 13, color: "#92400e" }}>{t.nameNotFound}</div>}

@@ -175,7 +175,7 @@ export default function RegistrationLookup({ event, regs, members, updateReg, ad
 
   const doCancel = (ids) => {
     ids.forEach((id) => {
-      updateReg(id, { cancelled: true }, { status: "Cancelado", note: "Cancelado pelo portal público" });
+      updateReg(id, { cancelled: true }, { status: "Cancelado", note: "Cancelado pelo portal público" }, { silent: true });
     });
     if (found && ids.includes(found.id)) setFound((prev) => ({ ...prev, cancelled: true }));
     setRelated((prev) => prev.filter((r) => !ids.includes(r.id)));
