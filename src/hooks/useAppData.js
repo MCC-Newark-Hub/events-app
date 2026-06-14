@@ -187,6 +187,47 @@ export function useAppData({ getUserRef, notify }) {
     };
   }, []);
 
+  // ── Real-time subscriptions ───────────────────────────────────────────────
+  useEffect(function () {
+    const extractSeq = (regNumber) => parseInt((regNumber || "").split("-")[2] || "0");
+
+    const channel = sb
+      .channel("db-changes")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "registrations" }, function (payload) {
+        const r = mapReg(payload.new);
+        setRegs(function (p) {
+          // Replace our own optimistic entry if present (matched by reg_number)
+          if (p.some(function (x) { return x.regNumber === r.regNumber; }))
+            return p.map(function (x) { return x.regNumber === r.regNumber ? r : x; });
+          // New reg from another clerk — keep seqRef ahead of it
+          const seq = extractSeq(r.regNumber);
+          if (seq > seqRef.current) seqRef.current = seq;
+          return [...p, r];
+        });
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "registrations" }, function (payload) {
+        const r = mapReg(payload.new);
+        setRegs(function (p) { return p.map(function (x) { return x.id === r.id ? r : x; }); });
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "registrations" }, function (payload) {
+        setRegs(function (p) { return p.filter(function (x) { return x.id !== payload.old.id; }); });
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "approvals" }, function (payload) {
+        const a = mapApproval(payload.new);
+        setApprovals(function (p) {
+          if (p.some(function (x) { return x.id === a.id; })) return p;
+          return [...p, a];
+        });
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "approvals" }, function (payload) {
+        const a = mapApproval(payload.new);
+        setApprovals(function (p) { return p.map(function (x) { return x.id === a.id ? a : x; }); });
+      })
+      .subscribe();
+
+    return function () { sb.removeChannel(channel); };
+  }, []);
+
   // ── Derived state ─────────────────────────────────────────────────────────
   const activeRegs = useMemo(
     () => regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted),
@@ -333,8 +374,8 @@ export function useAppData({ getUserRef, notify }) {
     if (timelineEntry && updatedReg) dbUpd.timeline = updatedReg.timeline;
     if (Object.keys(dbUpd).length > 0) {
       sb.from("registrations")
-        .eq("id", id)
         .update(dbUpd)
+        .eq("id", id)
         .then(function (res) {
           if (res.error) console.error("updateReg DB error:", res.error);
         });
@@ -394,12 +435,12 @@ export function useAppData({ getUserRef, notify }) {
       });
     });
     sb.from("approvals")
-      .eq("id", id)
       .update({
         status: approved ? "approved" : "denied",
         resolved_by: getUser() ? getUser().name : "Pastor",
         resolved_at: today,
       })
+      .eq("id", id)
       .then(function (res) {
         if (res.error) console.error("resolveApproval error:", res.error);
       });
