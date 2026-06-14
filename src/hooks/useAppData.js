@@ -374,8 +374,8 @@ export function useAppData({ getUserRef, notify }) {
     if (timelineEntry && updatedReg) dbUpd.timeline = updatedReg.timeline;
     if (Object.keys(dbUpd).length > 0) {
       sb.from("registrations")
-        .eq("id", id)
         .update(dbUpd)
+        .eq("id", id)
         .then(function (res) {
           if (res.error) console.error("updateReg DB error:", res.error);
         });
@@ -435,12 +435,12 @@ export function useAppData({ getUserRef, notify }) {
       });
     });
     sb.from("approvals")
-      .eq("id", id)
       .update({
         status: approved ? "approved" : "denied",
         resolved_by: getUser() ? getUser().name : "Pastor",
         resolved_at: today,
       })
+      .eq("id", id)
       .then(function (res) {
         if (res.error) console.error("resolveApproval error:", res.error);
       });
