@@ -58,7 +58,7 @@ function TermsContent({ termLang, deadlineDays }) {
         <ul style={{ paddingLeft: 18, margin: "4px 0 0" }}>
           <li style={li}>{pt ? "Cancelamentos devem ser comunicados com pelo menos 48 horas de antecedência." : "Cancellations must be communicated at least 48 hours in advance."}</li>
           <li style={li}>{pt ? <><span style={em}>Após esse prazo, a taxa não será reembolsada.</span></> : <><span style={em}>After this period, the fee will not be refunded.</span></>}</li>
-          <li style={li}>{pt ? "Você pode cancelar sua inscrição através desta plataforma, na opção "Consultar Inscrição"." : <>You can cancel your registration via the <em>"Consultar Inscrição"</em> option on the home screen.</>}</li>
+          <li style={li}>{pt ? <>Você pode cancelar sua inscrição através desta plataforma, na opção <em>Consultar Inscrição</em> na tela inicial.</> : <>You can cancel your registration via the <em>Consultar Inscrição</em> option on the home screen.</>}</li>
         </ul>
       </div>
 
