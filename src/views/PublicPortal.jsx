@@ -7,31 +7,93 @@ import BadgePrint from "@/components/BadgePrint";
 // Accent-insensitive search: "joao" matches "João"
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-const TERMS_TEXT = `CONDIÇÕES DE INSCRIÇÃO / REGISTRATION CONDITIONS
+function TermsContent({ termLang, deadlineDays }) {
+  const pt = termLang !== "en";
+  const s = { marginBottom: 14 };
+  const h = { fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", color: "#8B0000", marginBottom: 6, marginTop: 0 };
+  const p = { fontSize: 12, color: "#374151", lineHeight: 1.75, margin: "0 0 6px 0" };
+  const li = { fontSize: 12, color: "#374151", lineHeight: 1.75, marginBottom: 3 };
+  const em = { fontWeight: 700, color: "#1a1e2e" };
 
-1. STATUS DA INSCRIÇÃO / REGISTRATION STATUS
-Sua inscrição está PENDENTE até que o pagamento seja confirmado. A vaga no evento não está garantida até a efetivação do pagamento.
-Your registration is PENDING until payment is confirmed. Your spot at the event is not guaranteed until payment is received.
+  return (
+    <div>
+      {/* 1 */}
+      <div style={s}>
+        <h4 style={h}>{pt ? "1. Status da Inscrição" : "1. Registration Status"}</h4>
+        <p style={p}>
+          {pt
+            ? <>Sua inscrição ficará com status <span style={em}>PENDENTE</span> até que o pagamento seja confirmado. <span style={em}>A vaga no evento não está garantida</span> até a efetivação do pagamento.</>
+            : <>Your registration will be <span style={em}>PENDING</span> until payment is confirmed. <span style={em}>Your spot is not guaranteed</span> until payment is received.</>}
+        </p>
+      </div>
 
-2. PAGAMENTO / PAYMENT
-O pagamento deve ser efetuado presencialmente junto a um atendente, secretário(a), tesoureiro(a) ou líder de grupo autorizado pela organização do evento. O participante é responsável pela sua inscrição, mas o recebimento do pagamento é de competência exclusiva da equipe autorizada. Sua vaga só será confirmada após a efetivação do pagamento. Não aceitamos pagamentos online.
-Payment must be made in person to an authorized clerk, secretary, treasurer, or group leader designated by the event organization. The participant is responsible for their own registration, but only authorized staff may receive payments. Your spot will only be confirmed after the fee is paid. We do not accept online payments.
+      {/* 2 */}
+      <div style={s}>
+        <h4 style={h}>{pt ? "2. Pagamento" : "2. Payment"}</h4>
+        <p style={p}>
+          {pt
+            ? "O pagamento deve ser efetuado presencialmente junto a um atendente, secretário(a), tesoureiro(a) ou líder de grupo autorizado pela organização do evento."
+            : "Payment must be made in person to an authorized clerk, secretary, treasurer, or group leader designated by the event organization."}
+        </p>
+        <ul style={{ paddingLeft: 18, margin: "4px 0 0" }}>
+          <li style={li}>{pt ? <><span style={em}>O participante</span> é responsável pela sua inscrição.</> : <><span style={em}>The participant</span> is responsible for their own registration.</>}</li>
+          <li style={li}>{pt ? <>Somente a <span style={em}>equipe autorizada</span> pode receber pagamentos.</> : <>Only <span style={em}>authorized staff</span> may receive payments.</>}</li>
+          <li style={li}>{pt ? <><span style={em}>Não aceitamos pagamentos online.</span></> : <><span style={em}>We do not accept online payments.</span></>}</li>
+        </ul>
+      </div>
 
-3. CANCELAMENTO / CANCELLATION
-Cancelamentos devem ser comunicados com pelo menos 48 horas de antecedência. Após esse prazo, a taxa de inscrição não será reembolsada.
-Cancellations must be communicated at least 48 hours in advance. After this period, the registration fee will not be refunded.
+      {/* 3 — Cancellation with deadline callout */}
+      <div style={s}>
+        <h4 style={h}>{pt ? "3. Cancelamento" : "3. Cancellation"}</h4>
+        {deadlineDays && (
+          <div style={{ background: "#fef2f2", border: "1.5px solid #fca5a5", borderRadius: 8, padding: "10px 12px", marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+            <p style={{ ...p, margin: 0, color: "#991b1b" }}>
+              {pt
+                ? <><span style={{ fontWeight: 800 }}>Inscrições não pagas serão CANCELADAS automaticamente após {deadlineDays} dias</span> sem confirmação de pagamento.</>
+                : <><span style={{ fontWeight: 800 }}>Unpaid registrations will be AUTOMATICALLY CANCELLED after {deadlineDays} days</span> without payment confirmation.</>}
+            </p>
+          </div>
+        )}
+        <ul style={{ paddingLeft: 18, margin: "4px 0 0" }}>
+          <li style={li}>{pt ? "Cancelamentos devem ser comunicados com pelo menos 48 horas de antecedência." : "Cancellations must be communicated at least 48 hours in advance."}</li>
+          <li style={li}>{pt ? <><span style={em}>Após esse prazo, a taxa não será reembolsada.</span></> : <><span style={em}>After this period, the fee will not be refunded.</span></>}</li>
+          <li style={li}>{pt ? "Você pode cancelar sua inscrição através desta plataforma, na opção "Consultar Inscrição"." : <>You can cancel your registration via the <em>"Consultar Inscrição"</em> option on the home screen.</>}</li>
+        </ul>
+      </div>
 
-4. LISTA DE ESPERA / WAITLIST
-Caso o evento atinja a capacidade máxima, sua inscrição poderá ser colocada em lista de espera. Você será notificado caso uma vaga se abra.
-If the event reaches maximum capacity, your registration may be placed on a waitlist. You will be notified if a spot becomes available.
+      {/* 4 */}
+      <div style={s}>
+        <h4 style={h}>{pt ? "4. Lista de Espera" : "4. Waitlist"}</h4>
+        <p style={p}>
+          {pt
+            ? "Caso o evento atinja a capacidade máxima, sua inscrição poderá ser colocada em lista de espera. Você será notificado caso uma vaga se abra."
+            : "If the event reaches maximum capacity, your registration may be placed on a waitlist. You will be notified if a spot becomes available."}
+        </p>
+      </div>
 
-5. CÓDIGO DE CONDUTA / CODE OF CONDUCT
-Ao participar deste evento, você concorda em respeitar os valores e a cultura da Igreja Cristã Maranatha, tratando todos os participantes com respeito e dignidade.
-By attending this event, you agree to respect the values and culture of Igreja Cristã Maranatha, treating all participants with respect and dignity.
+      {/* 5 */}
+      <div style={s}>
+        <h4 style={h}>{pt ? "5. Código de Conduta" : "5. Code of Conduct"}</h4>
+        <p style={p}>
+          {pt
+            ? "Ao participar deste evento, você concorda em respeitar os valores e a cultura da Igreja Cristã Maranatha, tratando todos os participantes com respeito e dignidade."
+            : "By attending this event, you agree to respect the values and culture of Igreja Cristã Maranatha, treating all participants with respect and dignity."}
+        </p>
+      </div>
 
-6. FOTOS E VÍDEOS / PHOTOS AND VIDEOS
-O evento poderá ser fotografado e filmado para fins institucionais. Ao se inscrever, você consente com o uso de sua imagem para fins internos da igreja.
-The event may be photographed and filmed for institutional purposes. By registering, you consent to the use of your image for internal church purposes.`;
+      {/* 6 */}
+      <div style={{ ...s, marginBottom: 0 }}>
+        <h4 style={h}>{pt ? "6. Fotos e Vídeos" : "6. Photos & Videos"}</h4>
+        <p style={{ ...p, marginBottom: 0 }}>
+          {pt
+            ? "O evento poderá ser fotografado e filmado para fins institucionais. Ao se inscrever, você consente com o uso de sua imagem para fins internos da igreja."
+            : "The event may be photographed and filmed for institutional purposes. By registering, you consent to the use of your image for internal church purposes."}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function getRegStatus(reg) {
   if (reg.waitlisted) return { label: "Lista de Espera", color: "#92400e", bg: "#fef3c7" };
@@ -164,8 +226,13 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
   const [specialNeeds, setSpecialNeeds] = useState({ hasAny: false, other: "" });
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsError, setTermsError] = useState(false);
+  const [deadlineAccepted, setDeadlineAccepted] = useState(false);
+  const [deadlineError, setDeadlineError] = useState(false);
+  const [termLang, setTermLang] = useState(lang || "pt");
   const [submitted, setSubmitted] = useState(null);
   const [errors, setErrors] = useState({});
+
+  const deadlineDays = event?.payment_deadline_days ?? event?.paymentDeadlineDays ?? null;
 
   const allMembers = propMembers || [];
   const existingMemberIds = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled && r.memberId !== "GUEST").map((r) => r.memberId);
@@ -188,6 +255,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
 
   const handleSubmit = () => {
     if (!termsAccepted) { setTermsError(true); return; }
+    if (deadlineDays && !deadlineAccepted) { setDeadlineError(true); return; }
     if (!addReg) return;
     // Batch token groups all regs from this submission for family lookup, even when contact info is empty
     const batchId = "B" + Date.now();
@@ -233,7 +301,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
           setTranslations({ en: false, es: false });
           setAllergies({ hasAny: false, other: "" });
           setSpecialNeeds({ hasAny: false, other: "" });
-          setTermsAccepted(false); setSubmitted(null);
+          setTermsAccepted(false); setDeadlineAccepted(false); setSubmitted(null);
         }}
         onHome={onReset}
       />
@@ -509,9 +577,44 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                 </div>
               </div>
 
-              <div style={{ background: "#f8f9fb", border: "1px solid var(--border)", borderRadius: 10, padding: "16px", maxHeight: 280, overflowY: "auto", marginBottom: 16 }}>
-                <pre style={{ fontFamily: "inherit", fontSize: 12, color: "#374151", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{TERMS_TEXT}</pre>
+              {/* Language tabs */}
+              <div style={{ display: "flex", background: "#f3f4f6", borderRadius: 8, padding: 3, marginBottom: 10, gap: 2 }}>
+                {[{ key: "pt", label: "Português" }, { key: "en", label: "English" }].map(({ key, label }) => (
+                  <button key={key} onClick={() => setTermLang(key)} style={{ flex: 1, padding: "6px 0", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", borderRadius: 6, background: termLang === key ? "#fff" : "transparent", color: termLang === key ? "#1a1e2e" : "#6b7280", boxShadow: termLang === key ? "0 1px 3px rgba(0,0,0,.1)" : "none" }}>
+                    {label}
+                  </button>
+                ))}
               </div>
+
+              {/* Formatted terms */}
+              <div style={{ background: "#f8f9fb", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 18px", maxHeight: 300, overflowY: "auto", marginBottom: 16 }}>
+                <TermsContent termLang={termLang} deadlineDays={deadlineDays} />
+              </div>
+
+              {/* Deadline acknowledgement — shown only when event has a deadline */}
+              {deadlineDays && (
+                <div style={{ background: deadlineError ? "#fef2f2" : "#fff7ed", border: `1.5px solid ${deadlineError ? "#fca5a5" : "#f59e0b"}`, borderRadius: 10, padding: "14px 16px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "flex-start", marginBottom: 8 }}>
+                    <span style={{ fontSize: 20, flexShrink: 0, lineHeight: 1 }}>⚠️</span>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#92400e", lineHeight: 1.5 }}>
+                      {termLang === "en"
+                        ? <>Unpaid registrations are <span style={{ color: "#dc2626" }}>automatically cancelled after {deadlineDays} days</span>. Payment must be made in person with authorized staff.</>
+                        : <>Inscrições não pagas são <span style={{ color: "#dc2626" }}>canceladas automaticamente após {deadlineDays} dias</span>. O pagamento deve ser feito presencialmente com a equipe autorizada.</>}
+                    </p>
+                  </div>
+                  <div className="cb">
+                    <input type="checkbox" id="deadline-ack" checked={deadlineAccepted} onChange={(e) => { setDeadlineAccepted(e.target.checked); setDeadlineError(false); }} />
+                    <label htmlFor="deadline-ack" style={{ fontSize: 13, fontWeight: 600, color: "#78350f" }}>
+                      {termLang === "en"
+                        ? `I understand my registration will be cancelled after ${deadlineDays} days without payment.`
+                        : `Entendo que minha inscrição será cancelada após ${deadlineDays} dias sem pagamento.`}
+                    </label>
+                  </div>
+                  {deadlineError && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 6, marginBottom: 0, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={12} /> {termLang === "en" ? "Please confirm you understand the cancellation policy." : "Por favor, confirme que entendeu a política de cancelamento."}</p>}
+                </div>
+              )}
+
+              {/* General terms checkbox */}
               <div className="cb" style={{ marginBottom: 8 }}>
                 <input type="checkbox" id="terms" checked={termsAccepted} onChange={(e) => { setTermsAccepted(e.target.checked); setTermsError(false); }} />
                 <label htmlFor="terms" style={{ fontSize: 14, fontWeight: 600, color: "#1a1e2e" }}>{t.termsAccept}</label>
