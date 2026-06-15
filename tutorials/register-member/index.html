@@ -310,11 +310,31 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../troubleshooting/login-issues/" class="md-tabs__link">
+        <a href="../../explanation/event-lifecycle/" class="md-tabs__link">
           
   
   
-  Solução de problemas
+  Explicação
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/data-model/" class="md-tabs__link">
+          
+  
+  
+  Para desenvolvedores
 
         </a>
       </li>
@@ -644,6 +664,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#fluxo-de-inscricao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fluxo de inscrição
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fluxo-da-lista-de-espera" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fluxo da lista de espera
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -892,7 +934,7 @@
   <span class="md-ellipsis">
     
   
-    Solução de problemas
+    Explicação
   
 
     
@@ -908,7 +950,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Solução de problemas
+    Explicação
   
 
           </label>
@@ -921,14 +963,101 @@
   
   
     <li class="md-nav__item">
-      <a href="../../troubleshooting/login-issues/" class="md-nav__link">
+      <a href="../../explanation/event-lifecycle/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Problemas de acesso
+    Ciclo de vida de um evento
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Para desenvolvedores
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Para desenvolvedores
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/data-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo de dados
   
 
     
@@ -1074,6 +1203,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#fluxo-de-inscricao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fluxo de inscrição
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fluxo-da-lista-de-espera" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fluxo da lista de espera
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1151,6 +1302,26 @@
 <hr />
 <h2 id="problemas">Problemas?</h2>
 <p>Veja <a href="../../troubleshooting/login-issues/">Problemas de acesso</a> ou entre em contato com a equipe de atendimento no local.</p>
+<hr />
+<h2 id="fluxo-de-inscricao">Fluxo de inscrição</h2>
+<pre class="mermaid"><code>flowchart TD
+    A([Membro acessa o portal]) --&gt; B[Etapa 1 - Dados pessoais]
+    B --&gt; C[Etapa 2 - Evento e categoria]
+    C --&gt; D[Etapa 3 - Contato]
+    D --&gt; E[Etapa 4 - Revisão]
+    E --&gt; F{Vagas disponíveis?}
+    F --&gt;|Sim| G[Inscrição confirmada]
+    F --&gt;|Não| H[Lista de espera]
+    G --&gt; I([Crachá PDF gerado e enviado por email])
+    H --&gt; J([Notificado quando vaga abrir])</code></pre>
+<h2 id="fluxo-da-lista-de-espera">Fluxo da lista de espera</h2>
+<pre class="mermaid"><code>flowchart TD
+    A([Membro na lista de espera]) --&gt; B{Vaga abriu?}
+    B --&gt;|Não| A
+    B --&gt;|Sim| C[Status muda para Pendente]
+    C --&gt; D{Pagamento confirmado?}
+    D --&gt;|Sim| E([Status muda para Confirmado])
+    D --&gt;|Não| F([Aguardando pagamento])</code></pre>
 
 
 

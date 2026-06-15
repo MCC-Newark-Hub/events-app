@@ -18,7 +18,7 @@
         <link rel="prev" href="../roles/">
       
       
-        <link rel="next" href="../../troubleshooting/login-issues/">
+        <link rel="next" href="../../explanation/event-lifecycle/">
       
       
         
@@ -310,11 +310,31 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../troubleshooting/login-issues/" class="md-tabs__link">
+        <a href="../../explanation/event-lifecycle/" class="md-tabs__link">
           
   
   
-  Solução de problemas
+  Explicação
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/data-model/" class="md-tabs__link">
+          
+  
+  
+  Para desenvolvedores
 
         </a>
       </li>
@@ -831,10 +851,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fluxo-tipico-de-uma-inscricao" class="md-nav__link">
+  <a href="#fluxo-de-status-inscricao-normal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fluxo típico de uma inscrição
+        Fluxo de status — inscrição normal
       
     </span>
   </a>
@@ -842,21 +862,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fluxo-visual-inscricao-normal" class="md-nav__link">
+  <a href="#fluxo-de-status-lista-de-espera" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fluxo visual — inscrição normal
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#fluxo-visual-lista-de-espera" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Fluxo visual — lista de espera
+        Fluxo de status — lista de espera
       
     </span>
   </a>
@@ -909,7 +918,7 @@
   <span class="md-ellipsis">
     
   
-    Solução de problemas
+    Explicação
   
 
     
@@ -925,7 +934,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Solução de problemas
+    Explicação
   
 
           </label>
@@ -938,14 +947,101 @@
   
   
     <li class="md-nav__item">
-      <a href="../../troubleshooting/login-issues/" class="md-nav__link">
+      <a href="../../explanation/event-lifecycle/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Problemas de acesso
+    Ciclo de vida de um evento
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Para desenvolvedores
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Para desenvolvedores
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/data-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo de dados
   
 
     
@@ -1076,10 +1172,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fluxo-tipico-de-uma-inscricao" class="md-nav__link">
+  <a href="#fluxo-de-status-inscricao-normal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fluxo típico de uma inscrição
+        Fluxo de status — inscrição normal
       
     </span>
   </a>
@@ -1087,21 +1183,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fluxo-visual-inscricao-normal" class="md-nav__link">
+  <a href="#fluxo-de-status-lista-de-espera" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fluxo visual — inscrição normal
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#fluxo-visual-lista-de-espera" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Fluxo visual — lista de espera
+        Fluxo de status — lista de espera
       
     </span>
   </a>
@@ -1162,39 +1247,29 @@
 <p><strong>Quem vê:</strong> Admin<br />
 <strong>Próxima ação:</strong> Se a vaga foi liberada, o próximo na lista de espera é promovido automaticamente</p>
 <hr />
-<h2 id="fluxo-tipico-de-uma-inscricao">Fluxo típico de uma inscrição</h2>
-<div class="highlight"><pre><span></span><code>Inscrição criada
-      ↓
-  Pendente
-      ↓
-[Pagamento registrado / Aprovação concedida]
-      ↓
-  Confirmado
-</code></pre></div>
-<p>Se o evento estiver cheio:
-<div class="highlight"><pre><span></span><code>Inscrição criada
-      ↓
-Lista de espera
-      ↓
-[Vaga aberta]
-      ↓
-  Pendente → Confirmado
-</code></pre></div></p>
-<hr />
-<h2 id="fluxo-visual-inscricao-normal">Fluxo visual — inscrição normal</h2>
-<pre class="mermaid"><code>graph TD
-  A([Inscrição criada]) --&gt; B[Pendente]
-  B --&gt; C{Pagamento ou aprovação?}
-  C --&gt;|Confirmado| D([Confirmado])
-  C --&gt;|Recusado| E([Recusado])
-  C --&gt;|Cancelado| F([Cancelado])</code></pre>
-<h2 id="fluxo-visual-lista-de-espera">Fluxo visual — lista de espera</h2>
-<pre class="mermaid"><code>graph TD
-  A([Inscrição criada]) --&gt; B[Lista de espera]
-  B --&gt; C{Vaga abriu?}
-  C --&gt;|Sim| D[Pendente]
-  C --&gt;|Não| B
-  D --&gt; E([Confirmado])</code></pre>
+<h2 id="fluxo-de-status-inscricao-normal">Fluxo de status — inscrição normal</h2>
+<pre class="mermaid"><code>flowchart TD
+    A([Inscrição criada]) --&gt; B[Pendente]
+    B --&gt; C{Pagamento em dinheiro confirmado?}
+    C --&gt;|Sim| D([Confirmado])
+    C --&gt;|Não| E{Aprovação necessária?}
+    E --&gt;|Sim| F[Aprovação pendente]
+    E --&gt;|Não| B
+    F --&gt; G{Pastor ou Admin aprovou?}
+    G --&gt;|Sim| D
+    G --&gt;|Não| H([Recusado])
+    D --&gt; I{Cancelamento?}
+    I --&gt;|Sim| J([Cancelado])
+    I --&gt;|Não| D</code></pre>
+<h2 id="fluxo-de-status-lista-de-espera">Fluxo de status — lista de espera</h2>
+<pre class="mermaid"><code>flowchart TD
+    A([Inscrição criada]) --&gt; B[Lista de espera]
+    B --&gt; C{Vaga disponível?}
+    C --&gt;|Não| B
+    C --&gt;|Sim| D[Pendente]
+    D --&gt; E{Pagamento confirmado?}
+    E --&gt;|Sim| F([Confirmado])
+    E --&gt;|Não| D</code></pre>
 
 
 

@@ -310,11 +310,31 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../troubleshooting/login-issues/" class="md-tabs__link">
+        <a href="../../explanation/event-lifecycle/" class="md-tabs__link">
           
   
   
-  Solução de problemas
+  Explicação
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/data-model/" class="md-tabs__link">
+          
+  
+  
+  Para desenvolvedores
 
         </a>
       </li>
@@ -577,6 +597,17 @@
     <span class="md-ellipsis">
       
         Próximo passo
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fluxo-de-acesso-com-pin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fluxo de acesso com PIN
       
     </span>
   </a>
@@ -859,7 +890,7 @@
   <span class="md-ellipsis">
     
   
-    Solução de problemas
+    Explicação
   
 
     
@@ -875,7 +906,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Solução de problemas
+    Explicação
   
 
           </label>
@@ -888,14 +919,101 @@
   
   
     <li class="md-nav__item">
-      <a href="../../troubleshooting/login-issues/" class="md-nav__link">
+      <a href="../../explanation/event-lifecycle/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Problemas de acesso
+    Ciclo de vida de um evento
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Para desenvolvedores
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Para desenvolvedores
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/data-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo de dados
   
 
     
@@ -1008,6 +1126,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#fluxo-de-acesso-com-pin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fluxo de acesso com PIN
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1097,6 +1226,20 @@ Clique em "Acesso interno" e continue para o Passo 3.</p>
 <hr />
 <h2 id="proximo-passo">Próximo passo</h2>
 <p>Agora que você está dentro do sistema, veja como <a href="../register-member/">Inscrever um membro</a> em um evento.</p>
+<hr />
+<h2 id="fluxo-de-acesso-com-pin">Fluxo de acesso com PIN</h2>
+<pre class="mermaid"><code>flowchart TD
+    A([Usuário acessa o sistema]) --&gt; B{Tipo de acesso}
+    B --&gt;|Público| C[Portal de inscrição]
+    B --&gt;|Interno| D[Tela de PIN]
+    D --&gt; E{PIN válido?}
+    E --&gt;|Não| F([Mensagem de erro - tente novamente])
+    E --&gt;|Sim| G{Perfil do usuário}
+    G --&gt;|Admin| H([Painel completo])
+    G --&gt;|Atendente| I([Módulo de inscrições])
+    G --&gt;|Pastor| J([Visão de aprovações])
+    G --&gt;|Líder de GA| K([Lista do GA])
+    G --&gt;|Líder de Equipe| L([Lista da equipe])</code></pre>
 
 
 

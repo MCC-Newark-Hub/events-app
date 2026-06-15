@@ -15,6 +15,8 @@
         <link rel="canonical" href="https://leonard-alves.github.io/mcc-newark-events/architecture/data-model/">
       
       
+        <link rel="prev" href="../../explanation/event-lifecycle/">
+      
       
       
         
@@ -25,7 +27,7 @@
     
     
       
-        <title>Architecture: Data Model - ICM Newark — Sistema de Inscrições</title>
+        <title>Modelo de dados - ICM Newark — Sistema de Inscrições</title>
       
     
     
@@ -76,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architecture-data-model" class="md-skip">
+        <a href="#modelo-de-dados" class="md-skip">
           Ir para o conteúdo
         </a>
       
@@ -110,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Architecture: Data Model
+              Modelo de dados
             
           </span>
         </div>
@@ -304,11 +306,33 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../troubleshooting/login-issues/" class="md-tabs__link">
+        <a href="../../explanation/event-lifecycle/" class="md-tabs__link">
           
   
   
-  Solução de problemas
+  Explicação
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+  Para desenvolvedores
 
         </a>
       </li>
@@ -735,7 +759,7 @@
   <span class="md-ellipsis">
     
   
-    Solução de problemas
+    Explicação
   
 
     
@@ -751,7 +775,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Solução de problemas
+    Explicação
   
 
           </label>
@@ -764,14 +788,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../troubleshooting/login-issues/" class="md-nav__link">
+      <a href="../../explanation/event-lifecycle/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Problemas de acesso
+    Ciclo de vida de um evento
   
 
     
@@ -780,6 +804,156 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Para desenvolvedores
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Para desenvolvedores
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo de dados
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo de dados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#entidades-e-relacionamentos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entidades e relacionamentos
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -819,115 +993,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#entity-relationships" class="md-nav__link">
+  <a href="#entidades-e-relacionamentos" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Entity relationships
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#table-definitions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Table definitions
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Table definitions">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#events" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        events
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#registrations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        registrations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#members" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        members
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#families" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        families
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#assistance_groups" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        assistance_groups
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app_users" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        app_users
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#key-design-notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key design notes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#related" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Related
+        Entidades e relacionamentos
       
     </span>
   </a>
@@ -954,429 +1023,78 @@
   
 
 
-<h1 id="architecture-data-model">Architecture: Data Model</h1>
-<h2 id="entity-relationships">Entity relationships</h2>
-<div class="highlight"><pre><span></span><code>events (1)
-  └──&lt; registrations (N)    via event_id
-         ├── member_id       → members.id  (nullable — &quot;GUEST&quot; for unverified)
-         ├── family_id       → families.id (nullable — portal regs always null)
-         └── timeline[]      jsonb array of {status, note, timestamp, by}
-
-members (1)
-  ├──&lt; registrations (N)    via member_id
-  ├── family_id             → families.id
-  ├── ga_id                 → assistance_groups.id
-  └── roles text[]          (multiple ministry roles)
-
-families (1)
-  ├──&lt; registrations (N)    via family_id
-  ├── member_ids text[]     (denormalized — kept in sync with members.family_id)
-  └──&lt; members (N)          via family_id
-
-assistance_groups (1)
-  ├──&lt; members (N)          via ga_id
-  └── leader_id             → members.id
-
-approvals (N)
-  ├── event_id              → events.id
-  └── reg_id                → registrations.id
-
-rosters (N)
-  ├── event_id              → events.id
-  └── member_id             → members.id
-
-churches (N)
-  └── pastor_id             → members.id
-
-app_users                   standalone (no FK relations)
-categories                  standalone reference table
-functions                   standalone reference table (ministry roles)
-teams                       standalone reference table
-</code></pre></div>
+<h1 id="modelo-de-dados">Modelo de dados</h1>
+<p>Diagrama de entidades e relacionamentos do banco de dados Supabase (schema v2).</p>
+<blockquote>
+<p>Este documento é voltado para desenvolvedores. Membros e usuários internos não precisam conhecer esta estrutura.</p>
+</blockquote>
 <hr />
-<h2 id="table-definitions">Table definitions</h2>
-<h3 id="events">events</h3>
-<table>
-<thead>
-<tr>
-<th>Column</th>
-<th>Type</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>id</code></td>
-<td>text PK</td>
-<td>UUID default</td>
-</tr>
-<tr>
-<td><code>name</code></td>
-<td>text</td>
-<td>Display name</td>
-</tr>
-<tr>
-<td><code>date</code></td>
-<td>text</td>
-<td>YYYY-MM-DD</td>
-</tr>
-<tr>
-<td><code>time</code></td>
-<td>text</td>
-<td>HH:MM (24h)</td>
-</tr>
-<tr>
-<td><code>location</code></td>
-<td>text</td>
-<td>Free text</td>
-</tr>
-<tr>
-<td><code>prefix</code></td>
-<td>text</td>
-<td>Used in reg numbers</td>
-</tr>
-<tr>
-<td><code>capacity</code></td>
-<td>integer</td>
-<td>Max active registrations</td>
-</tr>
-<tr>
-<td><code>fees</code></td>
-<td>jsonb</td>
-<td><code>{"Adulto": 50, "Jovem": 40, ...}</code></td>
-</tr>
-<tr>
-<td><code>payment_deadline_days</code></td>
-<td>integer</td>
-<td>Days until informal deadline</td>
-</tr>
-</tbody>
-</table>
-<h3 id="registrations">registrations</h3>
-<table>
-<thead>
-<tr>
-<th>Column</th>
-<th>Type</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>id</code></td>
-<td>text PK</td>
-<td></td>
-</tr>
-<tr>
-<td><code>event_id</code></td>
-<td>text FK → events</td>
-<td></td>
-</tr>
-<tr>
-<td><code>member_id</code></td>
-<td>text</td>
-<td>FK to members or <code>"GUEST"</code></td>
-</tr>
-<tr>
-<td><code>member_name</code></td>
-<td>text</td>
-<td>Denormalized — snapshot at registration time</td>
-</tr>
-<tr>
-<td><code>badge_name</code></td>
-<td>text</td>
-<td>Short name for badge; falls back to member_name</td>
-</tr>
-<tr>
-<td><code>category</code></td>
-<td>text</td>
-<td>Age category snapshot</td>
-</tr>
-<tr>
-<td><code>church</code></td>
-<td>text</td>
-<td>Church snapshot</td>
-</tr>
-<tr>
-<td><code>role</code></td>
-<td>text</td>
-<td>Ministry role snapshot</td>
-</tr>
-<tr>
-<td><code>family_id</code></td>
-<td>text FK → families</td>
-<td>Nullable; portal regs always null</td>
-</tr>
-<tr>
-<td><code>team</code></td>
-<td>text</td>
-<td>Default: <code>"Participante"</code></td>
-</tr>
-<tr>
-<td><code>fee</code></td>
-<td>numeric</td>
-<td>Calculated from event.fees[category]</td>
-</tr>
-<tr>
-<td><code>paid</code></td>
-<td>boolean</td>
-<td></td>
-</tr>
-<tr>
-<td><code>exempt</code></td>
-<td>boolean</td>
-<td></td>
-</tr>
-<tr>
-<td><code>cancelled</code></td>
-<td>boolean</td>
-<td></td>
-</tr>
-<tr>
-<td><code>waitlisted</code></td>
-<td>boolean</td>
-<td></td>
-</tr>
-<tr>
-<td><code>waitlist_reason</code></td>
-<td>text</td>
-<td></td>
-</tr>
-<tr>
-<td><code>excedente</code></td>
-<td>boolean</td>
-<td></td>
-</tr>
-<tr>
-<td><code>needs_translation</code></td>
-<td>boolean</td>
-<td></td>
-</tr>
-<tr>
-<td><code>note</code></td>
-<td>text</td>
-<td>Contains batch token <code>[B{ts}]</code> + contact info</td>
-</tr>
-<tr>
-<td><code>badge_printed</code></td>
-<td>boolean</td>
-<td></td>
-</tr>
-<tr>
-<td><code>timeline</code></td>
-<td>jsonb</td>
-<td><code>[{status, note, timestamp, by}, ...]</code></td>
-</tr>
-<tr>
-<td><code>reg_number</code></td>
-<td>text</td>
-<td><code>PREFIX-YYYYMMDD-NNNN</code></td>
-</tr>
-<tr>
-<td><code>registered_at</code></td>
-<td>timestamptz</td>
-<td></td>
-</tr>
-<tr>
-<td><code>registered_by</code></td>
-<td>text</td>
-<td>Staff name or "Portal"</td>
-</tr>
-<tr>
-<td><code>checked_in_at</code></td>
-<td>timestamptz</td>
-<td></td>
-</tr>
-<tr>
-<td><code>checkin_method</code></td>
-<td>text</td>
-<td><code>manual</code> / <code>qr_clerk</code> / <code>self</code></td>
-</tr>
-<tr>
-<td><code>presence</code></td>
-<td>text</td>
-<td><code>unknown</code> / <code>present</code> / <code>absent</code> / <code>walk_in</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="members">members</h3>
-<table>
-<thead>
-<tr>
-<th>Column</th>
-<th>Type</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>id</code></td>
-<td>text PK</td>
-<td></td>
-</tr>
-<tr>
-<td><code>name</code></td>
-<td>text</td>
-<td>Full display name</td>
-</tr>
-<tr>
-<td><code>first_name</code></td>
-<td>text</td>
-<td>Added in migration 001</td>
-</tr>
-<tr>
-<td><code>last_name</code></td>
-<td>text</td>
-<td>Added in migration 001</td>
-</tr>
-<tr>
-<td><code>category</code></td>
-<td>text</td>
-<td>Age category</td>
-</tr>
-<tr>
-<td><code>church</code></td>
-<td>text</td>
-<td></td>
-</tr>
-<tr>
-<td><code>role</code></td>
-<td>text</td>
-<td>Primary ministry role (legacy)</td>
-</tr>
-<tr>
-<td><code>roles</code></td>
-<td>text[]</td>
-<td>All ministry roles (added in migration 008)</td>
-</tr>
-<tr>
-<td><code>gender</code></td>
-<td>text</td>
-<td><code>M</code> / <code>F</code></td>
-</tr>
-<tr>
-<td><code>family_id</code></td>
-<td>text FK → families</td>
-<td></td>
-</tr>
-<tr>
-<td><code>ga_id</code></td>
-<td>text FK → assistance_groups</td>
-<td></td>
-</tr>
-<tr>
-<td><code>allergies</code></td>
-<td>text</td>
-<td>Added in migration 001</td>
-</tr>
-<tr>
-<td><code>special_needs</code></td>
-<td>text</td>
-<td>Added in migration 001</td>
-</tr>
-</tbody>
-</table>
-<h3 id="families">families</h3>
-<table>
-<thead>
-<tr>
-<th>Column</th>
-<th>Type</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>id</code></td>
-<td>text PK</td>
-<td>Auto-generated (migration 010)</td>
-</tr>
-<tr>
-<td><code>name</code></td>
-<td>text</td>
-<td>e.g. "Família Silva"</td>
-</tr>
-<tr>
-<td><code>member_ids</code></td>
-<td>text[]</td>
-<td>Denormalized member list (migration 010)</td>
-</tr>
-</tbody>
-</table>
-<h3 id="assistance_groups">assistance_groups</h3>
-<table>
-<thead>
-<tr>
-<th>Column</th>
-<th>Type</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>id</code></td>
-<td>text PK</td>
-<td>Auto-generated (<code>GA</code> + 6 hex chars)</td>
-</tr>
-<tr>
-<td><code>name</code></td>
-<td>text</td>
-<td></td>
-</tr>
-<tr>
-<td><code>leader_id</code></td>
-<td>text FK → members</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<h3 id="app_users">app_users</h3>
-<table>
-<thead>
-<tr>
-<th>Column</th>
-<th>Type</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>id</code></td>
-<td>text PK</td>
-<td></td>
-</tr>
-<tr>
-<td><code>name</code></td>
-<td>text</td>
-<td>Display name in top bar</td>
-</tr>
-<tr>
-<td><code>pin</code></td>
-<td>text</td>
-<td>4-digit PIN (plain text)</td>
-</tr>
-<tr>
-<td><code>role</code></td>
-<td>text</td>
-<td><code>admin</code> / <code>clerk</code> / <code>pastor</code> / <code>ga_leader</code> / <code>team_leader</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="key-design-notes">Key design notes</h2>
-<p><strong>Denormalized snapshots on registrations:</strong> <code>member_name</code>, <code>category</code>, <code>church</code>, <code>role</code> are copied from the member record at registration time. This means:
-- Registration data doesn't change if the member directory is updated later
-- Reporting is accurate as of the registration date
-- Downside: clerk must manually update the registration if the member's details change</p>
-<p><strong>Batch token in <code>note</code>:</strong> Portal registrations always start with <code>[B{timestamp}]</code> in the <code>note</code> field. This groups family members from the same submission for Consultar Inscrição. The <code>family_id</code> FK is not used for portal registrations because no <code>families</code> row is created during the portal flow.</p>
-<p><strong><code>member_id = "GUEST"</code>:</strong> Unverified members (added manually in the portal or at the desk) use the literal string <code>"GUEST"</code> rather than a FK to <code>members</code>. This distinguishes them in reporting and prevents FK constraint violations.</p>
-<hr />
-<h2 id="related">Related</h2>
-<ul>
-<li><a href="../overview/">Architecture: Overview</a></li>
-<li><a href="../integrations/">Architecture: Integrations</a></li>
-<li><a href="../../explanation/registration-rules/">Explanation: Registration Rules</a></li>
-</ul>
+<h2 id="entidades-e-relacionamentos">Entidades e relacionamentos</h2>
+<pre class="mermaid"><code>erDiagram
+    churches ||--o{ members : "pertence a"
+    churches ||--o{ assistance_groups : "tem"
+    families ||--o{ members : "agrupa"
+    assistance_groups ||--o{ members : "inclui"
+    members ||--o{ registrations : "faz"
+    events ||--o{ registrations : "recebe"
+    categories ||--o{ registrations : "classifica"
+    functions ||--o{ registrations : "atribui"
+    registrations ||--o{ approvals : "requer"
+    app_users ||--o{ approvals : "processa"
+    events ||--o{ rosters : "gera"
+    members ||--o{ rosters : "aparece em"
+
+    churches {
+        uuid id
+        string name
+        boolean is_custom
+    }
+    families {
+        uuid id
+        string name
+        boolean payment_exempt
+    }
+    members {
+        uuid id
+        string full_name
+        date birth_date
+        string gender
+        uuid church_id
+        uuid family_id
+        uuid assistance_group_id
+        string church_custom
+        boolean is_visitor
+    }
+    events {
+        uuid id
+        string name
+        date event_date
+        int max_capacity
+        date payment_deadline
+    }
+    registrations {
+        uuid id
+        uuid member_id
+        uuid event_id
+        uuid category_id
+        uuid function_id
+        string status
+        boolean payment_confirmed
+        timestamp created_at
+    }
+    app_users {
+        uuid id
+        string name
+        string role
+        string pin
+    }
+    approvals {
+        uuid id
+        uuid registration_id
+        uuid app_user_id
+        string decision
+        timestamp decided_at
+    }</code></pre>
 
 
 

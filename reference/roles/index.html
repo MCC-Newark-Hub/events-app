@@ -310,11 +310,31 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../troubleshooting/login-issues/" class="md-tabs__link">
+        <a href="../../explanation/event-lifecycle/" class="md-tabs__link">
           
   
   
-  Solução de problemas
+  Explicação
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/data-model/" class="md-tabs__link">
+          
+  
+  
+  Para desenvolvedores
 
         </a>
       </li>
@@ -824,6 +844,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#fluxo-de-permissoes-por-acao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fluxo de permissões por ação
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -898,7 +929,7 @@
   <span class="md-ellipsis">
     
   
-    Solução de problemas
+    Explicação
   
 
     
@@ -914,7 +945,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Solução de problemas
+    Explicação
   
 
           </label>
@@ -927,14 +958,101 @@
   
   
     <li class="md-nav__item">
-      <a href="../../troubleshooting/login-issues/" class="md-nav__link">
+      <a href="../../explanation/event-lifecycle/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Problemas de acesso
+    Ciclo de vida de um evento
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Para desenvolvedores
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Para desenvolvedores
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/data-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo de dados
   
 
     
@@ -1080,6 +1198,17 @@
     <span class="md-ellipsis">
       
         Hierarquia de acesso
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fluxo-de-permissoes-por-acao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fluxo de permissões por ação
       
     </span>
   </a>
@@ -1277,6 +1406,18 @@
   C --&gt; G[Inscrições e presença]
   D --&gt; H[Membros do GA]
   E --&gt; I[Membros da equipe]</code></pre>
+<hr />
+<h2 id="fluxo-de-permissoes-por-acao">Fluxo de permissões por ação</h2>
+<pre class="mermaid"><code>flowchart LR
+    A[Ação no sistema] --&gt; B{Quem pode fazer?}
+    B --&gt; C[Inscrição pública]
+    B --&gt; D[Inscrição por Atendente]
+    B --&gt; E[Aprovação por Pastor]
+    B --&gt; F[Gestão por Admin]
+    C --&gt; G([Qualquer membro])
+    D --&gt; H([Atendente e Admin])
+    E --&gt; I([Pastor e Admin])
+    F --&gt; J([Somente Admin])</code></pre>
 
 
 
