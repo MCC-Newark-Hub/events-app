@@ -1,64 +1,112 @@
-# Contributing
+# Contributing to mcc-newark-events
 
-This is an internal project for ICM Newark. These guidelines keep the codebase consistent and production safe.
-
----
-
-## Prerequisites
-
-- Node.js 18+
-- A Supabase project (see [Local Setup](docs/setup-local.md))
-- Access to the GitHub repository
+This is a private project maintained for Igreja Cristã Maranata, Newark, NJ. If you're reading this, you've been added as a collaborator — welcome.
 
 ---
 
-## Workflow
+## Before you start
 
-1. **Branch** from `master` using the naming convention in [Branching Standards](docs/standards/branching.md)
-2. **Develop** locally — `npm run dev`
-3. **Test** — `npm test` must pass with no failures
-4. **Lint** — `npm run lint` must pass
-5. **Commit** using the convention in [Commit Standards](docs/standards/commits.md)
-6. **Open a PR** following the [PR Standards](docs/standards/pull-requests.md)
-7. **Merge** — squash merge into `master`; Vercel deploys automatically
+Make sure you have:
+- Node.js v18+
+- Git configured with your name and email (`git config --global user.name "Your Name"`)
+- Access to the Supabase project (ask the project owner for credentials)
+- A `.env` file set up locally (copy `.env.example` and fill in the values)
 
----
-
-## Code Style
-
-- **Formatting:** Prettier (`npm run format`). Config is in `package.json`. Run before committing.
-- **No TypeScript** — the project uses plain JavaScript (`.js` / `.jsx`).
-- **No comments explaining what code does** — well-named identifiers do that. Comments only for non-obvious *why*.
-- **No over-engineering** — don't abstract until the third repetition. Don't add error handling for impossible cases.
-- **Optimistic UI** — mutations update local React state immediately, then fire the async Supabase write. Don't wait for the DB before updating the UI.
-- **Supabase JS v2** — always `.update(data).eq(col, val)` — filter after mutation, never before.
+If anything's unclear, check the [README](README.md) first.
 
 ---
 
-## Testing
+## Branching
 
-- Tests live in `src/test/`
-- Run with `npm test` (Vitest)
-- Pure logic tests only — no live Supabase connection required
-- Add tests for any new helper functions in `constants/` or `hooks/`
-- UI/integration tests are not yet in scope
+We use a simple GitFlow-inspired model:
 
----
+| Branch | Purpose |
+|---|---|
+| `main` | Production — deploys automatically to Vercel |
+| `develop` | Integration branch — merge feature branches here first |
+| `feature/*` | New features (e.g., `feature/export-attendance`) |
+| `fix/*` | Bug fixes (e.g., `fix/login-pin-validation`) |
+| `chore/*` | Non-functional changes (deps, config, docs) |
 
-## What not to do
-
-- Do not re-enable Row Level Security without a complete auth redesign — the app uses PIN auth, not Supabase Auth. All 12 tables must have RLS disabled.
-- Do not add a client-side router — view state lives in `App.jsx` as a `view` string. URL params (`?checkin=`, `?selfcheckin=`) are the only URL-driven state.
-- Do not add pagination or lazy loading — the full DB is loaded upfront. This is intentional at current scale.
-- Do not push directly to `master` — always use a PR.
-- Do not skip `npm test` before opening a PR.
+Never push directly to `main`. Always go through a PR.
 
 ---
 
-## Reporting Issues
+## Commit messages
 
-Use the GitHub issue templates:
-- [Bug report](.github/ISSUE_TEMPLATE/bug_report.md)
-- [Feature request](.github/ISSUE_TEMPLATE/feature_request.md)
+Follow this convention:
 
-For production incidents, follow the [Incident Response runbook](docs/runbooks/incident-response.md).
+```
+type: short description (50 chars max)
+
+Optional longer explanation if needed.
+Closes #issue-number if applicable.
+```
+
+**Types:**
+
+| Type | When to use |
+|---|---|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `chore` | Dependency updates, config changes |
+| `docs` | Documentation only |
+| `refactor` | Code restructure, no behavior change |
+| `style` | Formatting, no logic change |
+| `test` | Adding or updating tests |
+
+**Examples:**
+
+```
+feat: add bulk registration mode to admin dashboard
+fix: handle missing email gracefully in confirmation flow
+docs: update registration guide for new 4-step flow
+chore: bump lucide-react to 0.400.0
+```
+
+---
+
+## Pull requests
+
+1. Branch off `develop` (not `main`)
+2. Keep PRs focused — one feature or fix per PR
+3. Write a clear PR description: what changed and why
+4. If it's a UI change, include a screenshot
+5. Request review from the project owner before merging
+
+PR title should follow the same commit convention above.
+
+---
+
+## Code style
+
+- JavaScript only (no TypeScript)
+- Functional components and hooks — no class components
+- Use `lucide-react` for icons, not inline SVGs or other libraries
+- String literals for UI text go in `src/i18n/strings.js` — don't hardcode UI text in components
+- Constants and seed data go in `src/constants/index.js`
+- Keep components in `src/components/`, page-level views in `src/views/`
+
+---
+
+## Environment variables
+
+Never commit `.env`. If you add a new env variable:
+1. Add it to `.env.example` with a placeholder value
+2. Document it in the README under the Environment Variables section
+3. Let the project owner know so they can add it to Vercel
+
+---
+
+## Supabase
+
+- The Supabase client is at `src/lib/supabase.js` — use it instead of importing the SDK directly
+- RLS policies are set to `allow_all` for now — do not tighten without discussing first
+- If you need to change the schema, write the SQL and share it for review before running it in production
+- The legacy `eyJ...` anon key is required — the `sb_publishable...` format does not work with the custom client
+
+---
+
+## Questions?
+
+Open a GitHub Discussion or reach out to the project owner directly.

@@ -1,5 +1,29 @@
-# All files — Leonard Alves is the default reviewer
-* @leonard-alves
+# CODEOWNERS
+#
+# This file defines who owns (and must review) changes to specific parts of the codebase.
+# When a PR touches a file matching a pattern below, the listed owner is automatically
+# added as a required reviewer.
+#
+# Format: pattern  @github-username
+# More specific rules override broader ones (last match wins per GitHub's rules).
+#
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-# Database migrations require extra care — flag for review
-migrations/ @leonard-alves
+# Default — everything requires review from the project owner
+*                           @leonard-alves
+
+# Core infrastructure — extra caution required
+src/lib/supabase.js         @leonard-alves
+src/constants/index.js      @leonard-alves
+.env.example                @leonard-alves
+
+# Database and schema changes
+supabase/                   @leonard-alves
+
+# CI/CD and deployment config
+.github/                    @leonard-alves
+vercel.json                 @leonard-alves
+
+# Documentation
+docs/                       @leonard-alves
+*.md                        @leonard-alves

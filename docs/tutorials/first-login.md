@@ -1,68 +1,64 @@
-# Tutorial: First Login
+# Primeiro acesso
 
-**What you'll learn:** How to log in to the system for the first time and orient yourself in your role's dashboard.
-
-**Who this is for:** A clerk, pastor, GA leader, or team leader who has just received their PIN and is opening the app for the first time.
-
-**Time:** ~5 minutes
+Se é a primeira vez que você vai usar o sistema, este tutorial te leva do zero até o painel principal em menos de 5 minutos.
 
 ---
 
-## Before you start
+## O que você vai precisar
 
-You need:
-- The app URL (provided by the admin)
-- Your 4-digit PIN (provided by the admin)
+- Um dispositivo com internet (celular, tablet ou computador)
+- O link do sistema (fornecido pela coordenação do evento)
+- Seu PIN de acesso (se você for da equipe interna)
 
----
-
-## Step 1 — Open the app
-
-Navigate to the app URL in any browser. You'll see the ICM Maranatha home screen with three options:
-
-- **Fazer minha inscrição** — public self-registration portal (no PIN needed)
-- **Consultar inscrição** — registration lookup (no PIN needed)
-- **Acesso da equipe / Team Access** — staff login
-
-Click **Acesso da equipe**.
+> **Apenas para membros fazendo inscrição pública:** você não precisa de PIN. O portal de inscrição é aberto — basta acessar o link.
 
 ---
 
-## Step 2 — Enter your PIN
+## Passo 1 — Acesse o sistema
 
-A PIN entry pad appears. Type your 4-digit PIN. The digits appear as dots as you type.
+Abra o navegador e acesse o link fornecido pela coordenação.
 
-> If you make a mistake, use the backspace button to clear the last digit.
+Você vai ver a tela inicial com duas opções:
 
-Press **Entrar / Sign In**.
-
----
-
-## Step 3 — Explore your dashboard
-
-What you see depends on your role:
-
-**Admin** — Full panel with tabs: Registrations, Events, Teams, Groups, Reports, Badges, Directory, Users.
-
-**Clerk** — Registration desk: search bar at the top, registrations list, capacity bar, and a fee summary.
-
-**Pastor** — Approval queue: pending capacity override requests from clerks.
-
-**GA Leader** — Your assistance group's registrations filtered to members of your group.
-
-**Team Leader** — Your team's roster for the current event.
+- **Inscrição pública** — para membros se inscrevendo num evento
+- **Acesso interno** — para equipe com PIN
 
 ---
 
-## Step 4 — Sign out
+## Passo 2 — Escolha seu tipo de acesso
 
-When you're done, click your name or the sign-out button in the top bar. Your session is stored in the browser, so leaving the tab open will keep you logged in.
+**Se você é um membro comum:**  
+Clique em "Inscrição" e siga para o portal público. Não precisa de PIN.
 
-> On a shared device (registration desk), always sign out when you step away.
+**Se você é da equipe interna:**  
+Clique em "Acesso interno" e continue para o Passo 3.
 
 ---
 
-## What's next?
+## Passo 3 — Digite seu PIN (equipe interna)
 
-- If you're a **clerk**, continue with [Tutorial: Register a Member](register-member.md)
-- If you're an **admin**, continue with [Tutorial: Create an Event](create-event.md)
+Na tela de acesso interno, você vai ver um campo para digitar seu PIN.
+
+Digite os números do seu PIN e clique em **Entrar**.
+
+> Se você não sabe seu PIN ou ele não está funcionando, veja [Redefinir PIN](../how-to/reset-password.md).
+
+---
+
+## Passo 4 — Você está dentro
+
+Após entrar, você vai ver o painel correspondente ao seu perfil:
+
+| Perfil | O que você vê |
+|---|---|
+| Admin | Painel completo com todos os módulos |
+| Atendente | Módulo de inscrições e lista de presença |
+| Pastor | Visão geral de registros e aprovações |
+| Líder de GA | Lista dos membros do seu grupo |
+| Líder de Equipe | Lista da sua equipe |
+
+---
+
+## Próximo passo
+
+Agora que você está dentro do sistema, veja como [Inscrever um membro](register-member.md) em um evento.

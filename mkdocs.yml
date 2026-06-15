@@ -1,0 +1,56 @@
+site_name: ICM Newark — Sistema de Inscrições
+site_description: Guia de usuário e documentação do sistema de inscrições da Igreja Cristã Maranata Newark
+site_author: ICM Newark
+site_url: https://docs.mcc-newark-events.vercel.app  # update when live
+
+repo_name: mcc-newark-events
+repo_url: https://github.com/leonard-alves/mcc-newark-events
+
+theme:
+  name: material
+  language: pt
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Modo escuro
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Modo claro
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+  font:
+    text: Inter
+    code: JetBrains Mono
+
+plugins:
+  - search:
+      lang: pt
+
+nav:
+  - Início: index.md
+  - Tutoriais:
+    - Primeiro acesso: tutorials/first-login.md
+    - Inscrever um membro: tutorials/register-member.md
+  - Como fazer:
+    - Redefinir PIN: how-to/reset-password.md
+  - Referência:
+    - Funções e perfis: reference/roles.md
+    - Status de inscrição: reference/statuses.md
+  - Solução de problemas:
+    - Problemas de acesso: troubleshooting/login-issues.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/leonard-alves/mcc-newark-events

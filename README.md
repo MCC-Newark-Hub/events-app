@@ -1,274 +1,151 @@
-# MCC Newark — Event Registration System
+# mcc-newark-events
 
-A full-featured event registration and management app for **Igreja Cristã Maranatha (ICM) Newark** and its affiliated congregations across the US and Canada. Handles self-registration, waitlists, fee tracking, team assignments, badge printing, and QR-code check-in.
+Event registration system for **Igreja Cristã Maranata — Newark, NJ**.
+
+Built to replace manual spreadsheet-based registration with a self-service portal for members and an internal management dashboard for staff.
 
 ---
 
-## Documentation
+## What it does
 
-Full documentation is in [`docs/`](docs/) and follows the [Diataxis framework](https://diataxis.fr/).
+- Public registration portal (4-step flow with PDF badge auto-download)
+- PIN-based internal access for five roles: Admin, Atendente, Pastor, GA Leader, Team Leader
+- Payment tracking with family-level exemptions and deadline management
+- Waitlist management and bulk registration mode
+- Confirmation emails sent to both the registrations inbox and the participant
+- Thermal label badge printing (3"×2" landscape, B&W)
+- CSV import for members, churches, families, assistance groups, and categories
 
-| Section | Contents |
+---
+
+## Tech stack
+
+| Layer | Tech |
 |---|---|
-| [Tutorials](docs/tutorials/) | First login · Create an event · Register a member |
-| [How-to guides](docs/how-to/) | Process payment · Print badges · Export attendance · Reset PIN |
-| [Reference](docs/reference/) | Roles · Permissions · Statuses · Age categories |
-| [Explanation](docs/explanation/) | Church hierarchy · Registration rules · Security model |
-| [Troubleshooting](docs/troubleshooting/) | Login issues · Registration errors · Sync issues |
-| [Architecture](docs/architecture/) | Overview · Data model · Integrations |
-| [ADRs](docs/adrs/) | Auth · Permissions · Database |
-| [Standards](docs/standards/) | Commits · Branching · Pull requests |
-| [Runbooks](docs/runbooks/) | Incident response · Rollback |
-
-Quick links: [Local Setup](docs/setup-local.md) · [Deployment](docs/deployment.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
-
----
-
-## Features
-
-**Public portal**
-- Self-registration in 4 steps: member search → family → health info → contact & terms
-- Family grouping — register multiple members in a single submission
-- Bilingual interface (Portuguese / English)
-- Terms of acceptance with payment deadline acknowledgement
-- Consultar Inscrição — look up a registration by number or name, cancel it, or add a family member
-
-**Registration desk (Clerk)**
-- Search, register, and manage participants
-- Capacity enforcement with automatic waitlist
-- Over-capacity ("excedente") flow with pastor approval
-- Fee payment tracking; auto-exempt for Pastors and Ungidos
-- Real-time sync between multiple clerk stations
-
-**Admin**
-- Event and fee configuration (per age category)
-- Payment deadline with auto-cancel logic (family/team exemptions)
-- Member directory CRUD (members, families, assistance groups, churches, teams)
-- CSV bulk import
-- Badge printing (PDF via html2canvas + jsPDF)
-- Registrations report with bulk delete
-
-**Pastor / GA Leader / Team Leader views**
-- Pastor: approve/deny capacity override requests
-- GA Leader: view and manage their assistance group registrations
-- Team Leader: manage their team roster
-
-**Check-in**
-- Clerk check-in via URL param (`?checkin=<regNumber>`)
-- Participant self check-in kiosk via QR code (`?selfcheckin=<eventId>`)
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | React 19 + Vite 8 |
-| Backend / DB | Supabase (PostgreSQL + Supabase JS v2) |
+| Frontend | React (Vite, JavaScript) |
+| Backend/DB | Supabase (PostgreSQL + REST API) |
+| Auth | PIN-based (no OAuth) |
+| Email | Resend |
 | Hosting | Vercel |
 | Icons | lucide-react |
-| PDF / Badges | html2canvas + jsPDF |
-| QR codes | qrcode |
-| Tests | Vitest + @testing-library/react |
+| PDF/Badges | jspdf + html2canvas |
 
 ---
 
-## Prerequisites
+## Project structure
 
-- [Node.js](https://nodejs.org/) 18+
-- A [Supabase](https://supabase.com/) project (free tier is sufficient)
+```
+mcc-newark-events/
+├── src/
+│   ├── assets/
+│   │   └── images/
+│   │       ├── logo/          # ICM logo
+│   │       └── custom-icons/  # Future custom SVGs
+│   ├── components/            # Reusable UI components
+│   ├── constants/             # App-wide constants and seed data
+│   ├── i18n/                  # PT/EN strings and language context
+│   ├── lib/
+│   │   └── supabase.js        # Supabase REST client
+│   └── views/                 # Page-level views (PublicPortal, AdminDashboard, etc.)
+├── docs/                      # User-facing documentation (MkDocs)
+├── .env                       # Local env vars — never commit this
+├── .env.example               # Template for env setup
+└── mkdocs.yml                 # MkDocs config for the docs site
+```
 
 ---
 
-## Getting Started
+## Getting started (local dev)
+
+**Prerequisites:** Node.js v18+, Git
 
 ```bash
-# 1. Clone
+# Clone the repo
 git clone https://github.com/leonard-alves/mcc-newark-events.git
 cd mcc-newark-events
 
-# 2. Install dependencies
+# Install dependencies
 npm install
 
-# 3. Configure environment variables (see section below)
-cp .env.example .env.local
+# Set up environment variables
+cp .env.example .env
+# Edit .env and add your Supabase URL and anon key
 
-# 4. Start the dev server
+# Run locally
 npm run dev
 ```
 
----
-
-## Environment Variables
-
-Create a `.env.local` file at the project root:
-
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_KEY=your-anon-key-here
-```
-
-Both values are found in your Supabase project under **Settings → API**.
-
-> **Note:** The app uses PIN-based authentication (not Supabase Auth). All users share the same anon key. Row Level Security is disabled on all tables — access control is enforced at the application layer.
+App runs at `http://localhost:5173`.
 
 ---
 
-## Database Setup
+## Environment variables
 
-The schema lives in the `migrations/` folder. Run each file **in order** using the Supabase SQL editor or `psql`.
+| Variable | Description |
+|---|---|
+| `VITE_SUPABASE_URL` | Your Supabase project URL |
+| `VITE_SUPABASE_KEY` | Supabase legacy anon key (eyJ... format) |
 
-```
-migrations/
-  001_member_fields.sql       — Adds first_name, last_name, allergies, special_needs to members
-  002_teams_table.sql         — Creates teams reference table
-  003_presence.sql            — Adds presence column to registrations
-  004_checkin_fields.sql      — Adds checked_in_at and checkin_method to registrations
-  005_churches_schema.sql     — Expands churches table with city/state/country fields
-  006_teams_enrich.sql        — Adds description, leader, and responsibilities to teams
-  007_churches_pastor.sql     — Adds pastor_id FK to churches
-  008_member_roles.sql        — Adds roles[] array to members
-  009_id_defaults.sql         — Auto-generates IDs for assistance_groups and families
-  010_families_member_ids.sql — Adds member_ids[] array to families
-```
+> ⚠️ Use the legacy `eyJ...` JWT format for the anon key, not the newer `sb_publishable...` format. The custom Supabase client expects the JWT.
 
-Each migration is idempotent (`IF NOT EXISTS`, `ON CONFLICT DO NOTHING`) — re-running is safe.
+---
 
-### Tables
+## Database
+
+Supabase project: `mcc-newark-events`
+Schema version: v2 — 11 tables
 
 | Table | Purpose |
 |---|---|
-| `events` | Event details, fees by category, capacity, registration prefix |
-| `registrations` | Registration records with all status flags |
-| `members` | Member directory (name, category, church, role, family_id, ga_id) |
-| `families` | Family groups |
-| `assistance_groups` | GA (Grupo de Assistência) groups |
-| `approvals` | Capacity override / exemption requests |
-| `rosters` | Team assignments per event |
-| `churches` | Church list (overrides the built-in constant when populated) |
-| `app_users` | PIN-authenticated users with system roles |
-| `categories` | Age categories (overrides built-in constant when populated) |
-| `functions` | Ministry roles (overrides built-in constant when populated) |
-| `teams` | Service teams (overrides built-in constant when populated) |
-
----
-
-## Project Structure
-
-```
-src/
-├── App.jsx                     # Root — session restore, view routing
-├── index.css                   # All styles (CSS custom properties for theming)
-├── constants/index.js          # Roles, categories, churches, fee helpers
-├── i18n/strings.js             # PT-BR and EN string table
-├── lib/supabase.js             # Supabase client
-├── hooks/
-│   ├── useAppData.js           # Central data hook — all state + mutations
-│   └── useAuth.js              # PIN login/logout
-├── views/
-│   ├── LoginScreen.jsx         # Landing — public register, lookup, PIN login
-│   ├── PublicPortal.jsx        # 4-step self-registration flow + confirmation
-│   ├── RegistrationLookup.jsx  # Consultar Inscrição (lookup, cancel, add family)
-│   ├── CheckInScreen.jsx       # Clerk check-in (?checkin=<regNumber>)
-│   ├── SelfCheckInScreen.jsx   # Self check-in kiosk (?selfcheckin=<eventId>)
-│   ├── AdminView.jsx           # Full admin panel (tabbed)
-│   ├── ClerkView.jsx
-│   ├── PastorView.jsx
-│   ├── GALeaderView.jsx
-│   ├── TeamLeaderView.jsx
-│   └── admin/
-│       ├── BadgesTab.jsx
-│       ├── EventsTab.jsx
-│       ├── RegistrationsTab.jsx
-│       ├── ReportsTab.jsx
-│       └── TeamsTab.jsx
-├── components/
-│   └── ApprovalsPanel, BadgePrint, CapBar, ChurchSearch,
-│       DetailModal, FeeBox, ICMLogo, Modal, PinLogin,
-│       RegModal, Sidebar, StatusBadge, Topbar
-└── test/
-    ├── constants.test.js       # fmt, daysSince, isDeadlineExempt, deadlineStatus, church helpers
-    └── registration.test.js    # mapReg, extractBatchId, dateFromRegNumber, getRegStatus
-```
-
----
-
-## Authentication & Roles
-
-Authentication uses 4-digit PINs stored in the `app_users` table. Sessions are persisted in `localStorage`.
-
-| Role | View | Access |
-|---|---|---|
-| `admin` | AdminView | Full access — events, registrations, directory, reports, badges |
-| `clerk` | ClerkView | Register participants, manage payments and check-in |
-| `pastor` | PastorView | Approve/deny capacity override requests |
-| `ga_leader` | GALeaderView | View and manage their assistance group |
-| `team_leader` | TeamLeaderView | Manage their team roster |
-
-Public users (no PIN) can self-register via the portal and look up their registration.
-
----
-
-## Registration Number Format
-
-```
-{EVENT_PREFIX}-{YYYYMMDD}-{0001}
-```
-
-Example: `MCC-20260615-0042`
-
----
-
-## Available Scripts
-
-```bash
-npm run dev          # Start dev server (http://localhost:5173)
-npm run build        # Production build
-npm run preview      # Preview production build locally
-npm run test         # Run tests (Vitest)
-npm run test:watch   # Run tests in watch mode
-npm run lint         # ESLint
-npm run format       # Prettier (src/**/*.{js,jsx})
-```
-
----
-
-## Testing
-
-```bash
-npm test
-```
-
-41 tests across two files covering core helpers, data mapping, and status logic. Tests do not require a live Supabase connection.
+| `categories` | Age/registration categories |
+| `functions` | SGI functions |
+| `churches` | Church list including "Outra / Not Listed" and "Sem Igreja" |
+| `families` | Family units with payment exemption flags |
+| `assistance_groups` | Assistance group assignments |
+| `members` | Member records |
+| `events` | Events |
+| `app_users` | PIN-based internal users |
+| `registrations` | Event registrations |
+| `approvals` | Approval workflow records |
+| `rosters` | Roster assignments |
 
 ---
 
 ## Deployment
 
-The app is hosted on [Vercel](https://vercel.com/). The `master` branch deploys automatically to production.
+The app deploys automatically to Vercel on every push to `main`.
 
-**Required environment variables in Vercel:**
+Live URL: `https://mcc-newark-events.vercel.app`
 
-| Variable | Environment |
-|---|---|
-| `VITE_SUPABASE_URL` | Production + Preview |
-| `VITE_SUPABASE_KEY` | Production + Preview |
-
-**Staging setup (optional):** Create a second Supabase project, run all migrations on it, then configure the **Preview** environment in Vercel to point to the staging project. Feature branches will then deploy against staging data automatically.
+For first-time Vercel setup, see [docs/dev/deployment.md](docs/dev/deployment.md).
 
 ---
 
-## Special URL Parameters
+## Documentation
 
-| URL | Purpose |
-|---|---|
-| `?checkin=MCC-20260615-0042` | Opens the clerk check-in screen for that reg number |
-| `?selfcheckin=<eventId>` | Opens the self-service QR check-in kiosk |
+User docs are published via MkDocs Material at [link TBD].
 
-These bypass PIN auth entirely, enabling kiosk and QR-code use cases.
+To run the docs site locally:
+
+```bash
+pip install mkdocs-material
+mkdocs serve
+```
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## Architecture decisions
+
+See [docs/architecture/](docs/architecture/) for ADRs covering authentication, permissions, and database design choices.
 
 ---
 
 ## License
 
-Private — internal use by Igreja Cristã Maranatha Newark. Not licensed for redistribution.
+Private — internal use only for Igreja Cristã Maranata, Newark, NJ.

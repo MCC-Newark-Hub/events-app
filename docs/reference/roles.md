@@ -1,66 +1,105 @@
-# Reference: Roles
+# Funções e perfis de acesso
 
-The system has two distinct sets of roles: **system roles** (control login access and views) and **church/ministry roles** (describe a member's function in the church).
-
----
-
-## System roles
-
-Set on the `app_users` table. Determines which view a user sees after logging in.
-
-| Role | View | Description |
-|---|---|---|
-| `admin` | Admin panel | Full access to all tabs: registrations, events, teams, groups, reports, badges, directory, users |
-| `clerk` | Clerk desk | Register participants, mark payment, process check-in, manage waitlist |
-| `pastor` | Pastor dashboard | View and approve/deny capacity override (excedente) requests |
-| `ga_leader` | GA Leader view | See and manage registrations for members of their assistance group |
-| `team_leader` | Team Leader view | Manage their service team's roster for the current event |
-
-Public users (no PIN) can access the self-registration portal and Consultar Inscrição without any system role.
+O sistema tem dois tipos de acesso: **público** (sem PIN) e **interno** (com PIN). O acesso interno é dividido em cinco perfis, cada um com permissões específicas.
 
 ---
 
-## Church / ministry roles
+## Acesso público
 
-Stored in the `role` (text) and `roles` (text[]) columns on the `members` table and carried onto `registrations.role`. Used for:
+Disponível para qualquer pessoa com o link do sistema. Não precisa de PIN.
 
-- Auto-exemption (Pastor and Ungido are always fee-exempt)
-- Deadline exemption (Obreiro roles and service team members are exempt from payment deadlines)
-- Badge display
-- Filtering and reporting
+Permite:
+- Realizar inscrição em eventos
+- Entrar na lista de espera
+- Baixar crachá em PDF
+- Receber confirmação por email
 
-### Exempt roles (fee = $0, always)
-
-| Role | Notes |
-|---|---|
-| Pastor | Primary pastor of a congregation |
-| Ungido | Ordained minister |
-
-### Obreiro roles (exempt from payment deadlines)
-
-| Role |
-|---|
-| Diácono / Diaconisa |
-| Obreiro / Obreira |
-| Presbítero / Presbítera |
-
-### Other common roles
-
-| Role | Category |
-|---|---|
-| Grupo de Louvor | Worship |
-| Líder de Jovens | Youth |
-| Líder de Adolescentes | Adolescents |
-| Líder de Crianças | Children |
-| Secretário(a) | Administration |
-| Tesoureiro(a) | Finance |
-| Membro | General member |
-
-The full list is maintained in `src/constants/index.js` (`ROLE_OPTIONS`) and can be overridden by populating the `functions` table in Supabase.
+Não permite:
+- Ver inscrições de outros membros
+- Gerenciar eventos
+- Acessar o painel interno
 
 ---
 
-## Related
+## Perfis internos
 
-- [Reference: Permissions](permissions.md)
-- [Explanation: Registration Rules](../explanation/registration-rules.md)
+### Admin
+
+Acesso total ao sistema.
+
+Pode:
+- Criar e editar eventos
+- Ver e gerenciar todas as inscrições
+- Gerenciar usuários e PINs
+- Importar dados via CSV
+- Configurar categorias, funções, e igrejas
+- Ver relatórios e exportar dados
+
+### Atendente
+
+Perfil de apoio no balcão de atendimento durante eventos.
+
+Pode:
+- Registrar inscrições manualmente
+- Ver a lista de inscritos e status de pagamento
+- Marcar presença
+- Imprimir crachás
+
+Não pode:
+- Editar configurações do evento
+- Gerenciar usuários
+- Importar dados
+
+### Pastor
+
+Visão geral de registros e aprovações.
+
+Pode:
+- Ver todas as inscrições do evento
+- Aprovar ou recusar registros que requerem aprovação pastoral
+- Ver status de pagamentos por família
+
+Não pode:
+- Editar inscrições
+- Gerenciar configurações
+
+### Líder de GA (Grupo de Assistência)
+
+Acesso aos membros do próprio grupo de assistência.
+
+Pode:
+- Ver a lista de membros inscritos do seu GA
+- Confirmar presença dos membros do seu GA
+- Ver status de pagamento dos membros do seu GA
+
+Não pode:
+- Ver membros de outros GAs
+- Editar inscrições
+
+### Líder de Equipe
+
+Acesso aos membros da própria equipe de trabalho.
+
+Pode:
+- Ver a lista de membros da sua equipe
+- Confirmar presença dos membros da sua equipe
+
+Não pode:
+- Ver outras equipes
+- Editar inscrições ou configurações
+
+---
+
+## Resumo de permissões
+
+| Ação | Público | Atendente | Pastor | Líder GA | Líder Equipe | Admin |
+|---|---|---|---|---|---|---|
+| Inscrição própria | ✓ | ✓ | | | | ✓ |
+| Inscrição de terceiros | | ✓ | | | | ✓ |
+| Ver todas as inscrições | | ✓ | ✓ | | | ✓ |
+| Ver inscrições do GA | | | | ✓ | | ✓ |
+| Ver inscrições da equipe | | | | | ✓ | ✓ |
+| Aprovar inscrições | | | ✓ | | | ✓ |
+| Gerenciar eventos | | | | | | ✓ |
+| Gerenciar usuários | | | | | | ✓ |
+| Importar dados | | | | | | ✓ |

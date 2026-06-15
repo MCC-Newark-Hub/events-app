@@ -1,43 +1,35 @@
-# Documentation
+# Sistema de Inscrições — ICM Newark
 
-This documentation follows the [Diataxis framework](https://diataxis.fr/), which organizes docs by the reader's *need* rather than by topic.
+Bem-vindo à documentação oficial do sistema de inscrições da Igreja Cristã Maranata de Newark.
 
----
-
-## Four quadrants
-
-| Section | Purpose | Reader's question |
-|---|---|---|
-| [Tutorials](tutorials/) | Learning — guided walkthroughs | "I'm new. Show me how to get started." |
-| [How-to guides](how-to/) | Task — concrete steps for a specific goal | "I know what I want. How do I do it?" |
-| [Reference](reference/) | Information — accurate, complete descriptions | "What are the exact values / rules for X?" |
-| [Explanation](explanation/) | Understanding — background and context | "Why does it work this way?" |
-
-Plus two additional sections:
-
-| Section | Purpose |
-|---|---|
-| [Troubleshooting](troubleshooting/) | Diagnosing and fixing known problems |
-| [Architecture](architecture/) | System design, data model, integrations |
-| [ADRs](adrs/) | Architecture Decision Records — permanent record of major decisions |
+Este site reúne tudo que você precisa para usar o sistema com confiança — seja você um membro fazendo sua primeira inscrição, um atendente gerenciando a fila de espera, ou um administrador configurando um novo evento.
 
 ---
 
-## Operational guides
+## Por onde começar?
 
-| Guide | Description |
-|---|---|
-| [Local Setup](setup-local.md) | Set up a local development environment |
-| [Deployment](deployment.md) | Vercel setup, staging, environment variables |
-| [Incident Response](runbooks/incident-response.md) | What to do when production is down |
-| [Rollback](runbooks/rollback.md) | How to revert a bad deploy |
+**É seu primeiro acesso?**  
+Veja o tutorial [Primeiro acesso](tutorials/first-login.md) — são menos de 5 minutos.
+
+**Quer se inscrever num evento?**  
+O tutorial [Inscrever um membro](tutorials/register-member.md) te guia passo a passo pelo portal público.
+
+**Está com algum problema?**  
+Acesse [Solução de problemas](troubleshooting/login-issues.md) — provavelmente já tem resposta lá.
 
 ---
 
-## Contributing standards
+## Seções deste site
 
-| Guide | Description |
+| Seção | Para quem é |
 |---|---|
-| [Commit Standards](standards/commits.md) | Commit message format |
-| [Branching Standards](standards/branching.md) | Branch naming and lifetime |
-| [PR Standards](standards/pull-requests.md) | Pull request guidelines |
+| **Tutoriais** | Quem está começando e quer um passo a passo completo |
+| **Como fazer** | Quem já sabe o básico e precisa de uma tarefa específica |
+| **Referência** | Quem quer entender funções, status e permissões em detalhe |
+| **Solução de problemas** | Quem está com alguma dificuldade técnica |
+
+---
+
+## Precisa de ajuda?
+
+Se não encontrar o que precisa aqui, entre em contato com a equipe de coordenação do evento ou com o secretário responsável pelo sistema.

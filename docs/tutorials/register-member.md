@@ -1,90 +1,91 @@
-# Tutorial: Register a Member at the Desk
+# Inscrever um membro
 
-**What you'll learn:** How to register a participant as a clerk, handle family registrations, mark payment, and deal with a full event.
-
-**Who this is for:** A clerk processing registrations at the registration desk.
-
-**Time:** ~15 minutes (includes practicing edge cases)
-
-**Prerequisite:** You're logged in as a clerk. If not, see [Tutorial: First Login](first-login.md).
+Este tutorial mostra como completar uma inscrição pelo portal público — o caminho que a maioria dos membros vai usar.
 
 ---
 
-## Step 1 — Search for the member
+## Antes de começar
 
-In the search bar at the top of the Clerk view, type the participant's name (or part of it). The system uses accent-insensitive search — typing "joao" will find "João".
-
-Click the participant's name in the results to select them.
-
-> If the participant doesn't appear, they may not be in the member directory. In that case, you can register them as a guest by entering their name manually. Check with your admin if members are frequently missing.
-
----
-
-## Step 2 — Review the registration card
-
-A registration card opens showing:
-- Name, age category, church, and ministry role
-- Calculated fee (based on their category and the event's fee table)
-- Auto-exempt status (Pastors and Ungidos are shown as "Isento" with fee $0.00)
-
-Confirm the information with the participant before proceeding.
+Tenha em mãos:
+- Nome completo do membro
+- Igreja de origem
+- Grupo de assistência (se souber)
+- Contato (email ou telefone, se quiser receber confirmação)
 
 ---
 
-## Step 3 — Add family members (optional)
+## Passo 1 — Acesse o portal de inscrição
 
-If the participant is registering with family:
+Abra o link do sistema e clique em **Inscrição**.
 
-1. In the family members section, search and select each family member
-2. Each member appears with their own fee
-3. The total updates at the bottom
-
-Family members are linked by the registration batch — they can all be looked up and cancelled together via Consultar Inscrição.
+Você vai ver o formulário de inscrição dividido em 4 etapas. Você pode avançar e voltar entre elas antes de confirmar.
 
 ---
 
-## Step 4 — Submit the registration
+## Passo 2 — Dados do membro (Etapa 1)
 
-Click **Registrar** (or **Confirm**). Registration numbers are generated immediately:
+Preencha:
+- **Nome completo**
+- **Data de nascimento** (usada para definir a categoria automaticamente)
+- **Gênero**
+- **Igreja de origem** — escolha da lista. Se sua igreja não estiver na lista, escolha "Outra / Not Listed". Se não tiver igreja, escolha "Sem Igreja".
 
-```
-CJ26-20260815-0001   ← primary registrant
-CJ26-20260815-0002   ← first family member
-```
-
-Write down or print the number(s) and give them to the participant.
-
----
-
-## Step 5 — Process payment (if paying now)
-
-If the participant is paying immediately:
-
-1. Find their registration in the list (it should appear at the top as the most recent)
-2. Click the registration to open the detail panel
-3. Toggle **Pago** to mark payment as received
-
-See [How-to: Process Payment](../how-to/process-payment.md) for more detail.
+Clique em **Próximo**.
 
 ---
 
-## Edge case: Event is full
+## Passo 3 — Evento e categoria (Etapa 2)
 
-If the event is at capacity, you'll see a warning. You have two options:
+O sistema já preenche a **categoria** automaticamente com base na data de nascimento. Confira se está correto.
 
-- **Waitlist:** Register normally — the system automatically places the participant on the waitlist. Inform them they'll be contacted if a spot opens.
-- **Excedente:** If you have authorization to go over capacity, toggle the "Excedente" option. This creates an approval request that the pastor must approve.
+Selecione o **evento** para o qual deseja se inscrever.
 
----
+Se houver mais de uma opção de função (SGI), escolha a sua.
 
-## Edge case: Participant is already registered
-
-If a search result shows "Já inscrito", the participant has registered via the public portal or at a previous desk session. Ask them for their registration number and look it up to verify their status.
+Clique em **Próximo**.
 
 ---
 
-## What's next?
+## Passo 4 — Contato (Etapa 3)
 
-- [How-to: Process Payment](../how-to/process-payment.md)
-- [How-to: Print Badges](../how-to/print-badges.md)
-- [Reference: Registration Statuses](../reference/statuses.md)
+Preencha seu **email** e/ou **telefone** se quiser receber um comprovante de inscrição.
+
+> Este passo é opcional, mas recomendado. O comprovante é enviado para o email informado e também para a coordenação do evento.
+
+Clique em **Próximo**.
+
+---
+
+## Passo 5 — Revisão e confirmação (Etapa 4)
+
+Revise todos os dados preenchidos. Se algo estiver errado, clique em **Voltar** para corrigir.
+
+Se tudo estiver certo, clique em **Confirmar inscrição**.
+
+---
+
+## Passo 6 — Comprovante e crachá
+
+Após confirmar, o sistema:
+
+1. Exibe uma mensagem de confirmação com seu número de inscrição
+2. Gera automaticamente um **crachá em PDF** para download
+3. Envia um email de confirmação (se você informou um endereço)
+
+Clique em **Baixar crachá** para salvar ou imprimir.
+
+> Se o download não iniciar automaticamente, verifique se o seu navegador está bloqueando pop-ups e libere o site.
+
+---
+
+## Inscrição na lista de espera
+
+Se o evento estiver com vagas esgotadas, você pode entrar na **lista de espera**. O processo é o mesmo — no final, você verá que foi adicionado à lista em vez de confirmado.
+
+Você será notificado se uma vaga abrir.
+
+---
+
+## Problemas?
+
+Veja [Problemas de acesso](../troubleshooting/login-issues.md) ou entre em contato com a equipe de atendimento no local.

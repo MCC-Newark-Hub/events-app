@@ -1,65 +1,74 @@
-# Troubleshooting: Login Issues
+# Problemas de acesso
+
+Se você está tendo dificuldade para entrar no sistema, este guia cobre os casos mais comuns.
 
 ---
 
-## "PIN incorreto" after entering the correct PIN
+## "PIN inválido" ao tentar entrar
 
-**Possible causes:**
+**Verifique o seguinte:**
 
-1. **Typo in the PIN** — the system is case-insensitive but PIN digits must be exact. Try again carefully.
-2. **Wrong PIN on file** — an admin may have changed the PIN. Ask the admin to verify what PIN is set for your account.
-3. **Supabase project is paused** — free-tier Supabase projects pause after 7 days of inactivity. If no one has used the system recently, the database is offline. An admin must log in to [supabase.com/dashboard](https://supabase.com/dashboard) and click **Restore**. The app will then work again within 30 seconds.
-4. **Empty `app_users` table** — on a fresh deployment, no users exist yet. An admin must create user records in Supabase directly (see [Local Setup — Seed test data](../setup-local.md)).
+1. **Você está no tipo de acesso certo?**  
+   Clique em "Acesso interno" antes de digitar o PIN. O portal público não tem campo de PIN.
 
-**How to verify Supabase is running:**
-Open browser DevTools → Network tab → attempt a login → look for a request to `supabase.co`. A 404 or connection error confirms the project is offline.
+2. **Você está digitando o PIN correto para o seu perfil?**  
+   Cada perfil tem um PIN diferente. Se você esqueceu, veja [Redefinir PIN](../how-to/reset-password.md).
 
----
+3. **Tem espaços sobrando?**  
+   Se você copiou e colou o PIN de algum lugar, pode ter um espaço invisível. Apague tudo e digite manualmente.
 
-## Logged in as the wrong role / wrong view appears
+4. **Tente um navegador diferente.**  
+   Às vezes o problema é cache do navegador. Tente abrir em modo anônimo ou em outro navegador.
 
-The role is stored in `localStorage` under `mcc_view`. If a user was previously logged in with a different PIN on the same device:
-
-1. Sign out using the button in the top bar
-2. Log back in with the correct PIN
-
-If the issue persists, clear the browser's localStorage:
-- DevTools → Application → Storage → Local Storage → delete `mcc_pin` and `mcc_view`
-- Refresh the page and log in again
+Se nenhum desses resolver, entre em contato com o administrador do sistema.
 
 ---
 
-## Session disappears on page refresh
+## A página não abre / fica carregando
 
-The session is stored in `localStorage`, which persists across page refreshes in normal use. If the session is lost on refresh:
+1. **Verifique sua conexão com a internet.**  
+   Tente abrir outro site para confirmar que a internet está funcionando.
 
-1. The browser may be in **private/incognito mode** — localStorage is cleared when the private window closes. Use a regular browser window.
-2. The browser may be set to clear localStorage on close. Check browser privacy settings.
-3. Safari on iOS sometimes clears localStorage aggressively. Use Chrome or Firefox.
+2. **O link está correto?**  
+   Peça o link oficial para a coordenação do evento. Não use links salvos de muito tempo atrás — o endereço pode ter mudado.
 
----
+3. **Tente recarregar a página.**  
+   No celular: puxe a tela para baixo. No computador: pressione `F5` ou `Ctrl+R`.
 
-## App shows public portal instead of the login form
-
-If the URL has `?checkin=` or `?selfcheckin=` parameters, the app bypasses the login screen entirely and shows the check-in or kiosk view. Remove those parameters from the URL to see the normal home screen.
-
----
-
-## Forgot which PIN is set for a user
-
-Only an admin can see and change PINs. See [How-to: Reset or Change a User PIN](../how-to/reset-pin.md).
-
-If no admin can log in, update the PIN directly in Supabase:
-
-```sql
-UPDATE app_users
-SET pin = '0000'
-WHERE name = 'Admin Name';
-```
+4. **Limpe o cache do navegador.**  
+   No Chrome: `Ctrl+Shift+Delete` → selecione "Cache" → "Limpar dados".
 
 ---
 
-## Related
+## O crachá em PDF não baixou
 
-- [How-to: Reset or Change a User PIN](../how-to/reset-pin.md)
-- [Explanation: Security Model](../explanation/security-model.md)
+1. **O navegador pode estar bloqueando o download automático.**  
+   Verifique se apareceu algum aviso de bloqueio de pop-up na barra de endereços e clique em "Permitir".
+
+2. **Verifique sua pasta de downloads.**  
+   O arquivo pode ter baixado sem aparecer na tela. Procure por `cracha_` na pasta de Downloads.
+
+3. **Tente em outro navegador.**  
+   O Chrome e o Edge funcionam melhor para downloads de PDF. Evite o Safari no iPhone para esta função.
+
+---
+
+## Não recebi o email de confirmação
+
+1. **Verifique a caixa de spam/lixo eletrônico.**  
+   Os emails de confirmação às vezes caem no spam.
+
+2. **Verifique se o email foi digitado corretamente.**  
+   Um erro de digitação no email é mais comum do que parece. Verifique com a equipe de atendimento se a inscrição está registrada corretamente.
+
+3. **O email pode demorar alguns minutos.**  
+   Aguarde até 10 minutos antes de concluir que não foi enviado.
+
+---
+
+## Outro problema não listado aqui
+
+Entre em contato com a secretaria ou com a equipe de atendimento no local do evento. Informe:
+- O que você tentou fazer
+- O que aconteceu (mensagem de erro, se houver)
+- O dispositivo e navegador que você está usando
