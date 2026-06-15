@@ -6,19 +6,21 @@ A full-featured event registration and management app for **Igreja Cristã Maran
 
 ## Documentation
 
-| Guide | Description |
+Full documentation is in [`docs/`](docs/) and follows the [Diataxis framework](https://diataxis.fr/).
+
+| Section | Contents |
 |---|---|
-| [Architecture](docs/architecture.md) | System design, key decisions, data flow |
-| [Local Setup](docs/setup-local.md) | Full local dev setup including Supabase schema |
-| [Deployment](docs/deployment.md) | Vercel setup, staging, environment variables |
-| [Troubleshooting](docs/troubleshooting.md) | Common issues and fixes |
-| [Commit Standards](docs/standards/commits.md) | Commit message format |
-| [Branching Standards](docs/standards/branching.md) | Branch naming and lifetime |
-| [PR Standards](docs/standards/pull-requests.md) | Pull request guidelines |
-| [Incident Response](docs/runbooks/incident-response.md) | What to do when production is down |
-| [Rollback](docs/runbooks/rollback.md) | How to revert a bad deploy |
-| [Changelog](CHANGELOG.md) | Release history |
-| [Contributing](CONTRIBUTING.md) | How to contribute |
+| [Tutorials](docs/tutorials/) | First login · Create an event · Register a member |
+| [How-to guides](docs/how-to/) | Process payment · Print badges · Export attendance · Reset PIN |
+| [Reference](docs/reference/) | Roles · Permissions · Statuses · Age categories |
+| [Explanation](docs/explanation/) | Church hierarchy · Registration rules · Security model |
+| [Troubleshooting](docs/troubleshooting/) | Login issues · Registration errors · Sync issues |
+| [Architecture](docs/architecture/) | Overview · Data model · Integrations |
+| [ADRs](docs/adrs/) | Auth · Permissions · Database |
+| [Standards](docs/standards/) | Commits · Branching · Pull requests |
+| [Runbooks](docs/runbooks/) | Incident response · Rollback |
+
+Quick links: [Local Setup](docs/setup-local.md) · [Deployment](docs/deployment.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
 ---
 
