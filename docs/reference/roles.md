@@ -103,3 +103,19 @@ Não pode:
 | Gerenciar eventos | | | | | | ✓ |
 | Gerenciar usuários | | | | | | ✓ |
 | Importar dados | | | | | | ✓ |
+
+---
+
+## Hierarquia de acesso
+
+```mermaid
+graph TD
+  A[Admin] --> B[Pastor]
+  A --> C[Atendente]
+  A --> D[Líder de GA]
+  A --> E[Líder de Equipe]
+  B --> F[Aprovações]
+  C --> G[Inscrições e presença]
+  D --> H[Membros do GA]
+  E --> I[Membros da equipe]
+```

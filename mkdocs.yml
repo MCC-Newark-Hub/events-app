@@ -1,7 +1,7 @@
 site_name: ICM Newark — Sistema de Inscrições
 site_description: Guia de usuário e documentação do sistema de inscrições da Igreja Cristã Maranata Newark
 site_author: ICM Newark
-site_url: https://docs.mcc-newark-events.vercel.app  # update when live
+site_url: https://leonard-alves.github.io/mcc-newark-events/
 
 repo_name: mcc-newark-events
 repo_url: https://github.com/leonard-alves/mcc-newark-events
@@ -32,6 +32,13 @@ theme:
   font:
     text: Inter
     code: JetBrains Mono
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
 
 plugins:
   - search:

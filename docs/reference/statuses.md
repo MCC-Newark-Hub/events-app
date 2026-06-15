@@ -76,3 +76,27 @@ Lista de espera
       ↓
   Pendente → Confirmado
 ```
+
+---
+
+## Fluxo visual — inscrição normal
+
+```mermaid
+graph TD
+  A([Inscrição criada]) --> B[Pendente]
+  B --> C{Pagamento ou aprovação?}
+  C -->|Confirmado| D([Confirmado])
+  C -->|Recusado| E([Recusado])
+  C -->|Cancelado| F([Cancelado])
+```
+
+## Fluxo visual — lista de espera
+
+```mermaid
+graph TD
+  A([Inscrição criada]) --> B[Lista de espera]
+  B --> C{Vaga abriu?}
+  C -->|Sim| D[Pendente]
+  C -->|Não| B
+  D --> E([Confirmado])
+```
