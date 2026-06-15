@@ -54,49 +54,33 @@ A inscrição foi cancelada, seja pelo membro ou pela equipe.
 
 ---
 
-## Fluxo típico de uma inscrição
-
-```
-Inscrição criada
-      ↓
-  Pendente
-      ↓
-[Pagamento registrado / Aprovação concedida]
-      ↓
-  Confirmado
-```
-
-Se o evento estiver cheio:
-```
-Inscrição criada
-      ↓
-Lista de espera
-      ↓
-[Vaga aberta]
-      ↓
-  Pendente → Confirmado
-```
-
----
-
-## Fluxo visual — inscrição normal
+## Fluxo de status — inscrição normal
 
 ```mermaid
-graph TD
-  A([Inscrição criada]) --> B[Pendente]
-  B --> C{Pagamento ou aprovação?}
-  C -->|Confirmado| D([Confirmado])
-  C -->|Recusado| E([Recusado])
-  C -->|Cancelado| F([Cancelado])
+flowchart TD
+    A([Inscrição criada]) --> B[Pendente]
+    B --> C{Pagamento em dinheiro confirmado?}
+    C -->|Sim| D([Confirmado])
+    C -->|Não| E{Aprovação necessária?}
+    E -->|Sim| F[Aprovação pendente]
+    E -->|Não| B
+    F --> G{Pastor ou Admin aprovou?}
+    G -->|Sim| D
+    G -->|Não| H([Recusado])
+    D --> I{Cancelamento?}
+    I -->|Sim| J([Cancelado])
+    I -->|Não| D
 ```
 
-## Fluxo visual — lista de espera
+## Fluxo de status — lista de espera
 
 ```mermaid
-graph TD
-  A([Inscrição criada]) --> B[Lista de espera]
-  B --> C{Vaga abriu?}
-  C -->|Sim| D[Pendente]
-  C -->|Não| B
-  D --> E([Confirmado])
+flowchart TD
+    A([Inscrição criada]) --> B[Lista de espera]
+    B --> C{Vaga disponível?}
+    C -->|Não| B
+    C -->|Sim| D[Pendente]
+    D --> E{Pagamento confirmado?}
+    E -->|Sim| F([Confirmado])
+    E -->|Não| D
 ```

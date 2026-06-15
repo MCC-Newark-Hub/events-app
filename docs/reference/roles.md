@@ -119,3 +119,20 @@ graph TD
   D --> H[Membros do GA]
   E --> I[Membros da equipe]
 ```
+
+---
+
+## Fluxo de permissões por ação
+
+```mermaid
+flowchart LR
+    A[Ação no sistema] --> B{Quem pode fazer?}
+    B --> C[Inscrição pública]
+    B --> D[Inscrição por Atendente]
+    B --> E[Aprovação por Pastor]
+    B --> F[Gestão por Admin]
+    C --> G([Qualquer membro])
+    D --> H([Atendente e Admin])
+    E --> I([Pastor e Admin])
+    F --> J([Somente Admin])
+```

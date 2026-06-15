@@ -54,8 +54,10 @@ nav:
   - Referência:
     - Funções e perfis: reference/roles.md
     - Status de inscrição: reference/statuses.md
-  - Solução de problemas:
-    - Problemas de acesso: troubleshooting/login-issues.md
+  - Explicação:
+    - Ciclo de vida de um evento: explanation/event-lifecycle.md
+  - Para desenvolvedores:
+    - Modelo de dados: architecture/data-model.md
 
 extra:
   social:

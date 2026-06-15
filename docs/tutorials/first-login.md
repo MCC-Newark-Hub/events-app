@@ -62,3 +62,22 @@ Após entrar, você vai ver o painel correspondente ao seu perfil:
 ## Próximo passo
 
 Agora que você está dentro do sistema, veja como [Inscrever um membro](register-member.md) em um evento.
+
+---
+
+## Fluxo de acesso com PIN
+
+```mermaid
+flowchart TD
+    A([Usuário acessa o sistema]) --> B{Tipo de acesso}
+    B -->|Público| C[Portal de inscrição]
+    B -->|Interno| D[Tela de PIN]
+    D --> E{PIN válido?}
+    E -->|Não| F([Mensagem de erro - tente novamente])
+    E -->|Sim| G{Perfil do usuário}
+    G -->|Admin| H([Painel completo])
+    G -->|Atendente| I([Módulo de inscrições])
+    G -->|Pastor| J([Visão de aprovações])
+    G -->|Líder de GA| K([Lista do GA])
+    G -->|Líder de Equipe| L([Lista da equipe])
+```

@@ -89,3 +89,32 @@ Você será notificado se uma vaga abrir.
 ## Problemas?
 
 Veja [Problemas de acesso](../troubleshooting/login-issues.md) ou entre em contato com a equipe de atendimento no local.
+
+---
+
+## Fluxo de inscrição
+
+```mermaid
+flowchart TD
+    A([Membro acessa o portal]) --> B[Etapa 1 - Dados pessoais]
+    B --> C[Etapa 2 - Evento e categoria]
+    C --> D[Etapa 3 - Contato]
+    D --> E[Etapa 4 - Revisão]
+    E --> F{Vagas disponíveis?}
+    F -->|Sim| G[Inscrição confirmada]
+    F -->|Não| H[Lista de espera]
+    G --> I([Crachá PDF gerado e enviado por email])
+    H --> J([Notificado quando vaga abrir])
+```
+
+## Fluxo da lista de espera
+
+```mermaid
+flowchart TD
+    A([Membro na lista de espera]) --> B{Vaga abriu?}
+    B -->|Não| A
+    B -->|Sim| C[Status muda para Pendente]
+    C --> D{Pagamento confirmado?}
+    D -->|Sim| E([Status muda para Confirmado])
+    D -->|Não| F([Aguardando pagamento])
+```
