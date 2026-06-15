@@ -4,6 +4,24 @@ A full-featured event registration and management app for **Igreja Cristã Maran
 
 ---
 
+## Documentation
+
+| Guide | Description |
+|---|---|
+| [Architecture](docs/architecture.md) | System design, key decisions, data flow |
+| [Local Setup](docs/setup-local.md) | Full local dev setup including Supabase schema |
+| [Deployment](docs/deployment.md) | Vercel setup, staging, environment variables |
+| [Troubleshooting](docs/troubleshooting.md) | Common issues and fixes |
+| [Commit Standards](docs/standards/commits.md) | Commit message format |
+| [Branching Standards](docs/standards/branching.md) | Branch naming and lifetime |
+| [PR Standards](docs/standards/pull-requests.md) | Pull request guidelines |
+| [Incident Response](docs/runbooks/incident-response.md) | What to do when production is down |
+| [Rollback](docs/runbooks/rollback.md) | How to revert a bad deploy |
+| [Changelog](CHANGELOG.md) | Release history |
+| [Contributing](CONTRIBUTING.md) | How to contribute |
+
+---
+
 ## Features
 
 **Public portal**

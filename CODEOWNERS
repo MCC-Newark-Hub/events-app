@@ -1,0 +1,5 @@
+# All files — Leonard Alves is the default reviewer
+* @leonard-alves
+
+# Database migrations require extra care — flag for review
+migrations/ @leonard-alves
