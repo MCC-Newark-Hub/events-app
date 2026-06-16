@@ -3,7 +3,7 @@ name: Bug report
 about: Something isn't working correctly
 title: "[BUG] "
 labels: bug
-assignees: leonard-alves
+assignees: mcc-newark-hub
 ---
 
 ## What happened

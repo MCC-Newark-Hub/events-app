@@ -12,7 +12,7 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
   const [qrModal, setQrModal] = useState(null); // { eventId, dataUrl }
 
   const openQrModal = async (eventId) => {
-    const url = `https://mcc-newark-events.vercel.app?selfcheckin=${eventId}`;
+    const url = `https://events-app.vercel.app?selfcheckin=${eventId}`;
     try {
       const dataUrl = await QRCode.toDataURL(url, { width: 256, margin: 2 });
       setQrModal({ eventId, url, dataUrl });

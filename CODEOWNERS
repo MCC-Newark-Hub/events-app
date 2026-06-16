@@ -10,20 +10,20 @@
 # Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # Default — everything requires review from the project owner
-*                           @leonard-alves
+*                           @mcc-newark-hub
 
 # Core infrastructure — extra caution required
-src/lib/supabase.js         @leonard-alves
-src/constants/index.js      @leonard-alves
-.env.example                @leonard-alves
+src/lib/supabase.js         @mcc-newark-hub
+src/constants/index.js      @mcc-newark-hub
+.env.example                @mcc-newark-hub
 
 # Database and schema changes
-supabase/                   @leonard-alves
+supabase/                   @mcc-newark-hub
 
 # CI/CD and deployment config
-.github/                    @leonard-alves
-vercel.json                 @leonard-alves
+.github/                    @mcc-newark-hub
+vercel.json                 @mcc-newark-hub
 
 # Documentation
-docs/                       @leonard-alves
-*.md                        @leonard-alves
+docs/                       @mcc-newark-hub
+*.md                        @mcc-newark-hub

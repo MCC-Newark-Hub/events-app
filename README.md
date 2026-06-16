@@ -1,4 +1,4 @@
-# mcc-newark-events
+# events-app
 
 Event registration system for **Igreja Cristã Maranata — Newark, NJ**.
 
@@ -35,7 +35,7 @@ Built to replace manual spreadsheet-based registration with a self-service porta
 ## Project structure
 
 ```
-mcc-newark-events/
+events-app/
 ├── src/
 │   ├── assets/
 │   │   └── images/
@@ -61,8 +61,8 @@ mcc-newark-events/
 
 ```bash
 # Clone the repo
-git clone https://github.com/leonard-alves/mcc-newark-events.git
-cd mcc-newark-events
+git clone https://github.com/mcc-newark-hub/events-app.git
+cd events-app
 
 # Install dependencies
 npm install
@@ -92,7 +92,7 @@ App runs at `http://localhost:5173`.
 
 ## Database
 
-Supabase project: `mcc-newark-events`
+Supabase project: `events-app`
 Schema version: v2 — 11 tables
 
 | Table | Purpose |
@@ -115,7 +115,7 @@ Schema version: v2 — 11 tables
 
 The app deploys automatically to Vercel on every push to `main`.
 
-Live URL: `https://mcc-newark-events.vercel.app`
+Live URL: `https://events-app.vercel.app`
 
 For first-time Vercel setup, see [docs/dev/deployment.md](docs/dev/deployment.md).
 
