@@ -108,7 +108,7 @@ function dateFromRegNumber(regNumber) {
   return d.length === 8 ? `${d.slice(6, 8)}/${d.slice(4, 6)}/${d.slice(0, 4)}` : "";
 }
 
-const CLERK_EMAIL = "mccnewark.registrations@gmail.com";
+const CLERK_EMAIL = "mccnewark.secretary@gmail.com";
 
 function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome }) {
   const primary = regs[0];
