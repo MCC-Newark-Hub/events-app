@@ -848,8 +848,8 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
     { id: "members",   label: "Membros",              count: members?.length },
     { id: "families",  label: "Famílias",             count: families?.length },
     { id: "groups",    label: "Grupos de Assistência",count: gas?.length },
-    { id: "teams",     label: "Equipes / Rosters",    count: rosters?.length },
-    { id: "teams_dir", label: "Equipes (Referência)",  count: dbTeams?.length },
+    { id: "teams",     label: "Escalas do Evento",     count: rosters?.length },
+    { id: "teams_dir", label: "Equipes",               count: dbTeams?.length },
   ];
   const [tab, setTab]         = useState("churches");
   const [search, setSearch]   = useState("");
@@ -860,8 +860,13 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   const [saving, setSaving]   = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [managingGA, setManagingGA] = useState(null); // GA whose members are being managed
-  const [bulkGaPick, setBulkGaPick] = useState(false); // show GA picker in members BulkBar
+  const [bulkGaPick, setBulkGaPick] = useState(false);
   const [bulkGaId, setBulkGaId] = useState("");
+  const [bulkChurchPick, setBulkChurchPick] = useState(false);
+  const [bulkChurch, setBulkChurch] = useState("");
+  const [bulkFamPick, setBulkFamPick] = useState(false); // "new" | "existing"
+  const [bulkFamId, setBulkFamId] = useState("");
+  const [bulkFamName, setBulkFamName] = useState("");
   // Sort state
   const [chSk, setChSk] = useState("display"); const [chSd, setChSd] = useState("asc");
   const [mbSk, setMbSk] = useState("name");    const [mbSd, setMbSd] = useState("asc");
@@ -1203,8 +1208,10 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
             {selected.length > 0 && (
               <BulkBar selected={selected.length} total={allIds.length} label="membros"
-                onSelectAll={() => selAll(allIds)} onClearAll={() => { clearSel(); setBulkGaPick(false); setBulkGaId(""); }}
+                onSelectAll={() => selAll(allIds)}
+                onClearAll={() => { clearSel(); setBulkGaPick(false); setBulkGaId(""); setBulkChurchPick(false); setBulkChurch(""); setBulkFamPick(false); setBulkFamId(""); setBulkFamName(""); }}
                 onDeleteSelected={() => setDeleting({ ids: selected, label: "" })}>
+                {/* ── Bulk GA ── */}
                 {bulkGaPick ? (
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                     <select value={bulkGaId} onChange={(e) => setBulkGaId(e.target.value)}
@@ -1223,11 +1230,72 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     }}>Confirmar</button>
                     <button className="btn btn-ghost btn-sm" onClick={() => { setBulkGaPick(false); setBulkGaId(""); }}>Cancelar</button>
                   </div>
-                ) : (
+                ) : !bulkChurchPick && !bulkFamPick && (
                   <button className="btn btn-ghost btn-sm" style={{ display: "flex", alignItems: "center", gap: 5 }}
-                    onClick={() => setBulkGaPick(true)}>
-                    👥 Atribuir GA
-                  </button>
+                    onClick={() => setBulkGaPick(true)}>👥 Atribuir GA</button>
+                )}
+                {/* ── Bulk Church ── */}
+                {bulkChurchPick ? (
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <select value={bulkChurch} onChange={(e) => setBulkChurch(e.target.value)}
+                      style={{ fontSize: 13, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card-bg)", color: "var(--text)" }}>
+                      <option value="">— Selecionar Igreja —</option>
+                      {(churches || []).map((c) => <option key={c.display || c} value={c.display || c}>{c.display || c}</option>)}
+                    </select>
+                    <button className="btn btn-primary btn-sm" disabled={!bulkChurch} onClick={async () => {
+                      const { error } = await sb.from("members").update({ church: bulkChurch }).in("id", selected);
+                      if (error) { notify("Erro: " + error.message); return; }
+                      setMembers((prev) => prev.map((m) => selected.includes(m.id) ? { ...m, church: bulkChurch } : m));
+                      notify(`Igreja atualizada para ${selected.length} membro(s).`);
+                      clearSel(); setBulkChurchPick(false); setBulkChurch("");
+                    }}>Confirmar</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { setBulkChurchPick(false); setBulkChurch(""); }}>Cancelar</button>
+                  </div>
+                ) : !bulkGaPick && !bulkFamPick && (
+                  <button className="btn btn-ghost btn-sm" style={{ display: "flex", alignItems: "center", gap: 5 }}
+                    onClick={() => setBulkChurchPick(true)}>⛪ Atribuir Igreja</button>
+                )}
+                {/* ── Bulk Family ── */}
+                {bulkFamPick ? (
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <select value={bulkFamId} onChange={(e) => setBulkFamId(e.target.value)}
+                      style={{ fontSize: 13, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card-bg)", color: "var(--text)" }}>
+                      <option value="">— Família existente —</option>
+                      {(families || []).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      <option value="__new__">+ Nova família…</option>
+                    </select>
+                    {bulkFamId === "__new__" && (
+                      <input value={bulkFamName} onChange={(e) => setBulkFamName(e.target.value)}
+                        placeholder="Nome da nova família"
+                        style={{ fontSize: 13, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border)", maxWidth: 180 }} />
+                    )}
+                    <button className="btn btn-primary btn-sm" disabled={!bulkFamId || (bulkFamId === "__new__" && !bulkFamName.trim())} onClick={async () => {
+                      const memberIds = selected;
+                      let famId = bulkFamId;
+                      if (bulkFamId === "__new__") {
+                        const famName = bulkFamName.trim();
+                        const { data, error } = await sb.from("families").insert({ name: famName, member_ids: memberIds }).select().single();
+                        if (error) { notify("Erro ao criar família: " + error.message); return; }
+                        famId = data.id;
+                        setFamilies((prev) => [...prev, { id: data.id, name: famName, memberIds }]);
+                      } else {
+                        const fam = (families || []).find((f) => f.id === famId);
+                        const mergedIds = [...new Set([...(fam?.memberIds || []), ...memberIds])];
+                        const { error } = await sb.from("families").update({ member_ids: mergedIds }).eq("id", famId);
+                        if (error) { notify("Erro ao atualizar família: " + error.message); return; }
+                        setFamilies((prev) => prev.map((f) => f.id === famId ? { ...f, memberIds: mergedIds } : f));
+                      }
+                      const { error: me } = await sb.from("members").update({ family_id: famId }).in("id", memberIds);
+                      if (me) { notify("Erro ao atualizar membros: " + me.message); return; }
+                      setMembers((prev) => prev.map((m) => memberIds.includes(m.id) ? { ...m, familyId: famId } : m));
+                      notify(`Família atribuída a ${memberIds.length} membro(s).`);
+                      clearSel(); setBulkFamPick(false); setBulkFamId(""); setBulkFamName("");
+                    }}>Confirmar</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { setBulkFamPick(false); setBulkFamId(""); setBulkFamName(""); }}>Cancelar</button>
+                  </div>
+                ) : !bulkGaPick && !bulkChurchPick && (
+                  <button className="btn btn-ghost btn-sm" style={{ display: "flex", alignItems: "center", gap: 5 }}
+                    onClick={() => setBulkFamPick(true)}>👨‍👩‍👧 Atribuir Família</button>
                 )}
               </BulkBar>
             )}
@@ -1474,18 +1542,20 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
               const unassigned = (members || []).filter((m) => !m.gaId || m.gaId !== managingGA.id);
               return (
                 <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setManagingGA(null)}>
-                  <div className="modal" style={{ maxWidth: 520 }}>
+                  {/* overflow:visible so the SearchSelect dropdown isn't clipped by the modal's overflow-y:auto */}
+                  <div className="modal" style={{ maxWidth: 520, overflow: "visible" }}>
                     <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 4 }}>
                       {managingGA.name} — Membros
                     </h3>
                     <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
                       {gaMembers.length} membro{gaMembers.length !== 1 ? "s" : ""} neste grupo
                     </p>
-                    <div style={{ marginBottom: 16 }}>
+                    <div style={{ marginBottom: 16, position: "relative", zIndex: 10 }}>
                       <label style={{ fontWeight: 600, fontSize: 13 }}>Adicionar membro</label>
                       <SearchSelect
                         value=""
                         onSelect={async (memberId) => {
+                          if (!memberId) return;
                           const { error } = await sb.from("members").update({ ga_id: managingGA.id }).eq("id", memberId);
                           if (error) { notify("Erro: " + error.message); return; }
                           setMembers((prev) => prev.map((m) => m.id === memberId ? { ...m, gaId: managingGA.id } : m));
@@ -1747,7 +1817,12 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       <label>Líder da Equipe</label>
                       <SearchSelect
                         value={formData.leaderId || ""}
-                        onSelect={(v) => setFormData({ ...formData, leaderId: v })}
+                        onSelect={(v) => {
+                          const leaderMember = (members || []).find((m) => m.id === v);
+                          const cur = formData.selectedMembers || [];
+                          const alreadyIn = cur.find((m) => m.id === v);
+                          setFormData({ ...formData, leaderId: v, selectedMembers: (v && leaderMember && !alreadyIn) ? [leaderMember, ...cur] : cur });
+                        }}
                         items={members || []}
                         getLabel={(m) => m.name}
                         getId={(m) => m.id}
@@ -1764,6 +1839,8 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                           if (!sel) return;
                           const cur = formData.selectedMembers || [];
                           if (cur.find((m) => m.id === id)) return;
+                          const conflict = (rosters || []).find((r) => r.eventId === formData.eventId && r.id !== editing?.id && (r.memberIds || []).includes(id));
+                          if (conflict) { notify(`${sel.name} já está na equipe "${conflict.team}".`); return; }
                           setFormData({ ...formData, selectedMembers: [...cur, sel] });
                         }}
                         items={(members || []).filter((m) => !(formData.selectedMembers || []).find((s) => s.id === m.id))}

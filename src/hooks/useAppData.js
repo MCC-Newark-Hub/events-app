@@ -72,6 +72,7 @@ export function mapApproval(a) {
     memberId: a.member_id,
     memberName: a.member_name,
     type: a.type,
+    fee: Number(a.fee ?? 0),
     reason: a.reason,
     status: a.status,
     requestedBy: a.requested_by,

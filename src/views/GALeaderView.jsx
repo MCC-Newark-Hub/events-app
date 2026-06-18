@@ -12,6 +12,15 @@ function GALeaderView(props) {
     if (!r) return "not_registered";
     return r.paid || r.exempt ? "confirmed" : "pending";
   };
+
+  // Summary stats across all my GAs
+  const allMyMembers = myGAs.flatMap((ga) => members.filter((m) => m.gaId === ga.id));
+  const totalMembers = allMyMembers.length;
+  const totalReg = allMyMembers.filter((m) => getStatus(m.id) !== "not_registered").length;
+  const totalNotReg = totalMembers - totalReg;
+  const pct = totalMembers > 0 ? Math.round((totalReg / totalMembers) * 100) : 0;
+  const categories = [...new Set(allMyMembers.map((m) => m.category).filter(Boolean))].sort();
+
   return (
     <div className="app-shell">
       <Topbar
@@ -32,6 +41,40 @@ function GALeaderView(props) {
             </h2>
             <p style={{ color: "#6b7280", fontSize: 13 }}>{t.readOnlyNote}</p>
           </div>
+
+          {/* ── Summary card ── */}
+          {totalMembers > 0 && (
+            <div className="card" style={{ marginBottom: 20, padding: "16px 20px" }}>
+              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Resumo Geral</div>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
+                <div style={{ textAlign: "center", minWidth: 80 }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: "#065f46" }}>{pct}%</div>
+                  <div style={{ fontSize: 11, color: "#6b7280" }}>Inscritos</div>
+                </div>
+                <div style={{ textAlign: "center", minWidth: 80 }}>
+                  <div style={{ fontSize: 28, fontWeight: 800 }}>{totalReg}</div>
+                  <div style={{ fontSize: 11, color: "#6b7280" }}>de {totalMembers} inscritos</div>
+                </div>
+                <div style={{ textAlign: "center", minWidth: 80 }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: totalNotReg > 0 ? "#b45309" : "#065f46" }}>{totalNotReg}</div>
+                  <div style={{ fontSize: 11, color: "#6b7280" }}>não inscritos</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {categories.map((cat) => {
+                  const catMembers = allMyMembers.filter((m) => m.category === cat);
+                  const catReg = catMembers.filter((m) => getStatus(m.id) !== "not_registered").length;
+                  const catPct = catMembers.length > 0 ? Math.round((catReg / catMembers.length) * 100) : 0;
+                  return (
+                    <div key={cat} style={{ background: "var(--sidebar-active-bg)", borderRadius: 8, padding: "6px 10px", fontSize: 12, minWidth: 100 }}>
+                      <div style={{ fontWeight: 600 }}>{cat}</div>
+                      <div style={{ color: "#6b7280" }}>{catReg}/{catMembers.length} — {catPct}%</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {myGAs.map((ga) => {
             const gam = members.filter((m) => m.gaId === ga.id);
             const notR = gam.filter((m) => getStatus(m.id) === "not_registered");
