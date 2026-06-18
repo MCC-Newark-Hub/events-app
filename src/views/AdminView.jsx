@@ -848,7 +848,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
     { id: "members",   label: "Membros",              count: members?.length },
     { id: "families",  label: "Famílias",             count: families?.length },
     { id: "groups",    label: "Grupos de Assistência",count: gas?.length },
-    { id: "teams",     label: "Escalas do Evento",     count: rosters?.length },
+    { id: "teams",     label: "Trabalhadores",          count: rosters?.length },
     { id: "teams_dir", label: "Equipes",               count: dbTeams?.length },
   ];
   const [tab, setTab]         = useState("churches");
