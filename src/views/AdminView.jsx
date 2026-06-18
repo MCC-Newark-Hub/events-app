@@ -819,7 +819,7 @@ function ConfirmDelete({ label, count, onConfirm, onCancel }) {
 }
 
 // Shared bulk-action bar shown when rows are selected
-function BulkBar({ selected, total, onSelectAll, onClearAll, onDeleteSelected, label }) {
+function BulkBar({ selected, total, onSelectAll, onClearAll, onDeleteSelected, label, children }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 12, padding: "10px 14px",
@@ -833,6 +833,7 @@ function BulkBar({ selected, total, onSelectAll, onClearAll, onDeleteSelected, l
         Selecionar todos ({total})
       </button>
       <button className="btn btn-ghost btn-sm" onClick={onClearAll}>Limpar seleção</button>
+      {children}
       <button className="btn btn-danger btn-sm" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5 }}
         onClick={onDeleteSelected}>
         <Trash2 size={13} /> Excluir {selected} {label}
@@ -858,6 +859,9 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   const [selected, setSelected] = useState([]);
   const [saving, setSaving]   = useState(false);
   const [expanded, setExpanded] = useState(null);
+  const [managingGA, setManagingGA] = useState(null); // GA whose members are being managed
+  const [bulkGaPick, setBulkGaPick] = useState(false); // show GA picker in members BulkBar
+  const [bulkGaId, setBulkGaId] = useState("");
   // Sort state
   const [chSk, setChSk] = useState("display"); const [chSd, setChSd] = useState("asc");
   const [mbSk, setMbSk] = useState("name");    const [mbSd, setMbSd] = useState("asc");
@@ -1194,8 +1198,33 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
             {selected.length > 0 && (
               <BulkBar selected={selected.length} total={allIds.length} label="membros"
-                onSelectAll={() => selAll(allIds)} onClearAll={clearSel}
-                onDeleteSelected={() => setDeleting({ ids: selected, label: "" })} />
+                onSelectAll={() => selAll(allIds)} onClearAll={() => { clearSel(); setBulkGaPick(false); setBulkGaId(""); }}
+                onDeleteSelected={() => setDeleting({ ids: selected, label: "" })}>
+                {bulkGaPick ? (
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <select value={bulkGaId} onChange={(e) => setBulkGaId(e.target.value)}
+                      style={{ fontSize: 13, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card-bg)", color: "var(--text)" }}>
+                      <option value="">— Selecionar GA —</option>
+                      {(gas || []).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                      <option value="__clear__">Remover do GA</option>
+                    </select>
+                    <button className="btn btn-primary btn-sm" disabled={!bulkGaId} onClick={async () => {
+                      const newGaId = bulkGaId === "__clear__" ? null : bulkGaId;
+                      const { error } = await sb.from("members").update({ ga_id: newGaId }).in("id", selected);
+                      if (error) { notify("Erro: " + error.message); return; }
+                      setMembers((prev) => prev.map((m) => selected.includes(m.id) ? { ...m, gaId: newGaId } : m));
+                      notify(`GA atualizado para ${selected.length} membro(s).`);
+                      clearSel(); setBulkGaPick(false); setBulkGaId("");
+                    }}>Confirmar</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { setBulkGaPick(false); setBulkGaId(""); }}>Cancelar</button>
+                  </div>
+                ) : (
+                  <button className="btn btn-ghost btn-sm" style={{ display: "flex", alignItems: "center", gap: 5 }}
+                    onClick={() => setBulkGaPick(true)}>
+                    👥 Atribuir GA
+                  </button>
+                )}
+              </BulkBar>
             )}
             <div className="card" style={{ padding: 0, overflow: "hidden" }}>
               <div style={{ overflowX: "auto" }}>
@@ -1434,6 +1463,55 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
               onCancel={() => setDeleting(null)}
               onConfirm={() => deleteRows("assistance_groups", deleting.ids, gas, setGas)} />}
 
+            {managingGA && (() => {
+              const gaMembers = (members || []).filter((m) => m.gaId === managingGA.id);
+              const unassigned = (members || []).filter((m) => !m.gaId || m.gaId !== managingGA.id);
+              return (
+                <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setManagingGA(null)}>
+                  <div className="modal" style={{ maxWidth: 520 }}>
+                    <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 4 }}>
+                      {managingGA.name} — Membros
+                    </h3>
+                    <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
+                      {gaMembers.length} membro{gaMembers.length !== 1 ? "s" : ""} neste grupo
+                    </p>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontWeight: 600, fontSize: 13 }}>Adicionar membro</label>
+                      <SearchSelect
+                        value=""
+                        onSelect={async (memberId) => {
+                          const { error } = await sb.from("members").update({ ga_id: managingGA.id }).eq("id", memberId);
+                          if (error) { notify("Erro: " + error.message); return; }
+                          setMembers((prev) => prev.map((m) => m.id === memberId ? { ...m, gaId: managingGA.id } : m));
+                        }}
+                        items={unassigned}
+                        getLabel={(m) => m.name}
+                        getId={(m) => m.id}
+                        placeholder="Buscar membro para adicionar…"
+                      />
+                    </div>
+                    <div style={{ maxHeight: 320, overflowY: "auto", border: "1px solid var(--border)", borderRadius: 8 }}>
+                      {gaMembers.length === 0 ? (
+                        <p style={{ textAlign: "center", color: "var(--muted)", padding: 20, fontSize: 13 }}>Nenhum membro neste grupo.</p>
+                      ) : gaMembers.map((m) => (
+                        <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid var(--border)" }}>
+                          <div>
+                            <span style={{ fontWeight: 500, fontSize: 14 }}>{m.name}</span>
+                            <span style={{ fontSize: 12, color: "var(--muted)", marginLeft: 8 }}>{m.category} · {m.church}</span>
+                          </div>
+                          <button className="btn btn-ghost btn-xs" title="Remover do grupo" onClick={async () => {
+                            const { error } = await sb.from("members").update({ ga_id: null }).eq("id", m.id);
+                            if (error) { notify("Erro: " + error.message); return; }
+                            setMembers((prev) => prev.map((x) => x.id === m.id ? { ...x, gaId: null } : x));
+                          }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                    <button className="btn btn-ghost" style={{ marginTop: 16, width: "100%" }} onClick={() => setManagingGA(null)}>Fechar</button>
+                  </div>
+                </div>
+              );
+            })()}
             {selected.length > 0 && (
               <BulkBar selected={selected.length} total={allIds.length} label="grupos"
                 onSelectAll={() => selAll(allIds)} onClearAll={clearSel}
@@ -1460,7 +1538,10 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         <td style={{ fontSize: 12 }}>{g.church}</td>
                         <td style={{ fontSize: 13 }}>{leader ? leader.name : (g.leaderId || <span style={{ color: "var(--muted)" }}>—</span>)}</td>
                         <td>
-                          <div style={{ display: "flex", gap: 6 }}>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            <button className="btn btn-ghost btn-xs" style={{ fontSize: 11 }} onClick={() => setManagingGA(g)}>
+                              👥 {(members || []).filter((m) => m.gaId === g.id).length}
+                            </button>
                             <button className="btn btn-ghost btn-xs" onClick={() => openEdit(g, { name: g.name, church: g.church || "", leaderId: g.leaderId || "", description: g.description || "" })}><Pencil size={12} /></button>
                             <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [g.id], label: g.name })}><Trash2 size={12} /></button>
                           </div>
