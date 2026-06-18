@@ -1079,9 +1079,10 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── Members ──────────────────────────────────────────────────────── */}
       {tab === "members" && (() => {
-        const rawList = (members || []).filter((m) =>
-          ["name", "firstName", "lastName", "church", "category", "role", "badgeName"].some((f) => norm(m[f]).includes(norm(search)))
-        ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        const rawList = (members || [])
+          .filter((m) => ["name", "firstName", "lastName", "church", "category", "role", "badgeName"].some((f) => norm(m[f]).includes(norm(search))) || norm((gas || []).find((g) => g.id === m.gaId)?.name || "").includes(norm(search)))
+          .map((m) => ({ ...m, gaName: (gas || []).find((g) => g.id === m.gaId)?.name || "" }))
+          .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const list = sortData(rawList, mbSk, mbSd);
         const allIds = list.map((m) => m.id).filter(Boolean);
         return (
@@ -1111,7 +1112,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         </select>
                       </div>
                     </div>
-                    <div><label>Igreja</label><input value={formData.church || ""} onChange={(e) => setFormData({ ...formData, church: e.target.value })} placeholder="Newark, NJ - EUA" /></div>
+                    <div><label>Igreja</label><input value={formData.church || ""} onChange={(e) => setFormData({ ...formData, church: e.target.value, gaId: "" })} placeholder="Newark, NJ - EUA" /></div>
                     <div className="fr">
                       <div>
                         <label>Funções</label>
@@ -1145,10 +1146,14 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         <SearchSelect
                           value={formData.gaId || ""}
                           onSelect={(v) => setFormData({ ...formData, gaId: v })}
-                          items={gas || []}
+                          items={(gas || []).filter((g) => {
+                            if (!formData.church) return true;
+                            const gaCity = (g.church || "").split(",")[0].trim().toLowerCase();
+                            return !gaCity || formData.church.toLowerCase().includes(gaCity);
+                          })}
                           getLabel={(g) => g.name}
                           getId={(g) => g.id}
-                          placeholder="Buscar GA…"
+                          placeholder={formData.church ? "Buscar GA…" : "Selecione a igreja primeiro…"}
                         />
                       </div>
                     </div>
@@ -1235,7 +1240,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
                           onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
                       </th>
-                      <MbTh k="name">Nome</MbTh><th>Crachá</th><th style={{ width: 55 }}>Gên.</th><MbTh k="category">Categoria</MbTh><th>Igreja</th><th>Função</th><th>Notas</th><th style={{ width: 90 }}></th>
+                      <MbTh k="name">Nome</MbTh><th>Crachá</th><th style={{ width: 55 }}>Gên.</th><MbTh k="category">Categoria</MbTh><MbTh k="church">Igreja</MbTh><MbTh k="gaName">GA</MbTh><th>Função</th><th>Notas</th><th style={{ width: 90 }}></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1247,6 +1252,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         <td><span className="badge badge-gray">{m.gender}</span></td>
                         <td><span className="badge badge-blue">{m.category}</span></td>
                         <td style={{ fontSize: 12 }}>{m.church}</td>
+                        <td style={{ fontSize: 12 }}>{m.gaName ? <span className="badge badge-gray" style={{ fontSize: 10 }}>{m.gaName}</span> : <span style={{ color: "var(--muted)" }}>—</span>}</td>
                         <td style={{ fontSize: 12 }}>
                           {(() => {
                             const roles = m.roles && m.roles.length > 0 ? m.roles : (m.role ? [m.role] : []);
@@ -1266,7 +1272,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         </td>
                       </tr>
                     ))}
-                    {list.length === 0 && <tr><td colSpan={9} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
+                    {list.length === 0 && <tr><td colSpan={10} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
                   </tbody>
                 </table>
               </div>

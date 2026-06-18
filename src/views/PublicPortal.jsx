@@ -3,6 +3,7 @@ import { Search, ArrowLeft, CheckCircle2, ClipboardList, Share2, AlertTriangle }
 import { STRINGS } from "@/i18n/strings";
 import { CATEGORIES, ROLE_BADGE, fmt } from "@/constants";
 import BadgePrint from "@/components/BadgePrint";
+import { sb } from "@/lib/supabase";
 
 // Accent-insensitive search: "joao" matches "João"
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -283,6 +284,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
   const [termLang, setTermLang] = useState(lang || "pt");
   const [submitted, setSubmitted] = useState(null);
   const [errors, setErrors] = useState({});
+  const [badgeNames, setBadgeNames] = useState({});
 
   const deadlineDays = event?.payment_deadline_days ?? event?.paymentDeadlineDays ?? null;
 
@@ -320,10 +322,15 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
     ].filter(Boolean).join(" | ");
     const submittedRegs = allParticipants.map((m) => {
       const isVerifiedMember = m.verified !== false && m.id && !m.id.startsWith("MANUAL-");
+      const resolvedBadge = (badgeNames[m.id] || "").trim() || m.badgeName || m.name;
+      // Persist badge name change to DB if member exists and name was customised
+      if (isVerifiedMember && (badgeNames[m.id] || "").trim() && (badgeNames[m.id] || "").trim() !== m.badgeName) {
+        sb.from("members").update({ badge_name: resolvedBadge }).eq("id", m.id);
+      }
       return addReg({
         memberId: isVerifiedMember ? m.id : "GUEST",
         memberName: m.name,
-        badgeName: m.badgeName || m.name,
+        badgeName: resolvedBadge,
         category: m.category || "Adulto",
         church: m.church || "",
         role: m.role || "",
@@ -349,7 +356,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
         t={t}
         onReset={() => {
           setStep(1); setPrimary(null); setPrimarySearch(""); setFamilyMembers([]);
-          setContact({ phone: "", email: "", whatsapp: true });
+          setContact({ phone: "", email: "", whatsapp: true }); setBadgeNames({});
           setTranslations({ en: false, es: false });
           setAllergies({ hasAny: false, other: "" });
           setSpecialNeeds({ hasAny: false, other: "" });
@@ -610,6 +617,36 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
           {step === 4 && (
             <div>
               <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 14 }}>4. {t.step4}</h3>
+
+              <div style={{ background: "#f8f9fb", border: "1px solid var(--border)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>
+                  {lang === "en" ? "🪪 Badge Name" : "🪪 Nome no Crachá"}
+                </div>
+                <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 12, marginTop: 0 }}>
+                  {lang === "en"
+                    ? "This name will be printed on your badge. Leave blank to use the name on file."
+                    : "Este nome será impresso no crachá. Deixe em branco para usar o nome cadastrado no sistema."}
+                </p>
+                {allParticipants.map((m) => {
+                  const systemName = m.badgeName || m.name;
+                  return (
+                    <div key={m.id} style={{ marginBottom: 10 }}>
+                      <label style={{ fontSize: 12, color: "#374151", fontWeight: 600 }}>{m.name}</label>
+                      <input
+                        value={badgeNames[m.id] ?? ""}
+                        onChange={(e) => setBadgeNames((prev) => ({ ...prev, [m.id]: e.target.value }))}
+                        placeholder={systemName}
+                        style={{ marginTop: 4 }}
+                      />
+                      {badgeNames[m.id] && badgeNames[m.id].trim() && badgeNames[m.id].trim() !== systemName && (
+                        <p style={{ fontSize: 11, color: "#6b7280", marginTop: 3, marginBottom: 0 }}>
+                          {lang === "en" ? `Badge will read: "${badgeNames[m.id].trim()}"` : `Crachá vai mostrar: "${badgeNames[m.id].trim()}"`}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
                 <div>
