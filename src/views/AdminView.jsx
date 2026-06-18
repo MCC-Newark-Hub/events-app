@@ -1457,7 +1457,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
                     <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
                       if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
-                      const row = { name: formData.name.trim(), church: formData.church || "", leader_id: formData.leaderId || null, description: formData.description || "", member_ids: formData.leaderId ? [formData.leaderId] : [] };
+                      const row = { name: formData.name.trim(), church: formData.church || "", leader_id: formData.leaderId || null, description: formData.description || "" };
                       row.id = isNew ? ("GA" + String(Date.now()).slice(-8)) : editing.id;
                       saveRow("assistance_groups", row, isNew, gas, setGas, mapGA);
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
