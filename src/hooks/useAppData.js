@@ -71,6 +71,7 @@ export function mapApproval(a) {
     eventId: a.event_id,
     memberId: a.member_id,
     memberName: a.member_name,
+    regId: a.reg_id,
     type: a.type,
     fee: Number(a.fee ?? 0),
     reason: a.reason,
@@ -391,6 +392,7 @@ export function useAppData({ getUserRef, notify }) {
       event_id: data.eventId,
       member_id: data.memberId,
       member_name: data.memberName,
+      reg_id: data.regId || null,
       type: data.type,
       reason: data.reason || "",
       status: "pending",
@@ -467,7 +469,18 @@ export function useAppData({ getUserRef, notify }) {
           true
         );
       } else if (apr.type === "exemption") {
-        updateReg(apr.regId, { exempt: true, fee: 0 });
+        var targetRegId = apr.regId;
+        if (!targetRegId) {
+          var existingReg = regs.find(function (r) {
+            return r.memberId === apr.memberId && r.eventId === apr.eventId && !r.cancelled;
+          });
+          targetRegId = existingReg ? existingReg.id : null;
+        }
+        if (targetRegId) {
+          updateReg(targetRegId, { exempt: true, fee: 0 });
+        } else {
+          addReg({ memberId: apr.memberId, memberName: apr.memberName, badgeName: apr.memberName, category: apr.category, church: apr.church, role: apr.role, team: apr.team, fee: 0, paid: false, exempt: true, note: apr.note }, true);
+        }
         notify("Isencao aprovada para " + apr.memberName + ".");
       }
     } else {
