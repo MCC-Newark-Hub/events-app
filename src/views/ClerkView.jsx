@@ -22,41 +22,20 @@ function ClerkView(props) {
   const resolvedApprovalList = eventApprovals.filter((a) => a.status !== "pending");
   const allActive = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const viewRegs = (tab === "active" ? allActive : tab === "waitlist" ? wlRegs : regs.filter((r) => r.eventId === event?.id && r.cancelled)).filter((r) => (r.memberName || "").toLowerCase().includes(search.toLowerCase()) || (r.regNumber || "").toLowerCase().includes(search.toLowerCase()) || (r.church || "").toLowerCase().includes(search.toLowerCase()));
-  const suggestions = search.length > 1 ? members.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()) && !allActive.find((r) => r.memberId === m.id)).slice(0, 5) : [];
+  const suggestions = tab !== "approvals" && search.length > 1 ? members.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()) && !allActive.find((r) => r.memberId === m.id)).slice(0, 5) : [];
+
+  const tabs = [
+    { k: "active", l: `${t.activeTab} (${allActive.length})` },
+    { k: "waitlist", l: `${t.waitlistTab} (${wlRegs.length})` },
+    { k: "cancelled", l: t.cancelledTab },
+    { k: "approvals", l: `Aprovações${pendingApprovalList.length > 0 ? ` (${pendingApprovalList.length})` : ""}` },
+  ];
 
   return (
     <div className="app-shell">
       <Topbar title={t.clerkTitle} sub={event?.name} user={user} logout={logout} pendingCount={pendingApprovalList.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
       <div className="main-scroll">
         <div className="page-pad">
-          {true && (
-            <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 14 }}>
-              <div style={{ padding: "10px 16px", background: "#f8f9fb", borderBottom: "1px solid var(--border)", fontWeight: 700, fontSize: 13 }}>
-                Solicitações ({eventApprovals.length}) {pendingApprovalList.length > 0 && <span className="badge badge-yellow" style={{ marginLeft: 6 }}>{pendingApprovalList.length} pendente{pendingApprovalList.length !== 1 ? "s" : ""}</span>}
-              </div>
-              {pendingApprovalList.map((a) => (
-                <div key={a.id} style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, background: "#fffbeb" }}>
-                  <div>
-                    <span style={{ fontWeight: 600 }}>{a.memberName}</span>
-                    <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{a.type === "capacity_override" ? "Excedente" : "Isenção"} · {a.category}</span>
-                    <span style={{ marginLeft: 8, fontSize: 11, color: "#92400e" }}>por {a.requestedBy}</span>
-                  </div>
-                  <span className="badge badge-yellow">Aguardando Pastor</span>
-                </div>
-              ))}
-              {resolvedApprovalList.map((a) => (
-                <div key={a.id} style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
-                  <div>
-                    <span style={{ fontWeight: 600 }}>{a.memberName}</span>
-                    <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{a.type === "capacity_override" ? "Excedente" : "Isenção"} · {a.category}</span>
-                    <span style={{ marginLeft: 8, fontSize: 11, color: "#6b7280" }}>por {a.requestedBy}</span>
-                  </div>
-                  <span className={a.status === "approved" ? "badge badge-green" : "badge badge-red"}>{a.status === "approved" ? "Aprovado" : "Negado"}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
           <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} />
 
           <div className="stat-grid-4" style={{ marginBottom: 18 }}>
@@ -73,13 +52,15 @@ function ClerkView(props) {
             ))}
           </div>
 
-          <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-            <div className="sb" style={{ flex: 1 }}>
-              <span className="si-icon"><Search size={16} /></span>
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t.searchMember}...`} />
+          {tab !== "approvals" && (
+            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+              <div className="sb" style={{ flex: 1 }}>
+                <span className="si-icon"><Search size={16} /></span>
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t.searchMember}...`} />
+              </div>
+              <button className="btn btn-primary" onClick={() => { setPrefill(null); setShowReg(true); }}>{t.addNew}</button>
             </div>
-            <button className="btn btn-primary" onClick={() => { setPrefill(null); setShowReg(true); }}>{t.addNew}</button>
-          </div>
+          )}
 
           {suggestions.length > 0 && (
             <div style={{ background: "#fff", border: "1.5px solid var(--border)", borderRadius: 10, marginBottom: 10, overflow: "hidden" }}>
@@ -96,50 +77,79 @@ function ClerkView(props) {
           <div className="card" style={{ padding: 0, overflow: "hidden" }}>
             <div style={{ padding: "11px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
               <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                {[{ k: "active", l: `${t.activeTab} (${allActive.length})` }, { k: "waitlist", l: `${t.waitlistTab} (${wlRegs.length})` }, { k: "cancelled", l: t.cancelledTab }].map(({ k, l }) => (
+                {tabs.map(({ k, l }) => (
                   <button key={k} className={`tab ${tab === k ? "active" : ""}`} onClick={() => setTab(k)}>{l}</button>
                 ))}
               </div>
-              <span style={{ fontSize: 12, color: "#6b7280" }}>{viewRegs.length}</span>
+              {tab !== "approvals" && <span style={{ fontSize: 12, color: "#6b7280" }}>{viewRegs.length}</span>}
             </div>
-            <div className="table-wrap">
-              <table className="table">
-                <thead><tr><th>{t.regNum}</th><th>{t.memberName}</th><th>{t.cargo}</th><th>{t.cat}</th><th>{t.teamH}</th><th>{t.feeH}</th><th>{t.statusH}</th><th>Presença</th><th>{t.actions}</th></tr></thead>
-                <tbody>
-                  {viewRegs.length === 0 && <tr><td colSpan={9} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
-                  {viewRegs.map((r) => (
-                    <tr key={r.id}>
-                      <td style={{ fontFamily: "monospace", fontSize: 11, color: "#1a3a6b", fontWeight: 600, whiteSpace: "nowrap" }}>{r.regNumber || "—"}</td>
-                      <td><div style={{ fontWeight: 600 }}>{r.memberName || "—"}</div></td>
-                      <td>{r.role ? <span className={`badge ${ROLE_BADGE[r.role] || "badge-gray"}`}>{r.role}</span> : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}</td>
-                      <td><span className="badge badge-blue">{r.category || "—"}</span></td>
-                      <td style={{ fontSize: 12 }}>{r.team || "—"}</td>
-                      <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{r.exempt ? <span style={{ color: "#6b7280" }}>{t.exempt}</span> : fmt(r.fee ?? 0)}</td>
-                      <td><StatusBadge r={r} event={event} allRegs={allActive} /></td>
-                      <td>
-                        <select
-                          value={r.presence || 'unknown'}
-                          onChange={(e) => updatePresence && updatePresence(r.id, e.target.value, 'manual')}
-                          style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--border)", background: r.presence === 'present' ? '#d1fae5' : r.presence === 'absent' ? '#fee2e2' : r.presence === 'walk_in' ? '#dbeafe' : '#f3f4f6', color: r.presence === 'present' ? '#065f46' : r.presence === 'absent' ? '#991b1b' : r.presence === 'walk_in' ? '#1e3a8a' : '#374151' }}
-                        >
-                          <option value="unknown">🔲 Desconhecida</option>
-                          <option value="present">✅ Presente</option>
-                          <option value="absent">❌ Ausente</option>
-                          <option value="walk_in">🚶 Walk-in</option>
-                        </select>
-                      </td>
-                      <td>
-                        <div style={{ display: "flex", gap: 4 }}>
-                          {r.waitlisted && <button className="btn btn-ok btn-sm" onClick={() => promoteFromWaitlist(r.id)}>{t.confirm}</button>}
-                          {!r.waitlisted && !r.paid && !r.exempt && !r.cancelled && <button className="btn btn-ok btn-sm" onClick={() => updateReg(r.id, { paid: true })}>{t.markPaid}</button>}
-                          <button className="btn btn-ghost btn-sm" onClick={() => setDetail(r)}>{t.edit}</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+
+            {tab === "approvals" ? (
+              <div>
+                {eventApprovals.length === 0 && (
+                  <div style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>Nenhuma solicitação.</div>
+                )}
+                {pendingApprovalList.map((a) => (
+                  <div key={a.id} style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, background: "#fffbeb" }}>
+                    <div>
+                      <span style={{ fontWeight: 600 }}>{a.memberName}</span>
+                      <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{a.type === "capacity_override" ? "Excedente" : "Isenção"} · {a.category}</span>
+                      <span style={{ marginLeft: 8, fontSize: 11, color: "#92400e" }}>por {a.requestedBy}</span>
+                    </div>
+                    <span className="badge badge-yellow">Aguardando Pastor</span>
+                  </div>
+                ))}
+                {resolvedApprovalList.map((a) => (
+                  <div key={a.id} style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                    <div>
+                      <span style={{ fontWeight: 600 }}>{a.memberName}</span>
+                      <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{a.type === "capacity_override" ? "Excedente" : "Isenção"} · {a.category}</span>
+                      <span style={{ marginLeft: 8, fontSize: 11, color: "#6b7280" }}>por {a.requestedBy}</span>
+                    </div>
+                    <span className={a.status === "approved" ? "badge badge-green" : "badge badge-red"}>{a.status === "approved" ? "Aprovado" : "Negado"}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table className="table">
+                  <thead><tr><th>{t.regNum}</th><th>{t.memberName}</th><th>{t.cargo}</th><th>{t.cat}</th><th>{t.teamH}</th><th>{t.feeH}</th><th>{t.statusH}</th><th>Presença</th><th>{t.actions}</th></tr></thead>
+                  <tbody>
+                    {viewRegs.length === 0 && <tr><td colSpan={9} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
+                    {viewRegs.map((r) => (
+                      <tr key={r.id}>
+                        <td style={{ fontFamily: "monospace", fontSize: 11, color: "#1a3a6b", fontWeight: 600, whiteSpace: "nowrap" }}>{r.regNumber || "—"}</td>
+                        <td><div style={{ fontWeight: 600 }}>{r.memberName || "—"}</div></td>
+                        <td>{r.role ? <span className={`badge ${ROLE_BADGE[r.role] || "badge-gray"}`}>{r.role}</span> : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}</td>
+                        <td><span className="badge badge-blue">{r.category || "—"}</span></td>
+                        <td style={{ fontSize: 12 }}>{r.team || "—"}</td>
+                        <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{r.exempt ? <span style={{ color: "#6b7280" }}>{t.exempt}</span> : fmt(r.fee ?? 0)}</td>
+                        <td><StatusBadge r={r} event={event} allRegs={allActive} /></td>
+                        <td>
+                          <select
+                            value={r.presence || 'unknown'}
+                            onChange={(e) => updatePresence && updatePresence(r.id, e.target.value, 'manual')}
+                            style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--border)", background: r.presence === 'present' ? '#d1fae5' : r.presence === 'absent' ? '#fee2e2' : r.presence === 'walk_in' ? '#dbeafe' : '#f3f4f6', color: r.presence === 'present' ? '#065f46' : r.presence === 'absent' ? '#991b1b' : r.presence === 'walk_in' ? '#1e3a8a' : '#374151' }}
+                          >
+                            <option value="unknown">🔲 Desconhecida</option>
+                            <option value="present">✅ Presente</option>
+                            <option value="absent">❌ Ausente</option>
+                            <option value="walk_in">🚶 Walk-in</option>
+                          </select>
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            {r.waitlisted && <button className="btn btn-ok btn-sm" onClick={() => promoteFromWaitlist(r.id)}>{t.confirm}</button>}
+                            {!r.waitlisted && !r.paid && !r.exempt && !r.cancelled && <button className="btn btn-ok btn-sm" onClick={() => updateReg(r.id, { paid: true })}>{t.markPaid}</button>}
+                            <button className="btn btn-ghost btn-sm" onClick={() => setDetail(r)}>{t.edit}</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>
