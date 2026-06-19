@@ -17,23 +17,41 @@ function ClerkView(props) {
   const [detail, setDetail] = useState(null);
   const [prefill, setPrefill] = useState(null);
 
-  const myPending = approvals.filter((a) => a.eventId === event?.id && a.requestedById === user?.id && a.status === "pending");
+  const eventApprovals = approvals.filter((a) => a.eventId === event?.id);
+  const pendingApprovalList = eventApprovals.filter((a) => a.status === "pending");
+  const resolvedApprovalList = eventApprovals.filter((a) => a.status !== "pending");
   const allActive = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const viewRegs = (tab === "active" ? allActive : tab === "waitlist" ? wlRegs : regs.filter((r) => r.eventId === event?.id && r.cancelled)).filter((r) => (r.memberName || "").toLowerCase().includes(search.toLowerCase()) || (r.regNumber || "").toLowerCase().includes(search.toLowerCase()) || (r.church || "").toLowerCase().includes(search.toLowerCase()));
   const suggestions = search.length > 1 ? members.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()) && !allActive.find((r) => r.memberId === m.id)).slice(0, 5) : [];
 
   return (
     <div className="app-shell">
-      <Topbar title={t.clerkTitle} sub={event?.name} user={user} logout={logout} pendingCount={myPending.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
+      <Topbar title={t.clerkTitle} sub={event?.name} user={user} logout={logout} pendingCount={pendingApprovalList.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
       <div className="main-scroll">
         <div className="page-pad">
-          {myPending.length > 0 && (
-            <div style={{ background: "#fffbeb", border: "1.5px solid #f59e0b", borderRadius: 10, padding: "12px 16px", marginBottom: 14 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>{t.myRequests}</div>
-              {myPending.map((a) => (
-                <div key={a.id} style={{ fontSize: 13, display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #fde68a", flexWrap: "wrap", gap: 4 }}>
-                  <span><strong>{a.memberName}</strong> ({a.category})</span>
-                  <span style={{ color: "#92400e", fontWeight: 600 }}>{t.awaitingPastor}</span>
+          {eventApprovals.length > 0 && (
+            <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 14 }}>
+              <div style={{ padding: "10px 16px", background: "#f8f9fb", borderBottom: "1px solid var(--border)", fontWeight: 700, fontSize: 13 }}>
+                Solicitações {pendingApprovalList.length > 0 && <span className="badge badge-yellow" style={{ marginLeft: 6 }}>{pendingApprovalList.length} pendente{pendingApprovalList.length !== 1 ? "s" : ""}</span>}
+              </div>
+              {pendingApprovalList.map((a) => (
+                <div key={a.id} style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, background: "#fffbeb" }}>
+                  <div>
+                    <span style={{ fontWeight: 600 }}>{a.memberName}</span>
+                    <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{a.type === "capacity_override" ? "Excedente" : "Isenção"} · {a.category}</span>
+                    <span style={{ marginLeft: 8, fontSize: 11, color: "#92400e" }}>por {a.requestedBy}</span>
+                  </div>
+                  <span className="badge badge-yellow">Aguardando Pastor</span>
+                </div>
+              ))}
+              {resolvedApprovalList.map((a) => (
+                <div key={a.id} style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                  <div>
+                    <span style={{ fontWeight: 600 }}>{a.memberName}</span>
+                    <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{a.type === "capacity_override" ? "Excedente" : "Isenção"} · {a.category}</span>
+                    <span style={{ marginLeft: 8, fontSize: 11, color: "#6b7280" }}>por {a.requestedBy}</span>
+                  </div>
+                  <span className={a.status === "approved" ? "badge badge-green" : "badge badge-red"}>{a.status === "approved" ? "Aprovado" : "Negado"}</span>
                 </div>
               ))}
             </div>
