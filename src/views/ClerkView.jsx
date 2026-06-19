@@ -17,7 +17,7 @@ function ClerkView(props) {
   const [detail, setDetail] = useState(null);
   const [prefill, setPrefill] = useState(null);
 
-  const eventApprovals = approvals.filter((a) => a.eventId === event?.id);
+  const eventApprovals = (approvals || []).filter((a) => a.eventId === event?.id);
   const pendingApprovalList = eventApprovals.filter((a) => a.status === "pending");
   const resolvedApprovalList = eventApprovals.filter((a) => a.status !== "pending");
   const allActive = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
@@ -29,10 +29,10 @@ function ClerkView(props) {
       <Topbar title={t.clerkTitle} sub={event?.name} user={user} logout={logout} pendingCount={pendingApprovalList.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
       <div className="main-scroll">
         <div className="page-pad">
-          {eventApprovals.length > 0 && (
+          {true && (
             <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 14 }}>
               <div style={{ padding: "10px 16px", background: "#f8f9fb", borderBottom: "1px solid var(--border)", fontWeight: 700, fontSize: 13 }}>
-                Solicitações {pendingApprovalList.length > 0 && <span className="badge badge-yellow" style={{ marginLeft: 6 }}>{pendingApprovalList.length} pendente{pendingApprovalList.length !== 1 ? "s" : ""}</span>}
+                Solicitações ({eventApprovals.length}) {pendingApprovalList.length > 0 && <span className="badge badge-yellow" style={{ marginLeft: 6 }}>{pendingApprovalList.length} pendente{pendingApprovalList.length !== 1 ? "s" : ""}</span>}
               </div>
               {pendingApprovalList.map((a) => (
                 <div key={a.id} style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, background: "#fffbeb" }}>
