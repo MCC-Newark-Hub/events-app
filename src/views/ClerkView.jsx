@@ -28,7 +28,7 @@ function ClerkView(props) {
     { k: "active", l: `${t.activeTab} (${allActive.length})` },
     { k: "waitlist", l: `${t.waitlistTab} (${wlRegs.length})` },
     { k: "cancelled", l: t.cancelledTab },
-    { k: "approvals", l: `Aprovações${pendingApprovalList.length > 0 ? ` (${pendingApprovalList.length})` : ""}` },
+    { k: "approvals", l: `Solicitações${pendingApprovalList.length > 0 ? ` (${pendingApprovalList.length})` : ""}` },
   ];
 
   return (
@@ -36,6 +36,12 @@ function ClerkView(props) {
       <Topbar title={t.clerkTitle} sub={event?.name} user={user} logout={logout} pendingCount={pendingApprovalList.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
       <div className="main-scroll">
         <div className="page-pad">
+          {pendingApprovalList.length > 0 && (
+            <div onClick={() => setTab("approvals")} style={{ background: "#fffbeb", border: "1.5px solid #f59e0b", borderRadius: 10, padding: "10px 16px", marginBottom: 14, cursor: "pointer", fontSize: 14, fontWeight: 600, color: "#92400e" }}>
+              ⏳ Você tem {pendingApprovalList.length} solicitaç{pendingApprovalList.length === 1 ? "ão pendente" : "ões pendentes"}.
+            </div>
+          )}
+
           <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} />
 
           <div className="stat-grid-4" style={{ marginBottom: 18 }}>
@@ -86,8 +92,8 @@ function ClerkView(props) {
 
             {tab === "approvals" ? (
               <div>
-                {eventApprovals.length === 0 && (
-                  <div style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>Nenhuma solicitação.</div>
+                {pendingApprovalList.length === 0 && (
+                  <div style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>Nenhuma solicitação pendente.</div>
                 )}
                 {pendingApprovalList.map((a) => (
                   <div key={a.id} style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, background: "#fffbeb" }}>
@@ -97,16 +103,6 @@ function ClerkView(props) {
                       <span style={{ marginLeft: 8, fontSize: 11, color: "#92400e" }}>por {a.requestedBy}</span>
                     </div>
                     <span className="badge badge-yellow">Aguardando Pastor</span>
-                  </div>
-                ))}
-                {resolvedApprovalList.map((a) => (
-                  <div key={a.id} style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
-                    <div>
-                      <span style={{ fontWeight: 600 }}>{a.memberName}</span>
-                      <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{a.type === "capacity_override" ? "Excedente" : "Isenção"} · {a.category}</span>
-                      <span style={{ marginLeft: 8, fontSize: 11, color: "#6b7280" }}>por {a.requestedBy}</span>
-                    </div>
-                    <span className={a.status === "approved" ? "badge badge-green" : "badge badge-red"}>{a.status === "approved" ? "Aprovado" : "Negado"}</span>
                   </div>
                 ))}
               </div>
