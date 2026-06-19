@@ -568,6 +568,10 @@ function AdminUsers({ dbUsers, setDbUsers, churches, notify }) {
   const [showPin, setShowPin] = useState(false);
   const [saving, setSaving] = useState(false);
   const [revealPins, setRevealPins] = useState({});
+  const [sk, setSk] = useState("name");
+  const [sd, setSd] = useState("asc");
+  const toggle = (k) => { if (sk === k) setSd((d) => (d === "asc" ? "desc" : "asc")); else { setSk(k); setSd("asc"); } };
+  const Th = makeTh(sk, sd, toggle);
 
   const startEdit = (u) => {
     setEditing({ ...u, newPin: "", confirmPin: "" });
@@ -698,15 +702,15 @@ function AdminUsers({ dbUsers, setDbUsers, churches, notify }) {
           <thead>
             <tr>
               <th style={{ width: 40 }}></th>
-              <th>Nome</th>
-              <th style={{ width: 130 }}>Função</th>
-              <th style={{ width: 160 }}>Igreja</th>
-              <th style={{ width: 80 }}>PIN</th>
+              <Th k="name">Nome</Th>
+              <Th k="sys_role" style={{ width: 130 }}>Função</Th>
+              <Th k="church" style={{ width: 160 }}>Igreja</Th>
+              <Th k="pin" style={{ width: 80 }}>PIN</Th>
               <th style={{ width: 80 }}></th>
             </tr>
           </thead>
           <tbody>
-            {dbUsers.map((u) => (
+            {sortData(dbUsers, sk, sd).map((u) => (
               <tr key={u.id}>
                 <td>
                   <div className="avatar" style={{ width: 28, height: 28, fontSize: 10 }}>{u.initials || u.name?.slice(0, 2).toUpperCase()}</div>
