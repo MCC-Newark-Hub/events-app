@@ -165,6 +165,7 @@ export function useAppData({ getUserRef, notify }) {
         setFamilies((famRes.data || []).map(mapFamily));
         setGas((gaRes.data || []).map(mapGA));
         setRegs((regRes.data || []).map(mapReg));
+        if (aprRes.error) console.error("Approvals load error:", aprRes.error);
         setApprovals((aprRes.data || []).map(mapApproval));
         setRosters((rosRes.data || []).map(mapRoster));
         if (chrRes.data && chrRes.data.length > 0) setChurches(chrRes.data);
