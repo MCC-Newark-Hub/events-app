@@ -271,8 +271,8 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
                       });
                       if (event && event.id === editEvt.id) setEvent({ ...editEvt });
                       sb.from("events")
-                        .eq("id", editEvt.id)
                         .update(upd)
+                        .eq("id", editEvt.id)
                         .then(function (res) {
                           if (res.error) console.error("event update error:", res.error);
                         });
