@@ -1,39 +1,120 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { useT } from "@/i18n/strings";
-import { ROLE_BADGE, fmt } from "@/constants";
+import { ROLE_BADGE, CATEGORIES, ROLE_GROUPS, fmt } from "@/constants";
+import { sb } from "@/lib/supabase";
+import { mapMember } from "@/hooks/useAppData";
 import Topbar from "@/components/Topbar";
 import CapBar from "@/components/CapBar";
 import StatusBadge from "@/components/StatusBadge";
 import RegModal from "@/components/RegModal";
 import DetailModal from "@/components/DetailModal";
+import Modal from "@/components/Modal";
 
 function ClerkView(props) {
-  const { event, regs, members, families, dbTeams, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify } = props;
+  const { event, regs, members, setMembers, families, dbTeams, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify } = props;
   const t = useT();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("active");
   const [showReg, setShowReg] = useState(false);
   const [detail, setDetail] = useState(null);
   const [prefill, setPrefill] = useState(null);
+  const [editingMember, setEditingMember] = useState(null);
+  const [savingMember, setSavingMember] = useState(false);
+  const [confirmDeleteMember, setConfirmDeleteMember] = useState(null);
+  const [deletingMember, setDeletingMember] = useState(false);
+
+  const cityOf = (s) => (s || "").split(",")[0].trim().toLowerCase();
+  const myChurch = user?.church || "";
+  const myCity = cityOf(myChurch);
+  const myMembers = members.filter((m) => cityOf(m.church) === myCity);
 
   const eventApprovals = (approvals || []).filter((a) => a.eventId === event?.id);
   const pendingApprovalList = eventApprovals.filter((a) => a.status === "pending");
   const resolvedApprovalList = eventApprovals.filter((a) => a.status !== "pending");
-  const allActive = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
-  const viewRegs = (tab === "active" ? allActive : tab === "waitlist" ? wlRegs : regs.filter((r) => r.eventId === event?.id && r.cancelled)).filter((r) => (r.memberName || "").toLowerCase().includes(search.toLowerCase()) || (r.regNumber || "").toLowerCase().includes(search.toLowerCase()) || (r.church || "").toLowerCase().includes(search.toLowerCase()));
-  const suggestions = tab !== "approvals" && search.length > 1 ? members.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()) && !allActive.find((r) => r.memberId === m.id)).slice(0, 5) : [];
+  const allActiveAll = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
+  const allActive = allActiveAll.filter((r) => cityOf(r.church) === myCity);
+  const myWlRegs = (wlRegs || []).filter((r) => cityOf(r.church) === myCity);
+  const viewRegs = (tab === "active" ? allActive : tab === "waitlist" ? myWlRegs : regs.filter((r) => r.eventId === event?.id && r.cancelled && cityOf(r.church) === myCity)).filter((r) => (r.memberName || "").toLowerCase().includes(search.toLowerCase()) || (r.regNumber || "").toLowerCase().includes(search.toLowerCase()) || (r.church || "").toLowerCase().includes(search.toLowerCase()));
+  const suggestions = tab !== "approvals" && tab !== "members" && search.length > 1 ? myMembers.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()) && !allActiveAll.find((r) => r.memberId === m.id)).slice(0, 5) : [];
+  const memberList = myMembers
+    .filter((m) => (m.name || "").toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
   const tabs = [
     { k: "active", l: `${t.activeTab} (${allActive.length})` },
-    { k: "waitlist", l: `${t.waitlistTab} (${wlRegs.length})` },
+    { k: "waitlist", l: `${t.waitlistTab} (${myWlRegs.length})` },
     { k: "cancelled", l: t.cancelledTab },
+    { k: "members", l: `Membros (${myMembers.length})` },
     { k: "approvals", l: `Solicitações${pendingApprovalList.length > 0 ? ` (${pendingApprovalList.length})` : ""}` },
   ];
 
+  const openNewMember = () => setEditingMember({ id: null, firstName: "", lastName: "", badgeName: "", gender: "M", category: "Adulto", role: "", allergies: "", specialNeeds: "", notes: "" });
+  const openEditMember = (m) => setEditingMember({ id: m.id, firstName: m.firstName || "", lastName: m.lastName || "", badgeName: m.badgeName || "", gender: m.gender || "M", category: m.category || "Adulto", role: m.role || "", allergies: m.allergies || "", specialNeeds: m.specialNeeds || "", notes: m.notes || "" });
+
+  const saveMember = async () => {
+    const fn = editingMember.firstName.trim();
+    const ln = editingMember.lastName.trim();
+    const fullName = (fn + " " + ln).trim();
+    if (!fullName) { notify("Nome é obrigatório."); return; }
+    setSavingMember(true);
+    try {
+      const row = {
+        name: fullName,
+        first_name: fn || null,
+        last_name: ln || null,
+        badge_name: editingMember.badgeName || fullName,
+        gender: editingMember.gender,
+        category: editingMember.category,
+        church: myChurch.split(",")[0].trim(),
+        role: editingMember.role || "",
+        roles: editingMember.role ? [editingMember.role] : [],
+        allergies: editingMember.allergies || null,
+        special_needs: editingMember.specialNeeds || null,
+        notes: editingMember.notes || null,
+      };
+      if (editingMember.id) {
+        const { error } = await sb.from("members").update(row).eq("id", editingMember.id);
+        if (error) throw error;
+        setMembers((prev) => prev.map((m) => (m.id === editingMember.id ? mapMember({ ...m, ...row, id: editingMember.id }) : m)));
+      } else {
+        const { data, error } = await sb.from("members").insert(row).select().single();
+        if (error) throw error;
+        setMembers((prev) => [...prev, mapMember(data)]);
+      }
+      notify(editingMember.id ? "Membro atualizado!" : "Membro criado!");
+      setEditingMember(null);
+    } catch (err) {
+      notify("Erro ao salvar membro: " + (err?.message || "erro desconhecido"));
+    } finally {
+      setSavingMember(false);
+    }
+  };
+
+  const requestDeleteMember = (m) => {
+    const regCount = regs.filter((r) => r.memberId === m.id && !r.cancelled).length;
+    setConfirmDeleteMember({ id: m.id, name: m.name, regCount });
+  };
+
+  const confirmDeleteMemberNow = async () => {
+    if (!confirmDeleteMember || confirmDeleteMember.regCount > 0) return;
+    setDeletingMember(true);
+    try {
+      const { error } = await sb.from("members").delete().eq("id", confirmDeleteMember.id);
+      if (error) throw error;
+      setMembers((prev) => prev.filter((m) => m.id !== confirmDeleteMember.id));
+      notify("Membro removido.");
+      setConfirmDeleteMember(null);
+    } catch (err) {
+      notify("Erro ao remover membro: " + (err?.message || "erro desconhecido"));
+    } finally {
+      setDeletingMember(false);
+    }
+  };
+
   return (
     <div className="app-shell">
-      <Topbar title={t.clerkTitle} sub={event?.name} user={user} logout={logout} pendingCount={pendingApprovalList.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
+      <Topbar title={user?.name || t.clerkTitle} sub={`${t.clerkTitle} · ${event?.name || ""}`} user={user} logout={logout} pendingCount={pendingApprovalList.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
       <div className="main-scroll">
         <div className="page-pad">
           {pendingApprovalList.length > 0 && (
@@ -49,7 +130,7 @@ function ClerkView(props) {
               { label: t.registered, value: allActive.length, color: "#1a3a6b" },
               { label: t.paid, value: allActive.filter((r) => r.paid || r.exempt).length, color: "#2d8a4e" },
               { label: t.pending, value: allActive.filter((r) => !r.paid && !r.exempt).length, color: "#d4820a" },
-              { label: t.waitlist, value: wlRegs.length, color: "#92400e" },
+              { label: t.waitlist, value: myWlRegs.length, color: "#92400e" },
             ].map((s) => (
               <div className="stat-card" key={s.label} style={{ textAlign: "center", borderTop: `3px solid ${s.color}` }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
@@ -62,9 +143,13 @@ function ClerkView(props) {
             <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
               <div className="sb" style={{ flex: 1 }}>
                 <span className="si-icon"><Search size={16} /></span>
-                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t.searchMember}...`} />
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tab === "members" ? "Buscar membro..." : `${t.searchMember}...`} />
               </div>
-              <button className="btn btn-primary" onClick={() => { setPrefill(null); setShowReg(true); }}>{t.addNew}</button>
+              {tab === "members" ? (
+                <button className="btn btn-primary" onClick={openNewMember}>+ Novo Membro</button>
+              ) : (
+                <button className="btn btn-primary" onClick={() => { setPrefill(null); setShowReg(true); }}>{t.addNew}</button>
+              )}
             </div>
           )}
 
@@ -87,10 +172,35 @@ function ClerkView(props) {
                   <button key={k} className={`tab ${tab === k ? "active" : ""}`} onClick={() => setTab(k)}>{l}</button>
                 ))}
               </div>
-              {tab !== "approvals" && <span style={{ fontSize: 12, color: "#6b7280" }}>{viewRegs.length}</span>}
+              {tab !== "approvals" && <span style={{ fontSize: 12, color: "#6b7280" }}>{tab === "members" ? memberList.length : viewRegs.length}</span>}
             </div>
 
-            {tab === "approvals" ? (
+            {tab === "members" ? (
+              <div className="table-wrap">
+                <table className="table">
+                  <thead><tr><th>{t.memberName}</th><th>{t.cargo}</th><th>{t.cat}</th><th>{t.actions}</th></tr></thead>
+                  <tbody>
+                    {memberList.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
+                    {memberList.map((m) => (
+                      <tr key={m.id}>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{m.name}</div>
+                          {m.badgeName && m.badgeName !== m.name && <div style={{ fontSize: 11, color: "#6b7280" }}>🏷 {m.badgeName}</div>}
+                        </td>
+                        <td>{m.role ? <span className={`badge ${ROLE_BADGE[m.role] || "badge-gray"}`}>{m.role}</span> : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}</td>
+                        <td><span className="badge badge-blue">{m.category}</span></td>
+                        <td>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => openEditMember(m)}>{t.edit}</button>
+                            <button className="btn btn-danger btn-sm" onClick={() => requestDeleteMember(m)}>🗑</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : tab === "approvals" ? (
               <div>
                 {pendingApprovalList.length === 0 && (
                   <div style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>Nenhuma solicitação pendente.</div>
@@ -149,8 +259,106 @@ function ClerkView(props) {
           </div>
         </div>
       </div>
-      {showReg && <RegModal event={event} members={members} families={families} dbTeams={dbTeams} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
+      {showReg && <RegModal event={event} members={myMembers} families={families} dbTeams={dbTeams} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
       {detail && <DetailModal reg={detail} event={event} dbTeams={dbTeams} regs={regs} canEditPayment={true} onClose={() => setDetail(null)} lang={lang} onUpdate={(u) => { updateReg(detail.id, u); setDetail(null); }} />}
+
+      {editingMember && (
+        <Modal onClose={() => !savingMember && setEditingMember(null)} maxWidth={460}>
+          <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 16 }}>
+            {editingMember.id ? "Editar Membro" : "Novo Membro"}
+          </h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="fr">
+              <div>
+                <label>Primeiro Nome *</label>
+                <input value={editingMember.firstName} onChange={(e) => setEditingMember({ ...editingMember, firstName: e.target.value })} />
+              </div>
+              <div>
+                <label>Sobrenome</label>
+                <input value={editingMember.lastName} onChange={(e) => setEditingMember({ ...editingMember, lastName: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label>Nome no Crachá</label>
+              <input value={editingMember.badgeName} onChange={(e) => setEditingMember({ ...editingMember, badgeName: e.target.value })} placeholder="Opcional" />
+            </div>
+            <div className="fr">
+              <div>
+                <label>Gênero</label>
+                <select value={editingMember.gender} onChange={(e) => setEditingMember({ ...editingMember, gender: e.target.value })}>
+                  <option value="M">Masculino</option>
+                  <option value="F">Feminino</option>
+                </select>
+              </div>
+              <div>
+                <label>Categoria</label>
+                <select value={editingMember.category} onChange={(e) => setEditingMember({ ...editingMember, category: e.target.value })}>
+                  {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label>Igreja</label>
+              <input value={myChurch} disabled style={{ background: "var(--sidebar-active-bg)", color: "var(--muted)" }} />
+            </div>
+            <div>
+              <label>Função</label>
+              <select value={editingMember.role} onChange={(e) => setEditingMember({ ...editingMember, role: e.target.value })}>
+                <option value="">{t.noRole}</option>
+                {ROLE_GROUPS.map((g) => (
+                  <optgroup key={g.group} label={g.group}>
+                    {g.roles.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label>Alergias</label>
+              <textarea rows={2} value={editingMember.allergies} onChange={(e) => setEditingMember({ ...editingMember, allergies: e.target.value })} style={{ resize: "vertical" }} />
+            </div>
+            <div>
+              <label>Necessidades Especiais</label>
+              <textarea rows={2} value={editingMember.specialNeeds} onChange={(e) => setEditingMember({ ...editingMember, specialNeeds: e.target.value })} style={{ resize: "vertical" }} />
+            </div>
+            <div>
+              <label>Notas</label>
+              <textarea rows={2} value={editingMember.notes} onChange={(e) => setEditingMember({ ...editingMember, notes: e.target.value })} style={{ resize: "vertical" }} />
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditingMember(null)} disabled={savingMember}>Cancelar</button>
+            <button className="btn btn-primary" style={{ flex: 2 }} onClick={saveMember} disabled={savingMember}>{savingMember ? "Salvando…" : "Salvar"}</button>
+          </div>
+        </Modal>
+      )}
+
+      {confirmDeleteMember && (
+        <Modal onClose={() => !deletingMember && setConfirmDeleteMember(null)} maxWidth={360}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
+            <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 8 }}>Confirmar exclusão</h3>
+            {confirmDeleteMember.regCount > 0 ? (
+              <p style={{ color: "#c0392b", fontSize: 14, marginBottom: 20 }}>
+                <strong>{confirmDeleteMember.name}</strong> tem <strong>{confirmDeleteMember.regCount}</strong> inscrição(ões) e não pode ser removido(a).
+              </p>
+            ) : (
+              <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 20 }}>
+                Remover <strong>{confirmDeleteMember.name}</strong>? Esta ação não pode ser desfeita.
+              </p>
+            )}
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setConfirmDeleteMember(null)} disabled={deletingMember}>
+                {confirmDeleteMember.regCount > 0 ? "Fechar" : "Cancelar"}
+              </button>
+              {confirmDeleteMember.regCount === 0 && (
+                <button className="btn btn-danger" style={{ flex: 1 }} onClick={confirmDeleteMemberNow} disabled={deletingMember}>
+                  {deletingMember ? "Removendo..." : "Excluir"}
+                </button>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

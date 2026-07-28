@@ -4,12 +4,62 @@ import { useT } from "@/i18n/strings";
 import { CATEGORIES } from "@/constants";
 import { sb } from "@/lib/supabase";
 import Modal from "@/components/Modal";
+import { fetchEventTeams, importTeamsFromEvent } from "@/lib/rosterImport";
 
-export default function EventsTab({ events, setEvents, event, setEvent, lang, notify }) {
+export default function EventsTab({ events, setEvents, event, setEvent, lang, notify, rosters, setRosters }) {
   const t = useT();
   const [showNew, setShowNew] = useState(false);
   const [editEvt, setEditEvt] = useState(null);
   const [qrModal, setQrModal] = useState(null); // { eventId, dataUrl }
+  const [importSourceId, setImportSourceId] = useState("");
+  const [importTeams, setImportTeams] = useState([]); // [{ team, memberCount, checked }]
+  const [importLoading, setImportLoading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null); // { id, name, checking, regCount }
+  const [deleting, setDeleting] = useState(false);
+
+  const requestDelete = async (ev) => {
+    setConfirmDelete({ id: ev.id, name: ev.name, checking: true, regCount: 0 });
+    const { count } = await sb
+      .from("registrations")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", ev.id);
+    setConfirmDelete({ id: ev.id, name: ev.name, checking: false, regCount: count || 0 });
+  };
+
+  const confirmDeleteEvent = async () => {
+    if (!confirmDelete || confirmDelete.regCount > 0) return;
+    const { id } = confirmDelete;
+    setDeleting(true);
+    try {
+      await sb.from("rosters").delete().eq("event_id", id);
+      await sb.from("approvals").delete().eq("event_id", id);
+      const { error } = await sb.from("events").delete().eq("id", id);
+      if (error) throw error;
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+      if (setRosters) setRosters((prev) => prev.filter((r) => r.eventId !== id));
+      if (event?.id === id) setEvent(null);
+      notify("Evento excluído.");
+      setConfirmDelete(null);
+    } catch (err) {
+      notify("Erro ao excluir evento: " + (err?.message || "erro desconhecido"));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const loadImportSource = async (sourceId) => {
+    setImportSourceId(sourceId);
+    setImportTeams([]);
+    if (!sourceId) return;
+    setImportLoading(true);
+    const sourceRosters = await fetchEventTeams(sourceId);
+    setImportTeams(
+      sourceRosters
+        .filter((r) => (r.memberIds || []).length > 0)
+        .map((r) => ({ team: r.team, memberCount: r.memberIds.length, checked: true }))
+    );
+    setImportLoading(false);
+  };
 
   const openQrModal = async (eventId) => {
     const url = `https://events-app.vercel.app?selfcheckin=${eventId}`;
@@ -67,6 +117,8 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
                 Adulto: 25,
               },
             });
+            setImportSourceId("");
+            setImportTeams([]);
             setShowNew(true);
           }}
         >
@@ -121,9 +173,61 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
             >
               🔗 QR Auto-Check-in
             </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => requestDelete(e)}
+            >
+              🗑️
+            </button>
           </div>
         </div>
       ))}
+
+      {confirmDelete && (
+        <Modal onClose={() => !deleting && setConfirmDelete(null)} maxWidth={360}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
+            <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 8 }}>
+              Confirmar exclusão
+            </h3>
+            {confirmDelete.checking ? (
+              <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 20 }}>
+                Verificando inscrições...
+              </p>
+            ) : confirmDelete.regCount > 0 ? (
+              <p style={{ color: "#c0392b", fontSize: 14, marginBottom: 20 }}>
+                Este evento tem <strong>{confirmDelete.regCount}</strong> inscrição(ões) e não pode
+                ser excluído.
+              </p>
+            ) : (
+              <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 20 }}>
+                Excluir <strong>{confirmDelete.name}</strong>? Isso também remove equipes/escalação
+                vinculadas. Esta ação não pode ser desfeita.
+              </p>
+            )}
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                className="btn btn-ghost"
+                style={{ flex: 1 }}
+                onClick={() => setConfirmDelete(null)}
+                disabled={deleting}
+              >
+                {confirmDelete.regCount > 0 || confirmDelete.checking ? "Fechar" : "Cancelar"}
+              </button>
+              {!confirmDelete.checking && confirmDelete.regCount === 0 && (
+                <button
+                  className="btn btn-danger"
+                  style={{ flex: 1 }}
+                  onClick={confirmDeleteEvent}
+                  disabled={deleting}
+                >
+                  {deleting ? "Excluindo..." : "Excluir"}
+                </button>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {qrModal && (
         <Modal onClose={() => setQrModal(null)}>
@@ -249,6 +353,48 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
                   ))}
                 </div>
               </div>
+              {!isEditing && (
+                <div>
+                  <label>Importar escalação de evento anterior (opcional)</label>
+                  <select value={importSourceId} onChange={(e) => loadImportSource(e.target.value)}>
+                    <option value="">Não importar</option>
+                    {events.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.name} ({e.date})
+                      </option>
+                    ))}
+                  </select>
+                  {importLoading && (
+                    <p style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>Carregando equipes...</p>
+                  )}
+                  {!importLoading && importSourceId && importTeams.length === 0 && (
+                    <p style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+                      Este evento não possui equipes com membros.
+                    </p>
+                  )}
+                  {importTeams.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                      {importTeams.map((it, i) => (
+                        <label
+                          key={it.team}
+                          style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={it.checked}
+                            onChange={(e) =>
+                              setImportTeams((prev) =>
+                                prev.map((x, idx) => (idx === i ? { ...x, checked: e.target.checked } : x))
+                              )
+                            }
+                          />
+                          {it.team} <span style={{ color: "#9ca3af" }}>({it.memberCount} membros)</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="fr">
                 <button
                   className="btn btn-primary"
@@ -299,11 +445,26 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
                         return [...p, ev];
                       });
                       setEvent(ev);
+                      var teamsToImport = importTeams.filter((it) => it.checked).map((it) => it.team);
                       setShowNew(false);
                       sb.from("events")
                         .insert(dbRow)
                         .then(function (res) {
-                          if (res.error) console.error("event insert error:", res.error);
+                          if (res.error) {
+                            console.error("event insert error:", res.error);
+                            return;
+                          }
+                          if (importSourceId && teamsToImport.length > 0) {
+                            importTeamsFromEvent({
+                              sourceEventId: importSourceId,
+                              targetEventId: newId,
+                              teamNames: teamsToImport,
+                              rosters: rosters || [],
+                              setRosters,
+                            }).then(function (imported) {
+                              notify(`Evento criado com ${imported.length} equipe(s) importada(s)!`);
+                            });
+                          }
                         });
                     }
                   }}

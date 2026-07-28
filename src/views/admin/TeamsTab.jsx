@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
 import { sb } from "@/lib/supabase";
+import { fetchEventTeams, importTeamsFromEvent } from "@/lib/rosterImport";
 
 const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
 import { SERVICE_TEAMS, STATUS_CFG } from "@/constants";
 
-export default function TeamsTab({ event, regs, members, rosters, setRosters, notify }) {
+export default function TeamsTab({ event, events, regs, members, rosters, setRosters, notify }) {
   const t = useT();
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
@@ -14,6 +15,11 @@ export default function TeamsTab({ event, regs, members, rosters, setRosters, no
   const [newTeamDesc, setNewTeamDesc] = useState("");
   const [newTeamLeader, setNewTeamLeader] = useState("");
   const [customTeams, setCustomTeams] = useState([]);
+  const [showImport, setShowImport] = useState(false);
+  const [importSourceId, setImportSourceId] = useState("");
+  const [importTeams, setImportTeams] = useState([]); // [{ team, memberCount, checked }]
+  const [importLoading, setImportLoading] = useState(false);
+  const [importSaving, setImportSaving] = useState(false);
 
   const eventRosters = rosters.filter((r) => r.eventId === event?.id);
   const eventRegs = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
@@ -87,6 +93,47 @@ export default function TeamsTab({ event, regs, members, rosters, setRosters, no
     notify("Equipe removida.");
   };
 
+  const openImport = () => {
+    setImportSourceId("");
+    setImportTeams([]);
+    setShowImport(true);
+  };
+
+  const loadImportSource = async (sourceId) => {
+    setImportSourceId(sourceId);
+    setImportTeams([]);
+    if (!sourceId) return;
+    setImportLoading(true);
+    const sourceRosters = await fetchEventTeams(sourceId);
+    setImportTeams(
+      sourceRosters
+        .filter((r) => (r.memberIds || []).length > 0)
+        .map((r) => ({ team: r.team, memberCount: r.memberIds.length, checked: true }))
+    );
+    setImportLoading(false);
+  };
+
+  const runImport = async () => {
+    const teamNames = importTeams.filter((t) => t.checked).map((t) => t.team);
+    if (!event?.id || teamNames.length === 0) return;
+    setImportSaving(true);
+    const imported = await importTeamsFromEvent({
+      sourceEventId: importSourceId,
+      targetEventId: event.id,
+      teamNames,
+      rosters,
+      setRosters,
+    });
+    setCustomTeams((prev) => {
+      const names = prev.map((t) => (typeof t === "string" ? t : t.name));
+      const toAdd = imported.filter((team) => !SERVICE_TEAMS.includes(team) && !names.includes(team));
+      return toAdd.length ? [...prev, ...toAdd.map((name) => ({ name, description: "", leaderId: "" }))] : prev;
+    });
+    setImportSaving(false);
+    setShowImport(false);
+    notify(`${imported.length} equipe(s) importada(s)!`);
+  };
+
   const searchR =
     msearch.length > 1
       ? members.filter((m) => norm(m.name).includes(norm(msearch))).slice(0, 6)
@@ -112,16 +159,94 @@ export default function TeamsTab({ event, regs, members, rosters, setRosters, no
         >
           {t.teams}
         </h2>
-        <button
-          className="btn btn-primary btn-sm"
-          onClick={() => {
-            setShowNew(true);
-            setNewTeamName("");
-          }}
-        >
-          + Nova Equipe
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-ghost btn-sm" onClick={openImport}>
+            📋 Importar de evento anterior
+          </button>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => {
+              setShowNew(true);
+              setNewTeamName("");
+            }}
+          >
+            + Nova Equipe
+          </button>
+        </div>
       </div>
+
+      {showImport && (
+        <div
+          className="modal-bg"
+          onClick={(e) => e.target === e.currentTarget && setShowImport(false)}
+        >
+          <div className="modal">
+            <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 16 }}>
+              Importar Escalação de Evento Anterior
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <label>Evento de origem *</label>
+                <select value={importSourceId} onChange={(e) => loadImportSource(e.target.value)}>
+                  <option value="">Selecionar evento...</option>
+                  {(events || [])
+                    .filter((e) => e.id !== event?.id)
+                    .map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.name} ({e.date})
+                      </option>
+                    ))}
+                </select>
+              </div>
+              {importLoading && <p style={{ fontSize: 13, color: "#6b7280" }}>Carregando equipes...</p>}
+              {!importLoading && importSourceId && importTeams.length === 0 && (
+                <p style={{ fontSize: 13, color: "#6b7280" }}>Este evento não possui equipes com membros.</p>
+              )}
+              {importTeams.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {importTeams.map((it, i) => {
+                    const existing = eventRosters.find((r) => r.team === it.team);
+                    return (
+                      <label
+                        key={it.team}
+                        style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={it.checked}
+                          onChange={(e) =>
+                            setImportTeams((prev) =>
+                              prev.map((x, idx) => (idx === i ? { ...x, checked: e.target.checked } : x))
+                            )
+                          }
+                        />
+                        {it.team} <span style={{ color: "#9ca3af" }}>({it.memberCount} membros)</span>
+                        {existing?.memberIds?.length > 0 && (
+                          <span style={{ color: "#b45309" }}>
+                            — será mesclado com {existing.memberIds.length} já existente(s)
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="fr" style={{ marginTop: 16 }}>
+              <button
+                className="btn btn-primary"
+                disabled={importSaving || !importTeams.some((t) => t.checked)}
+                onClick={runImport}
+              >
+                {importSaving ? "Importando..." : "Importar"}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setShowImport(false)}>
+                {t.cancel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 16 }}>
         Status atualizado automaticamente.
       </p>

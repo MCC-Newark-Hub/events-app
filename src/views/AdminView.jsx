@@ -47,7 +47,7 @@ function AdminView(props) {
             {sec === "ga" && <AdminGA {...props} />}
             {sec === "approvals" && <ApprovalsPanel {...props} />}
             {sec === "reports" && <ReportsTab {...props} />}
-            {sec === "events" && <EventsTab events={props.events} setEvents={props.setEvents} event={props.event} setEvent={props.setEvent} lang={props.lang} notify={props.notify} />}
+            {sec === "events" && <EventsTab events={props.events} setEvents={props.setEvents} event={props.event} setEvent={props.setEvent} lang={props.lang} notify={props.notify} rosters={props.rosters} setRosters={props.setRosters} />}
             {sec === "import" && <AdminImport members={props.members} setMembers={props.setMembers} families={props.families} setFamilies={props.setFamilies} gas={props.gas} setGas={props.setGas} rosters={props.rosters} setRosters={props.setRosters} churches={props.churches} setChurches={props.setChurches} notify={props.notify} />}
             {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} notify={props.notify} />}
             {sec === "directory" && <AdminDirectory {...props} dbTeams={props.dbTeams} setDbTeams={props.setDbTeams} />}
@@ -587,27 +587,33 @@ function AdminUsers({ dbUsers, setDbUsers, churches, notify }) {
     if (!editing.name.trim()) { notify("Nome é obrigatório."); return; }
     if (editing.newPin && editing.newPin.length !== 4) { notify("PIN deve ter 4 dígitos."); return; }
     if (editing.newPin && editing.newPin !== editing.confirmPin) { notify("PINs não coincidem."); return; }
+    if (!editing.id && !editing.newPin) { notify("PIN é obrigatório para novo usuário."); return; }
     setSaving(true);
-    const row = {
-      name: editing.name.trim(),
-      sys_role: editing.sysRole,
-      initials: editing.initials || editing.name.slice(0, 2).toUpperCase(),
-      church: editing.church || null,
-      ...(editing.newPin ? { pin: editing.newPin } : {}),
-    };
-    if (editing.id) {
-      const { error } = await sb.from("app_users").update(row).eq("id", editing.id);
-      if (error) { notify("Erro ao salvar: " + error.message); setSaving(false); return; }
-      setDbUsers((prev) => prev.map((u) => u.id === editing.id ? { ...u, ...row, pin: editing.newPin || u.pin } : u));
-    } else {
-      if (!editing.newPin) { notify("PIN é obrigatório para novo usuário."); setSaving(false); return; }
-      const { data, error } = await sb.from("app_users").insert({ ...row, pin: editing.newPin }).select().single();
-      if (error) { notify("Erro ao criar: " + error.message); setSaving(false); return; }
-      setDbUsers((prev) => [...prev, data]);
+    try {
+      const row = {
+        name: editing.name.trim(),
+        sys_role: editing.sysRole,
+        initials: editing.initials || editing.name.slice(0, 2).toUpperCase(),
+        church: editing.church || null,
+        ...(editing.newPin ? { pin: editing.newPin } : {}),
+      };
+      if (editing.id) {
+        const { error } = await sb.from("app_users").update(row).eq("id", editing.id);
+        if (error) throw error;
+        setDbUsers((prev) => prev.map((u) => u.id === editing.id ? { ...u, ...row, pin: editing.newPin || u.pin } : u));
+      } else {
+        const { data, error } = await sb.from("app_users").insert({ ...row, pin: editing.newPin }).select().single();
+        if (error) throw error;
+        setDbUsers((prev) => [...prev, data]);
+      }
+      notify(editing.id ? "Usuário atualizado!" : "Usuário criado!");
+      setEditing(null);
+    } catch (err) {
+      const msg = err?.code === "23505" ? "Este PIN já está em uso. Escolha outro." : (err?.message || "Erro desconhecido.");
+      notify((editing.id ? "Erro ao salvar: " : "Erro ao criar: ") + msg);
+    } finally {
+      setSaving(false);
     }
-    notify(editing.id ? "Usuário atualizado!" : "Usuário criado!");
-    setSaving(false);
-    setEditing(null);
   };
 
   return (
@@ -1182,12 +1188,13 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     <div><label>Notas</label><textarea rows={2} value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} style={{ resize: "vertical" }} /></div>
                     {(() => {
                       const memberRosters = (rosters || []).filter((r) => (r.memberIds || []).includes(editing?.id));
-                      if (memberRosters.length === 0) return null;
+                      const teamNames = [...new Set(memberRosters.map((r) => r.team))];
+                      if (teamNames.length === 0) return null;
                       return (
                         <div>
                           <label>Equipes</label>
                           <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                            {memberRosters.map((r) => <span key={r.id} className="badge badge-green">{r.team}</span>)}
+                            {teamNames.map((team) => <span key={team} className="badge badge-green">{team}</span>)}
                           </div>
                         </div>
                       );
