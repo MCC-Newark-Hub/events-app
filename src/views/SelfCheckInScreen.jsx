@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import ICMLogo from '@/components/ICMLogo';
+import { useT } from '@/i18n/strings';
 
 // Accent-insensitive search: "joao" matches "João"
-const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
-export default function SelfCheckInScreen({ eventId, regs, members, updatePresence }) {
+export default function SelfCheckInScreen({ eventId, regs, members, updatePresence, lang, setLang }) {
+  const t = useT();
   const [step, setStep] = useState('search');   // search | confirm | done | already
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(null);
@@ -35,13 +37,30 @@ norm(m.name).includes(norm(query)) ||
     setStep('done');
   };
 
+  const LangToggle = () =>
+    setLang ? (
+      <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 4 }}>
+        {['pt', 'en'].map((l) => (
+          <button
+            key={l}
+            className={`lang-btn ${lang === l ? 'active' : ''}`}
+            onClick={() => setLang(l)}
+          >
+            {l.toUpperCase()}
+          </button>
+        ))}
+      </div>
+    ) : null;
+
   // Shared card wrapper
   const Card = ({ children }) => (
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(160deg,#8B0000 0%,#b41926 50%,#03223f 100%)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+      position: 'relative',
     }}>
+      <LangToggle />
       <div style={{
         background: '#fff', borderRadius: 20, padding: '32px 28px',
         width: '100%', maxWidth: 420, textAlign: 'center',
@@ -53,19 +72,19 @@ norm(m.name).includes(norm(query)) ||
     </div>
   );
 
-  if (step === 'loading') return <Card><p style={{ color: '#6b7280' }}>Registrando…</p></Card>;
+  if (step === 'loading') return <Card><p style={{ color: '#6b7280' }}>{t.checkinRegistering}</p></Card>;
 
   if (step === 'done') return (
     <Card>
       <div style={{ fontSize: 64, marginBottom: 12 }}>✅</div>
       <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 24, color: '#2d8a4e', marginBottom: 8 }}>
-        Presença registrada!
+        {t.checkinDoneTitle}
       </h2>
       <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{selected?.name}</p>
-      <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 20 }}>Bem-vindo(a)! Sua presença foi confirmada.</p>
+      <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 20 }}>{t.checkinDoneWelcome}</p>
       <button onClick={() => { setStep('search'); setQuery(''); setSelected(null); }}
         style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
-        Registrar outra pessoa
+        {t.checkinAgain}
       </button>
     </Card>
   );
@@ -73,11 +92,11 @@ norm(m.name).includes(norm(query)) ||
   if (step === 'already') return (
     <Card>
       <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-      <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, marginBottom: 8 }}>Já confirmado!</h2>
-      <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 20 }}>{selected?.name} já está marcado como presente.</p>
+      <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, marginBottom: 8 }}>{t.checkinAlreadyTitle}</h2>
+      <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 20 }}>{selected?.name} {t.checkinAlreadySuffix}</p>
       <button onClick={() => { setStep('search'); setQuery(''); setSelected(null); }}
         style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
-        Voltar
+        {t.checkinBackLink}
       </button>
     </Card>
   );
@@ -92,7 +111,7 @@ norm(m.name).includes(norm(query)) ||
       <p style={{ color: '#6b7280', fontSize: 12, marginBottom: 20 }}>{selected?.church}</p>
       {!reg && (
         <div style={{ background: '#fef3c7', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#92400e' }}>
-          ⚠️ Inscrição não encontrada para este evento. Procure um atendente.
+          {t.checkinNoRegWarning}
         </div>
       )}
       {reg && (
@@ -101,12 +120,12 @@ norm(m.name).includes(norm(query)) ||
           background: '#2d8a4e', color: '#fff', border: 'none', borderRadius: 12,
           cursor: 'pointer', boxShadow: '0 4px 16px rgba(45,138,78,.35)', marginBottom: 12,
         }}>
-          ✅ Confirmar minha presença
+          {t.checkinConfirmBtn}
         </button>
       )}
       <button onClick={() => { setStep('search'); setQuery(''); }}
         style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
-        ← Não sou eu
+        {t.checkinNotMe}
       </button>
     </Card>
   );
@@ -115,15 +134,15 @@ norm(m.name).includes(norm(query)) ||
   return (
     <Card>
       <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, marginBottom: 6 }}>
-        Confirmar Presença
+        {t.checkinTitle}
       </h2>
       <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 20 }}>
-        Digite seu nome para confirmar sua presença no evento.
+        {t.checkinSub}
       </p>
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar pelo nome..."
+        placeholder={t.checkinSearchPlaceholder}
         autoFocus
         style={{
           width: '100%', padding: '12px 16px', fontSize: 15,
@@ -150,7 +169,7 @@ norm(m.name).includes(norm(query)) ||
       )}
       {query.length > 1 && results.length === 0 && (
         <p style={{ color: '#92400e', background: '#fef3c7', borderRadius: 8, padding: '10px 14px', fontSize: 13, marginTop: 8 }}>
-          Nome não encontrado. Procure um atendente.
+          {t.checkinNotFoundName}
         </p>
       )}
     </Card>

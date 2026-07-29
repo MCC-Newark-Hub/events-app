@@ -26,8 +26,22 @@ function LoginScreen({ login, lang, setLang, onPublicRegister, onLookup }) {
         alignItems: "center",
         justifyContent: "center",
         padding: 20,
+        position: "relative",
       }}
     >
+      {setLang && (
+        <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 4 }}>
+          {["pt", "en"].map((l) => (
+            <button
+              key={l}
+              className={`lang-btn ${lang === l ? "active" : ""}`}
+              onClick={() => setLang(l)}
+            >
+              {l.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      )}
       {mode === "choose" ? (
         <div style={{ textAlign: "center", maxWidth: 380, width: "100%" }}>
           <ICMLogo height={150} style={{ marginBottom: 24 }} />

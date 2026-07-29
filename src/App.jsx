@@ -16,8 +16,11 @@ import TeamLeaderView from "@/views/TeamLeaderView";
 import RegistrationLookup from "@/views/RegistrationLookup";
 
 export default function App() {
-  const lang = "pt";
-  const setLang = () => {};
+  const [lang, setLangState] = useState(() => localStorage.getItem("mcc_lang") || "pt");
+  const setLang = (l) => {
+    localStorage.setItem("mcc_lang", l);
+    setLangState(l);
+  };
   const [theme, setTheme] = useState("light");
   const urlParams = new URLSearchParams(window.location.search);
   const checkinParam = urlParams.get('checkin');
@@ -82,6 +85,8 @@ export default function App() {
             regNumber={checkinParam}
             regs={appData.regs}
             updatePresence={appData.updatePresence}
+            lang={lang}
+            setLang={setLang}
           />
         )}
         {selfCheckinParam && !checkinParam && (
@@ -90,6 +95,8 @@ export default function App() {
             regs={appData.regs}
             members={appData.members}
             updatePresence={appData.updatePresence}
+            lang={lang}
+            setLang={setLang}
           />
         )}
         {!checkinParam && !selfCheckinParam && view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} onPublicRegister={() => setView("public")} onLookup={() => setView("lookup")} />}

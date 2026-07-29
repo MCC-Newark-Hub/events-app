@@ -9,13 +9,14 @@ function extractBatchId(note) {
   return m ? m[0] : null;
 }
 
-function getRegStatus(reg) {
-  if (reg.cancelled)  return { label: "Cancelado",       color: "#6b7280", bg: "#f3f4f6" };
-  if (reg.waitlisted) return { label: "Lista de Espera", color: "#92400e", bg: "#fef3c7" };
-  if (reg.excedente)  return { label: "Excedente",       color: "#7c3aed", bg: "#ede9fe" };
-  if (reg.exempt)     return { label: "Isento",          color: "#065f46", bg: "#d1fae5" };
-  if (reg.paid)       return { label: "Pago",            color: "#065f46", bg: "#d1fae5" };
-  return               { label: "Pendente",              color: "#b45309", bg: "#fef3c7" };
+function getRegStatus(reg, lang) {
+  const en = lang === "en";
+  if (reg.cancelled)  return { label: en ? "Cancelled"     : "Cancelado",       color: "#6b7280", bg: "#f3f4f6" };
+  if (reg.waitlisted) return { label: en ? "Waitlist"       : "Lista de Espera", color: "#92400e", bg: "#fef3c7" };
+  if (reg.excedente)  return { label: en ? "Over Capacity"  : "Excedente",       color: "#7c3aed", bg: "#ede9fe" };
+  if (reg.exempt)     return { label: en ? "Exempt"         : "Isento",          color: "#065f46", bg: "#d1fae5" };
+  if (reg.paid)       return { label: en ? "Paid"           : "Pago",            color: "#065f46", bg: "#d1fae5" };
+  return               { label: en ? "Pending"              : "Pendente",        color: "#b45309", bg: "#fef3c7" };
 }
 
 function dateFromRegNumber(regNumber) {
@@ -24,7 +25,7 @@ function dateFromRegNumber(regNumber) {
 }
 
 function RegCard({ reg, onCancel, lang }) {
-  const status = getRegStatus(reg);
+  const status = getRegStatus(reg, lang);
   const date = dateFromRegNumber(reg.regNumber);
   const canCancel = !reg.cancelled && !reg.paid;
 
@@ -44,27 +45,27 @@ function RegCard({ reg, onCancel, lang }) {
 
       <div style={{ display: "flex", gap: 16, marginTop: 10, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 1, textTransform: "uppercase", letterSpacing: ".5px" }}>Número</div>
+          <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 1, textTransform: "uppercase", letterSpacing: ".5px" }}>{lang === "en" ? "Number" : "Número"}</div>
           <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 13, color: "#b41926" }}>{reg.regNumber}</div>
         </div>
         {date && (
           <div>
-            <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 1, textTransform: "uppercase", letterSpacing: ".5px" }}>Data</div>
+            <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 1, textTransform: "uppercase", letterSpacing: ".5px" }}>{lang === "en" ? "Date" : "Data"}</div>
             <div style={{ fontSize: 13 }}>{date}</div>
           </div>
         )}
         {reg.fee > 0 && (
           <div>
-            <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 1, textTransform: "uppercase", letterSpacing: ".5px" }}>Taxa</div>
+            <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 1, textTransform: "uppercase", letterSpacing: ".5px" }}>{lang === "en" ? "Fee" : "Taxa"}</div>
             <div style={{ fontSize: 13, fontWeight: 600, color: reg.paid ? "#065f46" : "#b45309" }}>
-              {reg.paid ? `✓ Pago (${fmt(reg.fee)})` : fmt(reg.fee)}
+              {reg.paid ? `✓ ${lang === "en" ? "Paid" : "Pago"} (${fmt(reg.fee)})` : fmt(reg.fee)}
             </div>
           </div>
         )}
         {reg.fee === 0 && (
           <div>
-            <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 1, textTransform: "uppercase", letterSpacing: ".5px" }}>Taxa</div>
-            <div style={{ fontSize: 13, color: "#065f46" }}>{reg.exempt ? "Isento" : "Grátis"}</div>
+            <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 1, textTransform: "uppercase", letterSpacing: ".5px" }}>{lang === "en" ? "Fee" : "Taxa"}</div>
+            <div style={{ fontSize: 13, color: "#065f46" }}>{reg.exempt ? (lang === "en" ? "Exempt" : "Isento") : (lang === "en" ? "Free" : "Grátis")}</div>
           </div>
         )}
       </div>
@@ -292,7 +293,7 @@ export default function RegistrationLookup({ event, regs, members, updateReg, ad
               {nameResults.length > 0 && !found && (
                 <div style={{ border: "1.5px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
                   {nameResults.map((r) => {
-                    const st = getRegStatus(r);
+                    const st = getRegStatus(r, lang);
                     return (
                       <div
                         key={r.id}
@@ -473,7 +474,7 @@ export default function RegistrationLookup({ event, regs, members, updateReg, ad
                         <div>
                           <span style={{ fontWeight: 600 }}>{famSelected.name}</span>
                           {famSelected.verified === false && (
-                            <span style={{ marginLeft: 6, fontSize: 10, background: "#fef3c7", color: "#92400e", padding: "1px 6px", borderRadius: 99, fontWeight: 700 }}>Não verificado</span>
+                            <span style={{ marginLeft: 6, fontSize: 10, background: "#fef3c7", color: "#92400e", padding: "1px 6px", borderRadius: 99, fontWeight: 700 }}>{lang === "en" ? "Unverified" : "Não verificado"}</span>
                           )}
                           <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{famSelected.category}{famSelected.church ? ` · ${famSelected.church}` : ""}</div>
                         </div>

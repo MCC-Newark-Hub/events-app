@@ -43,8 +43,8 @@ export default function BadgePrint({ regs, event, lang }) {
       // Event footer
       const location = event?.location || "";
       const eventDate = event?.date ? new Date(event.date + "T12:00:00") : new Date();
-      const monthYear = eventDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).toUpperCase();
-      const footerEvent = `SEMINÁRIO ${location.toUpperCase()} · ${monthYear}`;
+      const monthYear = eventDate.toLocaleDateString(lang === "en" ? "en-US" : "pt-BR", { month: "long", year: "numeric" }).toUpperCase();
+      const footerEvent = `${lang === "en" ? "SEMINAR" : "SEMINÁRIO"} ${location.toUpperCase()} · ${monthYear}`;
 
       // ── Draw badge ──────────────────────────────────────────────────────
       // White background

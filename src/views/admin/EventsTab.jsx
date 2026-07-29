@@ -62,7 +62,7 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
   };
 
   const openQrModal = async (eventId) => {
-    const url = `https://events-app.vercel.app?selfcheckin=${eventId}`;
+    const url = `${window.location.origin}?selfcheckin=${eventId}`;
     try {
       const dataUrl = await QRCode.toDataURL(url, { width: 256, margin: 2 });
       setQrModal({ eventId, url, dataUrl });

@@ -163,7 +163,7 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#f8f9fb", borderRadius: 8, marginBottom: 4 }}>
                   <div>
                     <span style={{ fontWeight: 600, fontSize: 13 }}>{m.name || m.memberName}</span>
-                    {!m.verified && <span style={{ marginLeft: 6, fontSize: 10, background: "#fef3c7", color: "#92400e", padding: "1px 5px", borderRadius: 99, fontWeight: 600 }}>Não verificado</span>}
+                    {!m.verified && <span style={{ marginLeft: 6, fontSize: 10, background: "#fef3c7", color: "#92400e", padding: "1px 5px", borderRadius: 99, fontWeight: 600 }}>{t.unverified}</span>}
                     <div style={{ fontFamily: "monospace", fontSize: 11, color: "#b41926" }}>{m.regNumber}</div>
                   </div>
                   <span style={{ fontSize: 12, color: "#6b7280" }}>{m.category}</span>
@@ -301,8 +301,8 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
 
   const validateStep1 = () => {
     const e = {};
-    if (!primary) e.primary = "Por favor, pesquise e selecione o seu nome.";
-    if (existingReg) e.primary = "Este participante já está inscrito neste evento.";
+    if (!primary) e.primary = t.pleaseSelectName;
+    if (existingReg) e.primary = t.alreadyRegisteredError;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -416,7 +416,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                             <div>
                               <span style={{ fontWeight: 600 }}>{m.name}</span>
                               <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{m.church}</span>
-                              {alreadyReg && <span style={{ marginLeft: 6, fontSize: 10, background: "#fee2e2", color: "#991b1b", padding: "1px 6px", borderRadius: 99, fontWeight: 700 }}>Já inscrito</span>}
+                              {alreadyReg && <span style={{ marginLeft: 6, fontSize: 10, background: "#fee2e2", color: "#991b1b", padding: "1px 6px", borderRadius: 99, fontWeight: 700 }}>{t.alreadyRegisteredBadge}</span>}
                             </div>
                             <div style={{ display: "flex", gap: 5 }}><span className="badge badge-blue">{m.category}</span>{m.role && <span className={`badge ${ROLE_BADGE[m.role]}`}>{m.role}</span>}</div>
                           </div>
@@ -451,7 +451,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                     const status = getRegStatus(existingReg);
                     return (
                       <div style={{ marginTop: 8, background: "#fff7ed", border: "1.5px solid #f59e0b", borderRadius: 10, padding: "14px 16px" }}>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: "#78350f", marginBottom: 8 }}>Participante já inscrito neste evento</div>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: "#78350f", marginBottom: 8 }}>{t.alreadyRegisteredTitle}</div>
                         <div style={{ fontWeight: 600, fontSize: 15 }}>{primary.name}</div>
                         <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{primary.category} · {primary.church}</div>
                         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
@@ -496,7 +496,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                     <span style={{ fontWeight: 600 }}>{primary.name}</span>
                     <div style={{ display: "flex", gap: 6 }}>
                       <span className="badge badge-blue">{primary.category}</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "#2d8a4e" }}>{primary.role === "Pastor" ? "Isento" : eventFee(primary.category) === 0 ? "Grátis" : fmt(eventFee(primary.category))}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "#2d8a4e" }}>{primary.role === "Pastor" ? t.exempt : eventFee(primary.category) === 0 ? t.free : fmt(eventFee(primary.category))}</span>
                     </div>
                   </div>
                 </div>
@@ -513,7 +513,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                         <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{m.category} · {m.gender}</span>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "#2d8a4e" }}>{eventFee(m.category) === 0 ? "Grátis" : fmt(eventFee(m.category))}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#2d8a4e" }}>{eventFee(m.category) === 0 ? t.free : fmt(eventFee(m.category))}</span>
                         <button onClick={() => setFamilyMembers((prev) => prev.filter((_, j) => j !== i))} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 18, lineHeight: 1 }}>×</button>
                       </div>
                     </div>
@@ -541,7 +541,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                         >
                           <div>
                             <span style={{ fontWeight: 600, color: alreadyReg ? "#6b7280" : "inherit" }}>{m.name}</span>
-                            {alreadyReg && <span style={{ marginLeft: 6, fontSize: 10, background: "#fee2e2", color: "#991b1b", padding: "1px 6px", borderRadius: 99, fontWeight: 700 }}>Já inscrito</span>}
+                            {alreadyReg && <span style={{ marginLeft: 6, fontSize: 10, background: "#fee2e2", color: "#991b1b", padding: "1px 6px", borderRadius: 99, fontWeight: 700 }}>{t.alreadyRegisteredBadge}</span>}
                           </div>
                           <div style={{ display: "flex", gap: 5 }}>
                             <span className="badge badge-blue">{m.category}</span>
@@ -567,7 +567,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                       <div><label>{t.manualMemberName}</label><input value={manualFam.name} onChange={(e) => setManualFam({ ...manualFam, name: e.target.value })} /></div>
                       <div className="fr">
                         <div><label>{t.manualMemberGender}</label><select value={manualFam.gender} onChange={(e) => setManualFam({ ...manualFam, gender: e.target.value })}><option value="M">{t.genderM}</option><option value="F">{t.genderF}</option></select></div>
-                        <div><label>{t.manualMemberCategory}</label><select value={manualFam.category} onChange={(e) => setManualFam({ ...manualFam, category: e.target.value })}>{CATEGORIES.map((c) => <option key={c} value={c}>{c} — {eventFee(c) === 0 ? "Grátis" : fmt(eventFee(c))}</option>)}</select></div>
+                        <div><label>{t.manualMemberCategory}</label><select value={manualFam.category} onChange={(e) => setManualFam({ ...manualFam, category: e.target.value })}>{CATEGORIES.map((c) => <option key={c} value={c}>{c} — {eventFee(c) === 0 ? t.free : fmt(eventFee(c))}</option>)}</select></div>
                       </div>
                       <button className="btn btn-warn btn-sm" onClick={() => { if (!manualFam.name) return; setFamilyMembers((prev) => [...prev, { ...manualFam, id: "MANUAL-" + Date.now(), verified: false, role: "", church: "", badgeName: manualFam.name }]); setManualFam({ name: "", gender: "M", category: "Adulto" }); setShowManualFam(false); }}>
                         + {lang === "en" ? "Add Unverified Member" : "Adicionar Membro Não Verificado"}
@@ -581,7 +581,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                 <div style={{ background: "var(--sidebar-active-bg,#fdf5f5)", borderRadius: 10, padding: "12px 14px", marginTop: 14, marginBottom: 4 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
                     <span>{t.totalMembers}: <strong>{allParticipants.length}</strong></span>
-                    <span>{t.totalFee}: <strong style={{ color: "#1a3a6b" }}>{totalFee === 0 ? "Grátis" : fmt(totalFee)}</strong></span>
+                    <span>{t.totalFee}: <strong style={{ color: "#1a3a6b" }}>{totalFee === 0 ? t.free : fmt(totalFee)}</strong></span>
                   </div>
                 </div>
               )}
@@ -713,7 +713,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
               <div style={{ background: "var(--sidebar-active-bg,#fdf5f5)", borderRadius: 10, padding: "12px 14px", marginBottom: 14, fontSize: 13 }}>
                 <div style={{ fontWeight: 700, marginBottom: 6 }}>{lang === "en" ? "Registration Summary:" : "Resumo da Inscrição:"}</div>
                 <div>{primary?.name} {familyMembers.length > 0 && `+ ${familyMembers.length} ${t.familyMembers.toLowerCase()}`}</div>
-                <div style={{ marginTop: 4 }}>{t.totalFee}: <strong>{totalFee === 0 ? "Grátis" : fmt(totalFee)}</strong></div>
+                <div style={{ marginTop: 4 }}>{t.totalFee}: <strong>{totalFee === 0 ? t.free : fmt(totalFee)}</strong></div>
                 <div style={{ marginTop: 4, color: "#6b7280" }}>{t.pendingPaymentNote}</div>
               </div>
 
