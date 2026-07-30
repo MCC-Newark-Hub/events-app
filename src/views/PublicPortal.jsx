@@ -96,12 +96,13 @@ function TermsContent({ termLang, deadlineDays }) {
   );
 }
 
-function getRegStatus(reg) {
-  if (reg.waitlisted) return { label: "Lista de Espera", color: "#92400e", bg: "#fef3c7" };
-  if (reg.excedente)  return { label: "Excedente",       color: "#7c3aed", bg: "#ede9fe" };
-  if (reg.exempt)     return { label: "Isento",          color: "#065f46", bg: "#d1fae5" };
-  if (reg.paid)       return { label: "Pago",            color: "#065f46", bg: "#d1fae5" };
-  return               { label: "Pendente",              color: "#b45309", bg: "#fef3c7" };
+function getRegStatus(reg, lang) {
+  const en = lang === "en";
+  if (reg.waitlisted) return { label: en ? "Waitlist"      : "Lista de Espera", color: "#92400e", bg: "#fef3c7" };
+  if (reg.excedente)  return { label: en ? "Over Capacity" : "Excedente",       color: "#7c3aed", bg: "#ede9fe" };
+  if (reg.exempt)     return { label: en ? "Exempt"        : "Isento",          color: "#065f46", bg: "#d1fae5" };
+  if (reg.paid)       return { label: en ? "Paid"          : "Pago",            color: "#065f46", bg: "#d1fae5" };
+  return               { label: en ? "Pending"             : "Pendente",        color: "#b45309", bg: "#fef3c7" };
 }
 
 function dateFromRegNumber(regNumber) {
@@ -268,6 +269,8 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
   const [primary, setPrimary] = useState(null);
   const [primarySearch, setPrimarySearch] = useState("");
   const [primaryNotFound, setPrimaryNotFound] = useState(false);
+  const [showManualPrimary, setShowManualPrimary] = useState(false);
+  const [manualPrimary, setManualPrimary] = useState({ name: "", gender: "M", category: "Adulto" });
   const [familyMembers, setFamilyMembers] = useState([]);
   const [famSearch, setFamSearch] = useState("");
   const [famNotFound, setFamNotFound] = useState(false);
@@ -356,6 +359,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
         t={t}
         onReset={() => {
           setStep(1); setPrimary(null); setPrimarySearch(""); setFamilyMembers([]);
+          setShowManualPrimary(false); setManualPrimary({ name: "", gender: "M", category: "Adulto" });
           setContact({ phone: "", email: "", whatsapp: true }); setBadgeNames({});
           setTranslations({ en: false, es: false });
           setAllergies({ hasAny: false, other: "" });
@@ -399,7 +403,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
           {step === 1 && (
             <div>
               <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 700, color: "#03223f", marginBottom: 4 }}>1. {t.step1}</h3>
-              <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 18 }}>Search for your name in our member directory.</p>
+              <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 18 }}>{t.searchDirectoryHint}</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div>
                   <label>{t.searchName} *</label>
@@ -426,29 +430,87 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                   )}
                   {allMembers.length === 0 && loading && (
                     <p style={{ fontSize: 12, color: "#6b7280", marginTop: 6, textAlign: "center" }}>
-                      ⏳ Carregando membros... aguarde um momento.
+                      {t.loadingMembers}
                     </p>
                   )}
                   {allMembers.length === 0 && !loading && (
                     <div style={{ marginTop: 6, textAlign: "center" }}>
                       <p style={{ fontSize: 12, color: "#c0392b", marginBottom: 4 }}>
-                        Nenhum membro carregado. Verifique sua conexão e tente recarregar.
+                        {t.noMembersLoaded}
                       </p>
                       <button className="btn btn-ghost btn-sm" onClick={() => window.location.reload()} style={{ fontSize: 12 }}>
-                        ↺ Recarregar
+                        {t.reload}
                       </button>
                     </div>
                   )}
                   {!primary && allMembers.length > 0 && primarySearch.length === 0 && (
                     <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>
-                      {allMembers.length} membros disponíveis — digite para buscar
+                      {allMembers.length} {t.membersAvailableHint}
                     </p>
                   )}
                   {primarySearch.length > 0 && primaryResults.length === 0 && !primary && (
                     <div style={{ marginTop: 8, padding: "10px 14px", background: "#fef3c7", borderRadius: 8, fontSize: 13, color: "#92400e" }}>{t.nameNotFound} {t.nameNotFoundClerk}</div>
                   )}
+                  {primarySearch.length > 0 && primaryResults.length === 0 && !primary && !showManualPrimary && (
+                    <button
+                      onClick={() => { setShowManualPrimary(true); setManualPrimary((p) => ({ ...p, name: primarySearch })); }}
+                      style={{ marginTop: 8, background: "none", border: "1px dashed #f59e0b", borderRadius: 8, padding: "8px 12px", fontSize: 13, cursor: "pointer", color: "#92400e", width: "100%", textAlign: "center" }}
+                    >
+                      {t.cantFindMyself}
+                    </button>
+                  )}
+                  {showManualPrimary && !primary && (
+                    <div style={{ marginTop: 8, background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 10, padding: "14px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        <div>
+                          <label>{t.manualMemberName}</label>
+                          <input value={manualPrimary.name} onChange={(e) => setManualPrimary({ ...manualPrimary, name: e.target.value })} autoFocus />
+                        </div>
+                        <div className="fr">
+                          <div>
+                            <label>{t.manualMemberGender}</label>
+                            <select value={manualPrimary.gender} onChange={(e) => setManualPrimary({ ...manualPrimary, gender: e.target.value })}>
+                              <option value="M">{t.genderM}</option>
+                              <option value="F">{t.genderF}</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label>{t.manualMemberCategory}</label>
+                            <select value={manualPrimary.category} onChange={(e) => setManualPrimary({ ...manualPrimary, category: e.target.value })}>
+                              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => setShowManualPrimary(false)}>{t.back}</button>
+                          <button
+                            className="btn btn-warn btn-sm"
+                            style={{ flex: 2 }}
+                            onClick={() => {
+                              if (!manualPrimary.name.trim()) return;
+                              setPrimary({
+                                id: "MANUAL-" + Date.now(),
+                                name: manualPrimary.name.trim(),
+                                gender: manualPrimary.gender,
+                                category: manualPrimary.category,
+                                verified: false,
+                                role: "",
+                                church: "",
+                                badgeName: manualPrimary.name.trim(),
+                              });
+                              setShowManualPrimary(false);
+                              setPrimaryNotFound(false);
+                              setErrors({});
+                            }}
+                          >
+                            {t.useThisName}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {primary && existingReg && (() => {
-                    const status = getRegStatus(existingReg);
+                    const status = getRegStatus(existingReg, lang);
                     return (
                       <div style={{ marginTop: 8, background: "#fff7ed", border: "1.5px solid #f59e0b", borderRadius: 10, padding: "14px 16px" }}>
                         <div style={{ fontWeight: 700, fontSize: 14, color: "#78350f", marginBottom: 8 }}>{t.alreadyRegisteredTitle}</div>
@@ -460,17 +522,21 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                           <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 99, background: status.bg, color: status.color }}>{status.label}</span>
                         </div>
                         <p style={{ fontSize: 12, color: "#78350f", marginTop: 10, marginBottom: 8 }}>
-                          Se precisar de ajuda, fale com um atendente.
+                          {t.needHelpContactClerk}
                         </p>
                         <button onClick={() => { setPrimary(null); setPrimarySearch(""); }} style={{ background: "none", border: "1px solid #f59e0b", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", color: "#92400e" }}>
-                          Buscar outro nome
+                          {t.searchAnotherName}
                         </button>
                       </div>
                     );
                   })()}
                   {primary && !existingReg && (
                     <div style={{ marginTop: 8, background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: "10px 14px", fontSize: 13, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div><strong>{primary.name}</strong><span style={{ marginLeft: 8, color: "#6b7280" }}>{primary.category} · {primary.church}</span></div>
+                      <div>
+                        <strong>{primary.name}</strong>
+                        {primary.verified === false && <span style={{ marginLeft: 6, fontSize: 10, background: "#fef3c7", color: "#92400e", padding: "1px 6px", borderRadius: 99, fontWeight: 600 }}>{t.unverified}</span>}
+                        <span style={{ marginLeft: 8, color: "#6b7280" }}>{primary.category}{primary.church ? ` · ${primary.church}` : ""}</span>
+                      </div>
                       <button onClick={() => { setPrimary(null); setPrimarySearch(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 18 }}>×</button>
                     </div>
                   )}
@@ -509,7 +575,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                     <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", background: "#f8f9fb", borderRadius: 8, marginBottom: 6 }}>
                       <div>
                         <span style={{ fontWeight: 600 }}>{m.name}</span>
-                        {!m.verified && <span style={{ marginLeft: 8, fontSize: 10, color: "#92400e", background: "#fef3c7", padding: "1px 6px", borderRadius: 99, fontWeight: 600 }}>Unverified</span>}
+                        {!m.verified && <span style={{ marginLeft: 8, fontSize: 10, color: "#92400e", background: "#fef3c7", padding: "1px 6px", borderRadius: 99, fontWeight: 600 }}>{t.unverified}</span>}
                         <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{m.category} · {m.gender}</span>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
