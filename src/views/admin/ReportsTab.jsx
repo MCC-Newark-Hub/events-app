@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useT } from "@/i18n/strings";
-import { fmt, ROLE_BADGE } from "@/constants";
+import { fmt, ROLE_BADGE, CATEGORIES } from "@/constants";
 
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const byName = (a, b) => norm(a.memberName).localeCompare(norm(b.memberName));
@@ -12,6 +12,10 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
   const [repCategory, setRepCategory] = useState("");
   const [repChurch, setRepChurch] = useState("");
   const [repDate, setRepDate] = useState("");
+  const [summaryDim, setSummaryDim] = useState("church"); // "church" | "category"
+  const [expandedGroups, setExpandedGroups] = useState({});
+  const toggleGroup = (key) => setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  const switchSummaryDim = (dim) => { setSummaryDim(dim); setExpandedGroups({}); };
   const er = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const wl = wlRegs;
   const pend = er.filter((r) => !r.paid && !r.exempt);
@@ -32,19 +36,28 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
   const wlView = applyReportFilters(wl.map((r, i) => ({ ...r, wlPosition: i + 1 }))).sort(byName);
   const erView = applyReportFilters(er).sort(byName);
 
-  const byCh = [...new Set(er.map((r) => r.church))]
-    .map((ch) => ({
-      ch,
-      total: er.filter((r) => r.church === ch).length,
-      paid: er.filter((r) => r.church === ch && r.paid).length,
-      pendN: er.filter((r) => r.church === ch && !r.paid && !r.exempt).length,
-      exempt: er.filter((r) => r.church === ch && r.exempt).length,
-      coll: er.filter((r) => r.church === ch && r.paid).reduce((s, r) => s + r.fee, 0),
-      pendA: er
-        .filter((r) => r.church === ch && !r.paid && !r.exempt)
-        .reduce((s, r) => s + r.fee, 0),
-    }))
-    .sort((a, b) => b.total - a.total);
+  const groupStats = (rows, field) => {
+    const keys = field === "category"
+      ? CATEGORIES.filter((c) => rows.some((r) => r.category === c))
+      : [...new Set(rows.map((r) => r.church))];
+    const groups = keys.map((key) => {
+      const subset = rows.filter((r) => r[field] === key);
+      return {
+        key,
+        rows: subset,
+        total: subset.length,
+        paid: subset.filter((r) => r.paid).length,
+        pendN: subset.filter((r) => !r.paid && !r.exempt).length,
+        exempt: subset.filter((r) => r.exempt).length,
+        coll: subset.filter((r) => r.paid).reduce((s, r) => s + r.fee, 0),
+        pendA: subset.filter((r) => !r.paid && !r.exempt).reduce((s, r) => s + r.fee, 0),
+      };
+    });
+    if (field === "church") groups.sort((a, b) => b.total - a.total);
+    return groups;
+  };
+  const otherDim = summaryDim === "church" ? "category" : "church";
+  const summaryGroups = groupStats(er, summaryDim);
 
   return (
     <div>
@@ -104,43 +117,73 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
       )}
 
       {type === "summary" && (
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t.churchH}</th>
-                  <th>{t.total}</th>
-                  <th>{t.paid}</th>
-                  <th>{t.pending}</th>
-                  <th>{t.exempt}</th>
-                  <th>{t.collected}</th>
-                  <th>{t.toReceive}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {byCh.map((c) => (
-                  <tr key={c.ch}>
-                    <td style={{ fontWeight: 600 }}>{c.ch}</td>
-                    <td>{c.total}</td>
-                    <td style={{ color: "#2d8a4e", fontWeight: 600 }}>{c.paid}</td>
-                    <td style={{ color: "#d4820a", fontWeight: 600 }}>{c.pendN}</td>
-                    <td style={{ color: "#6b7280" }}>{c.exempt}</td>
-                    <td style={{ color: "#2d8a4e", fontWeight: 600 }}>{fmt(c.coll)}</td>
-                    <td style={{ color: "#d4820a", fontWeight: 600 }}>{fmt(c.pendA)}</td>
+        <div>
+          <div style={{ display: "flex", gap: 5, marginBottom: 12 }}>
+            <button className={`btn btn-sm ${summaryDim === "church" ? "btn-primary" : "btn-ghost"}`} onClick={() => switchSummaryDim("church")}>
+              Por {t.church}
+            </button>
+            <button className={`btn btn-sm ${summaryDim === "category" ? "btn-primary" : "btn-ghost"}`} onClick={() => switchSummaryDim("category")}>
+              Por {t.category}
+            </button>
+          </div>
+          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{summaryDim === "church" ? t.church : t.category}</th>
+                    <th>{t.total}</th>
+                    <th>{t.paid}</th>
+                    <th>{t.pending}</th>
+                    <th>{t.exempt}</th>
+                    <th>{t.collected}</th>
+                    <th>{t.toReceive}</th>
                   </tr>
-                ))}
-                <tr style={{ background: "#f8f9fb", fontWeight: 700 }}>
-                  <td>{t.total}</td>
-                  <td>{er.length}</td>
-                  <td>{er.filter((r) => r.paid).length}</td>
-                  <td>{pend.length}</td>
-                  <td>{er.filter((r) => r.exempt).length}</td>
-                  <td>{fmt(er.filter((r) => r.paid).reduce((s, r) => s + r.fee, 0))}</td>
-                  <td>{fmt(pend.reduce((s, r) => s + r.fee, 0))}</td>
-                </tr>
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {summaryGroups.map((g) => {
+                    const isOpen = !!expandedGroups[g.key];
+                    const subGroups = isOpen ? groupStats(g.rows, otherDim) : [];
+                    return (
+                      <Fragment key={g.key}>
+                        <tr onClick={() => toggleGroup(g.key)} style={{ cursor: "pointer" }}>
+                          <td style={{ fontWeight: 600 }}>
+                            <span style={{ display: "inline-block", width: 14, color: "#9ca3af" }}>{isOpen ? "▾" : "▸"}</span>
+                            {g.key}
+                          </td>
+                          <td>{g.total}</td>
+                          <td style={{ color: "#2d8a4e", fontWeight: 600 }}>{g.paid}</td>
+                          <td style={{ color: "#d4820a", fontWeight: 600 }}>{g.pendN}</td>
+                          <td style={{ color: "#6b7280" }}>{g.exempt}</td>
+                          <td style={{ color: "#2d8a4e", fontWeight: 600 }}>{fmt(g.coll)}</td>
+                          <td style={{ color: "#d4820a", fontWeight: 600 }}>{fmt(g.pendA)}</td>
+                        </tr>
+                        {subGroups.map((sg) => (
+                          <tr key={g.key + ":" + sg.key} style={{ background: "#f8f9fb" }}>
+                            <td style={{ paddingLeft: 34, fontSize: 13, color: "#374151" }}>{sg.key}</td>
+                            <td style={{ fontSize: 13 }}>{sg.total}</td>
+                            <td style={{ color: "#2d8a4e", fontSize: 13 }}>{sg.paid}</td>
+                            <td style={{ color: "#d4820a", fontSize: 13 }}>{sg.pendN}</td>
+                            <td style={{ color: "#6b7280", fontSize: 13 }}>{sg.exempt}</td>
+                            <td style={{ color: "#2d8a4e", fontSize: 13 }}>{fmt(sg.coll)}</td>
+                            <td style={{ color: "#d4820a", fontSize: 13 }}>{fmt(sg.pendA)}</td>
+                          </tr>
+                        ))}
+                      </Fragment>
+                    );
+                  })}
+                  <tr style={{ background: "#f8f9fb", fontWeight: 700 }}>
+                    <td>{t.total}</td>
+                    <td>{er.length}</td>
+                    <td>{er.filter((r) => r.paid).length}</td>
+                    <td>{pend.length}</td>
+                    <td>{er.filter((r) => r.exempt).length}</td>
+                    <td>{fmt(er.filter((r) => r.paid).reduce((s, r) => s + r.fee, 0))}</td>
+                    <td>{fmt(pend.reduce((s, r) => s + r.fee, 0))}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

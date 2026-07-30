@@ -1,27 +1,35 @@
-import { useState } from "react";
-import { LayoutDashboard, Clock } from "lucide-react";
+import { useState, Fragment } from "react";
+import { LayoutDashboard, Clock, BarChart2 } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, fmt } from "@/constants";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
 import CapBar from "@/components/CapBar";
 import ApprovalsPanel from "@/components/ApprovalsPanel";
+import ReportsTab from "./admin/ReportsTab";
 
 function PastorView(props) {
   const { event, regs, approvals, resolveApproval, user, logout, activeCount, wlRegs, exRegs, pendingApprovals, lang, setLang, theme, toggleTheme } = props;
   const t = useT();
   const [sec, setSec] = useState("dashboard");
+  const [expandedCat, setExpandedCat] = useState({});
+  const [expandedCh, setExpandedCh] = useState({});
+  const toggleCat = (key) => setExpandedCat((p) => ({ ...p, [key]: !p[key] }));
+  const toggleCh = (key) => setExpandedCh((p) => ({ ...p, [key]: !p[key] }));
   const er = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const paid = er.filter((r) => r.paid && !r.exempt);
   const pend = er.filter((r) => !r.paid && !r.exempt);
   const coll = paid.reduce((s, r) => s + r.fee, 0);
   const pendA = pend.reduce((s, r) => s + r.fee, 0);
   const pct = Math.round((coll / (coll + pendA)) * 100 || 0);
-  const byCat = CATEGORIES.map((c) => ({ c, n: er.filter((r) => r.category === c).length })).filter((x) => x.n > 0);
-  const byCh = [...new Set(er.map((r) => r.church))].map((ch) => ({ ch, total: er.filter((r) => r.church === ch).length, paid: er.filter((r) => r.church === ch && r.paid).length })).sort((a, b) => b.total - a.total);
+  const byCatOf = (rows) => CATEGORIES.map((c) => ({ c, n: rows.filter((r) => r.category === c).length })).filter((x) => x.n > 0);
+  const byChOf = (rows) => [...new Set(rows.map((r) => r.church))].map((ch) => ({ ch, total: rows.filter((r) => r.church === ch).length, paid: rows.filter((r) => r.church === ch && r.paid).length })).sort((a, b) => b.total - a.total);
+  const byCat = byCatOf(er);
+  const byCh = byChOf(er);
   const navItems = [
     { id: "dashboard", icon: <LayoutDashboard size={16} />, label: t.dashboard },
     { id: "approvals", icon: <Clock size={16} />, label: `${t.approvals}${pendingApprovals.length > 0 ? ` (${pendingApprovals.length})` : ""}` },
+    { id: "reports", icon: <BarChart2 size={16} />, label: t.reports },
   ];
   return (
     <div className="app-shell">
@@ -53,11 +61,51 @@ function PastorView(props) {
                 <div className="two-col" style={{ marginBottom: 14 }}>
                   <div className="card">
                     <h4 style={{ fontWeight: 700, marginBottom: 10 }}>{t.category}</h4>
-                    {byCat.map((x) => <div key={x.c} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)" }}><span style={{ fontSize: 14 }}>{x.c}</span><span className="badge badge-blue">{x.n}</span></div>)}
+                    {byCat.map((x) => {
+                      const isOpen = !!expandedCat[x.c];
+                      const subRows = isOpen ? byChOf(er.filter((r) => r.category === x.c)) : [];
+                      return (
+                        <Fragment key={x.c}>
+                          <div onClick={() => toggleCat(x.c)} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)", cursor: "pointer" }}>
+                            <span style={{ fontSize: 14 }}>
+                              <span style={{ display: "inline-block", width: 14, color: "#9ca3af" }}>{isOpen ? "▾" : "▸"}</span>
+                              {x.c}
+                            </span>
+                            <span className="badge badge-blue">{x.n}</span>
+                          </div>
+                          {subRows.map((sr) => (
+                            <div key={x.c + ":" + sr.ch} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0 5px 22px", borderBottom: "1px solid var(--border)", background: "var(--bg2)" }}>
+                              <span style={{ fontSize: 12, color: "var(--muted)" }}>{sr.ch}</span>
+                              <div style={{ display: "flex", gap: 6 }}><span className="badge badge-green" style={{ fontSize: 11 }}>{sr.paid}✓</span><span className="badge badge-blue" style={{ fontSize: 11 }}>{sr.total}</span></div>
+                            </div>
+                          ))}
+                        </Fragment>
+                      );
+                    })}
                   </div>
                   <div className="card">
                     <h4 style={{ fontWeight: 700, marginBottom: 10 }}>{t.church}</h4>
-                    {byCh.map((x) => <div key={x.ch} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)" }}><span style={{ fontSize: 13 }}>{x.ch}</span><div style={{ display: "flex", gap: 5 }}><span className="badge badge-green">{x.paid}✓</span><span className="badge badge-blue">{x.total}</span></div></div>)}
+                    {byCh.map((x) => {
+                      const isOpen = !!expandedCh[x.ch];
+                      const subRows = isOpen ? byCatOf(er.filter((r) => r.church === x.ch)) : [];
+                      return (
+                        <Fragment key={x.ch}>
+                          <div onClick={() => toggleCh(x.ch)} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)", cursor: "pointer" }}>
+                            <span style={{ fontSize: 13 }}>
+                              <span style={{ display: "inline-block", width: 14, color: "#9ca3af" }}>{isOpen ? "▾" : "▸"}</span>
+                              {x.ch}
+                            </span>
+                            <div style={{ display: "flex", gap: 5 }}><span className="badge badge-green">{x.paid}✓</span><span className="badge badge-blue">{x.total}</span></div>
+                          </div>
+                          {subRows.map((sr) => (
+                            <div key={x.ch + ":" + sr.c} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0 5px 22px", borderBottom: "1px solid var(--border)", background: "var(--bg2)" }}>
+                              <span style={{ fontSize: 12, color: "var(--muted)" }}>{sr.c}</span>
+                              <span className="badge badge-blue" style={{ fontSize: 11 }}>{sr.n}</span>
+                            </div>
+                          ))}
+                        </Fragment>
+                      );
+                    })}
                   </div>
                 </div>
                 <div className="card">
@@ -78,6 +126,7 @@ function PastorView(props) {
               </div>
             )}
             {sec === "approvals" && <ApprovalsPanel approvals={approvals} resolveApproval={resolveApproval} event={event} activeCount={activeCount} />}
+            {sec === "reports" && <ReportsTab regs={regs} event={event} wlRegs={wlRegs} exRegs={exRegs} />}
           </div>
         </div>
       </div>

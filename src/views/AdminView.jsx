@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, Fragment } from "react";
 import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, ROLE_GROUPS, TEAMS, ROLE_BADGE, fmt } from "@/constants";
@@ -66,13 +66,19 @@ function AdminView(props) {
 
 function AdminOverview({ event, regs, activeCount, wlRegs, exRegs }) {
   const t = useT();
+  const [expandedCat, setExpandedCat] = useState({});
+  const [expandedCh, setExpandedCh] = useState({});
+  const toggleCat = (key) => setExpandedCat((p) => ({ ...p, [key]: !p[key] }));
+  const toggleCh = (key) => setExpandedCh((p) => ({ ...p, [key]: !p[key] }));
   const er = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const paid = er.filter((r) => r.paid && !r.exempt);
   const pend = er.filter((r) => !r.paid && !r.exempt);
   const coll = paid.reduce((s, r) => s + r.fee, 0);
   const pendA = pend.reduce((s, r) => s + r.fee, 0);
-  const byCat = CATEGORIES.map((c) => ({ c, n: er.filter((r) => r.category === c).length })).filter((x) => x.n > 0);
-  const byCh = [...new Set(er.map((r) => r.church))].map((ch) => ({ ch, total: er.filter((r) => r.church === ch).length, paid: er.filter((r) => r.church === ch && r.paid).length })).sort((a, b) => b.total - a.total);
+  const byCatOf = (rows) => CATEGORIES.map((c) => ({ c, n: rows.filter((r) => r.category === c).length })).filter((x) => x.n > 0);
+  const byChOf = (rows) => [...new Set(rows.map((r) => r.church))].map((ch) => ({ ch, total: rows.filter((r) => r.church === ch).length, paid: rows.filter((r) => r.church === ch && r.paid).length })).sort((a, b) => b.total - a.total);
+  const byCat = byCatOf(er);
+  const byCh = byChOf(er);
   return (
     <div>
       <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700, marginBottom: 14, color: "var(--text)" }}>{t.overview}</h2>
@@ -95,20 +101,51 @@ function AdminOverview({ event, regs, activeCount, wlRegs, exRegs }) {
       <div className="two-col">
         <div className="card">
           <h4 style={{ fontWeight: 700, marginBottom: 12 }}>{t.category}</h4>
-          {byCat.map((x) => (
-            <div key={x.c} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
-              <span style={{ fontSize: 14 }}>{x.c}</span><span className="badge badge-blue">{x.n}</span>
-            </div>
-          ))}
+          {byCat.map((x) => {
+            const isOpen = !!expandedCat[x.c];
+            const subRows = isOpen ? byChOf(er.filter((r) => r.category === x.c)) : [];
+            return (
+              <Fragment key={x.c}>
+                <div onClick={() => toggleCat(x.c)} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)", cursor: "pointer" }}>
+                  <span style={{ fontSize: 14 }}>
+                    <span style={{ display: "inline-block", width: 14, color: "#9ca3af" }}>{isOpen ? "▾" : "▸"}</span>
+                    {x.c}
+                  </span>
+                  <span className="badge badge-blue">{x.n}</span>
+                </div>
+                {subRows.map((sr) => (
+                  <div key={x.c + ":" + sr.ch} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0 5px 22px", borderBottom: "1px solid var(--border)", background: "var(--bg2)" }}>
+                    <span style={{ fontSize: 12, color: "var(--muted)" }}>{sr.ch}</span>
+                    <div style={{ display: "flex", gap: 6 }}><span className="badge badge-green" style={{ fontSize: 11 }}>{sr.paid}✓</span><span className="badge badge-blue" style={{ fontSize: 11 }}>{sr.total}</span></div>
+                  </div>
+                ))}
+              </Fragment>
+            );
+          })}
         </div>
         <div className="card">
           <h4 style={{ fontWeight: 700, marginBottom: 12 }}>{t.church}</h4>
-          {byCh.map((x) => (
-            <div key={x.ch} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
-              <span style={{ fontSize: 13 }}>{x.ch}</span>
-              <div style={{ display: "flex", gap: 6 }}><span className="badge badge-green">{x.paid}✓</span><span className="badge badge-blue">{x.total}</span></div>
-            </div>
-          ))}
+          {byCh.map((x) => {
+            const isOpen = !!expandedCh[x.ch];
+            const subRows = isOpen ? byCatOf(er.filter((r) => r.church === x.ch)) : [];
+            return (
+              <Fragment key={x.ch}>
+                <div onClick={() => toggleCh(x.ch)} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)", cursor: "pointer" }}>
+                  <span style={{ fontSize: 13 }}>
+                    <span style={{ display: "inline-block", width: 14, color: "#9ca3af" }}>{isOpen ? "▾" : "▸"}</span>
+                    {x.ch}
+                  </span>
+                  <div style={{ display: "flex", gap: 6 }}><span className="badge badge-green">{x.paid}✓</span><span className="badge badge-blue">{x.total}</span></div>
+                </div>
+                {subRows.map((sr) => (
+                  <div key={x.ch + ":" + sr.c} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0 5px 22px", borderBottom: "1px solid var(--border)", background: "var(--bg2)" }}>
+                    <span style={{ fontSize: 12, color: "var(--muted)" }}>{sr.c}</span>
+                    <span className="badge badge-blue" style={{ fontSize: 11 }}>{sr.n}</span>
+                  </div>
+                ))}
+              </Fragment>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -229,6 +266,18 @@ function AdminGA({ gas, setGas, members, churches, regs, event, notify }) {
 const VALID_CATEGORIES = ["0-3","Criança","Intermediário","Adolescente","Jovem","Adulto"];
 const VALID_CODES      = ["EUA","CAN","BRA"];
 
+// Resolves a raw CSV church string to the canonical `churches.display` value —
+// matches the full display ("Newark, NJ") or just the city ("Newark") so a
+// missing state suffix doesn't silently create a second, drifted church value.
+const matchChurch = (raw, churches) => {
+  if (!raw || !churches?.length) return null;
+  const rawN = norm(raw);
+  const exact = churches.find((c) => norm(c.display) === rawN);
+  if (exact) return exact.display;
+  const byCity = churches.find((c) => norm(c.city || (c.display || "").split(",")[0]) === rawN);
+  return byCity ? byCity.display : null;
+};
+
 const CSV_TEMPLATES = {
   // ── Members ──────────────────────────────────────────────────────────────
   members: {
@@ -251,16 +300,19 @@ const CSV_TEMPLATES = {
       "specialNeeds: necessidades especiais. Opcional.",
       "notes: observações gerais. Opcional.",
     ],
-    validate: (row) => {
+    validate: (row, ctx) => {
       var e = [];
       if (!row.firstName && !row.lastName) e.push("firstName ou lastName obrigatório");
       if (!row.badgeName) e.push("badgeName obrigatório");
       if (!["M","F"].includes(row.gender)) e.push("gender deve ser M ou F");
       if (!row.category) e.push("category obrigatória");
       // Non-standard categories are allowed (warn only, don't block)
+      if (row.church && !matchChurch(row.church, ctx?.churches)) {
+        e.push(`church "${row.church}" não corresponde a nenhuma igreja cadastrada (veja Diretório > Igrejas)`);
+      }
       return e;
     },
-    transform: (row, idx, existing) => {
+    transform: (row, idx, existing, ctx) => {
       var id = row.id || "M" + String(existing.length + idx + 1).padStart(3, "0");
       var firstName = row.firstName || "";
       var lastName  = row.lastName  || "";
@@ -273,7 +325,7 @@ const CSV_TEMPLATES = {
         badge_name:    row.badgeName || firstName || fullName,
         gender:        row.gender,
         category:      row.category,
-        church:        row.church   || "",
+        church:        matchChurch(row.church, ctx?.churches) || row.church || "",
         role:          row.role     || "",
         family_id:     row.familyId || null,
         ga_id:         row.gaId     || null,
@@ -320,15 +372,18 @@ const CSV_TEMPLATES = {
       "leaderId: ID do membro líder (ex: M100).",
       "description: descrição opcional.",
     ],
-    validate: (row) => {
+    validate: (row, ctx) => {
       var e = [];
       if (!row.name) e.push("name obrigatório");
       if (!row.leaderId) e.push("leaderId obrigatório");
+      if (row.church && !matchChurch(row.church, ctx?.churches)) {
+        e.push(`church "${row.church}" não corresponde a nenhuma igreja cadastrada (veja Diretório > Igrejas)`);
+      }
       return e;
     },
-    transform: (row, idx, existing) => {
+    transform: (row, idx, existing, ctx) => {
       var id = row.id || "GA" + String(existing.length + idx + 1).padStart(3, "0");
-      return { id, name: row.name, church: row.church || "", leader_id: row.leaderId, description: row.description || "" };
+      return { id, name: row.name, church: matchChurch(row.church, ctx?.churches) || row.church || "", leader_id: row.leaderId, description: row.description || "" };
     },
   },
 
@@ -464,7 +519,7 @@ function AdminImport({ members, setMembers, families, setFamilies, gas, setGas, 
         text = new TextDecoder("windows-1252").decode(buffer);
       }
       var rows = parseCSV(text);
-      setPreview({ rows: rows.map((row, i) => ({ row, errs: tpl.validate(row), idx: i })), template: activeTab });
+      setPreview({ rows: rows.map((row, i) => ({ row, errs: tpl.validate(row, { churches }), idx: i })), template: activeTab });
       setImportDone(null);
     };
     reader.readAsArrayBuffer(file);
@@ -475,7 +530,7 @@ function AdminImport({ members, setMembers, families, setFamilies, gas, setGas, 
     var valid=preview.rows.filter(r=>r.errs.length===0);
     setImporting(true);
     var existing=activeTab==="members"?members:activeTab==="families"?families:activeTab==="assistanceGroups"?gas:rosters;
-    var items=valid.map((r,i)=>tpl.transform(r.row,i,existing));
+    var items=valid.map((r,i)=>tpl.transform(r.row,i,existing,{churches}));
     var dbTable=activeTab==="members"?"members":activeTab==="families"?"families":activeTab==="assistanceGroups"?"assistance_groups":activeTab==="teams"?"rosters":"churches";
     // transform() already produces snake_case DB keys; just pass through
     // For churches, add allow_custom flag
@@ -1046,7 +1101,17 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         </select>
                       </div>
                     </div>
-                    <div><label>Igreja</label><input value={formData.church || ""} onChange={(e) => setFormData({ ...formData, church: e.target.value, gaId: "" })} placeholder="Newark, NJ - EUA" /></div>
+                    <div>
+                      <label>Igreja</label>
+                      <SearchSelect
+                        value={formData.church || ""}
+                        onSelect={(v) => setFormData({ ...formData, church: v, gaId: "" })}
+                        items={churches || []}
+                        getLabel={(c) => c.display || c}
+                        getId={(c) => c.display || c}
+                        placeholder="Buscar igreja…"
+                      />
+                    </div>
                     <div className="fr">
                       <div>
                         <label>Funções</label>
