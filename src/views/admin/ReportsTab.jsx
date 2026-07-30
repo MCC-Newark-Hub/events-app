@@ -2,12 +2,36 @@ import { useState } from "react";
 import { useT } from "@/i18n/strings";
 import { fmt, ROLE_BADGE } from "@/constants";
 
+const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const byName = (a, b) => norm(a.memberName).localeCompare(norm(b.memberName));
+
 export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
   const t = useT();
   const [type, setType] = useState("summary");
+  const [repSearch, setRepSearch] = useState("");
+  const [repCategory, setRepCategory] = useState("");
+  const [repChurch, setRepChurch] = useState("");
+  const [repDate, setRepDate] = useState("");
   const er = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const wl = wlRegs;
   const pend = er.filter((r) => !r.paid && !r.exempt);
+
+  const applyReportFilters = (rows) => rows.filter((r) => {
+    const q = norm(repSearch);
+    return (!q || norm(r.memberName).includes(q)) &&
+      (!repCategory || r.category === repCategory) &&
+      (!repChurch || r.church === repChurch) &&
+      (!repDate || r.registeredAt === repDate);
+  });
+  const reportFilterPool = [...er, ...(wl || [])];
+  const reportCategories = [...new Set(reportFilterPool.map((r) => r.category).filter(Boolean))].sort();
+  const reportChurches = [...new Set(reportFilterPool.map((r) => r.church).filter(Boolean))].sort();
+  const reportDates = [...new Set(reportFilterPool.map((r) => r.registeredAt).filter(Boolean))].sort();
+
+  const pendView = applyReportFilters(pend).sort(byName);
+  const wlView = applyReportFilters(wl.map((r, i) => ({ ...r, wlPosition: i + 1 }))).sort(byName);
+  const erView = applyReportFilters(er).sort(byName);
+
   const byCh = [...new Set(er.map((r) => r.church))]
     .map((ch) => ({
       ch,
@@ -55,6 +79,29 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
           </button>
         ))}
       </div>
+
+      {["pending", "waitlist", "roster", "badges"].includes(type) && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+          <input
+            value={repSearch}
+            onChange={(e) => setRepSearch(e.target.value)}
+            placeholder="Buscar por nome..."
+            style={{ flex: 1, minWidth: 160 }}
+          />
+          <select value={repCategory} onChange={(e) => setRepCategory(e.target.value)}>
+            <option value="">Todas as categorias</option>
+            {reportCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select value={repChurch} onChange={(e) => setRepChurch(e.target.value)}>
+            <option value="">Todas as igrejas</option>
+            {reportChurches.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select value={repDate} onChange={(e) => setRepDate(e.target.value)}>
+            <option value="">Todas as datas</option>
+            {reportDates.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+      )}
 
       {type === "summary" && (
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
@@ -125,7 +172,8 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
                 </tr>
               </thead>
               <tbody>
-                {pend.map((r) => (
+                {pendView.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "#6b7280", padding: 20 }}>{t.noRecords}</td></tr>}
+                {pendView.map((r) => (
                   <tr key={r.id}>
                     <td style={{ fontWeight: 600 }}>{r.memberName}</td>
                     <td>
@@ -171,9 +219,10 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {wl.map((r, i) => (
+                  {wlView.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "#6b7280", padding: 20 }}>{t.noRecords}</td></tr>}
+                  {wlView.map((r) => (
                     <tr key={r.id}>
-                      <td style={{ fontWeight: 700, color: "#92400e" }}>#{i + 1}</td>
+                      <td style={{ fontWeight: 700, color: "#92400e" }}>#{r.wlPosition}</td>
                       <td style={{ fontWeight: 600 }}>{r.memberName}</td>
                       <td>
                         <span className="badge badge-blue">{r.category}</span>
@@ -209,7 +258,8 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
                 </tr>
               </thead>
               <tbody>
-                {er.map((r) => (
+                {erView.length === 0 && <tr><td colSpan={10} style={{ textAlign: "center", color: "#6b7280", padding: 20 }}>{t.noRecords}</td></tr>}
+                {erView.map((r) => (
                   <tr key={r.id}>
                     <td style={{ fontFamily: "monospace", fontSize: 11 }}>{r.regNumber}</td>
                     <td style={{ fontWeight: 600 }}>
@@ -371,7 +421,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
               gap: 10,
             }}
           >
-            {er.slice(0, 15).map((r) => (
+            {erView.slice(0, 15).map((r) => (
               <div
                 key={r.id}
                 style={{
