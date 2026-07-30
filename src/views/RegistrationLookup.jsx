@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Search, ArrowLeft, XCircle, CheckCircle2, AlertTriangle, UserPlus } from "lucide-react";
-import { fmt, CATEGORIES, ROLE_BADGE } from "@/constants";
+import { fmt, CATEGORIES, ROLE_BADGE, OBREIRO_ROLES } from "@/constants";
 
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
@@ -104,7 +104,7 @@ export default function RegistrationLookup({ event, regs, members, updateReg, ad
   const [famSearch, setFamSearch] = useState("");
   const [famSelected, setFamSelected] = useState(null);
   const [showManual, setShowManual] = useState(false);
-  const [manualMember, setManualMember] = useState({ name: "", category: "Adulto" });
+  const [manualMember, setManualMember] = useState({ name: "", category: "Adulto", role: "" });
   const [addDone, setAddDone] = useState(false);
 
   const registeredIds = (regs || [])
@@ -451,11 +451,21 @@ export default function RegistrationLookup({ event, regs, members, updateReg, ad
                                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                               </select>
                             </div>
+                            <div>
+                              <label style={{ fontSize: 13 }}>{lang === "en" ? "Role (if applicable)" : "Função (se aplicável)"}</label>
+                              <select value={manualMember.role} onChange={(e) => setManualMember({ ...manualMember, role: e.target.value })}>
+                                <option value="">{lang === "en" ? "(None)" : "(Nenhum)"}</option>
+                                {OBREIRO_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                              </select>
+                              <p style={{ fontSize: 11, color: "#92400e", marginTop: 3 }}>
+                                {lang === "en" ? "Pastors and Ungidos are automatically identified as fee-exempt." : "Pastores e Ungidos são identificados automaticamente como isentos de taxa."}
+                              </p>
+                            </div>
                             <button
                               className="btn btn-warn btn-sm"
                               onClick={() => {
                                 if (!manualMember.name.trim()) return;
-                                setFamSelected({ id: "MANUAL-" + Date.now(), name: manualMember.name.trim(), category: manualMember.category, church: "", role: "", verified: false });
+                                setFamSelected({ id: "MANUAL-" + Date.now(), name: manualMember.name.trim(), category: manualMember.category, church: "", role: manualMember.role, verified: false });
                                 setShowManual(false);
                               }}
                             >

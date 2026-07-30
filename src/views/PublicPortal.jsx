@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Search, ArrowLeft, CheckCircle2, ClipboardList, Share2, AlertTriangle } from "lucide-react";
 import { STRINGS } from "@/i18n/strings";
-import { CATEGORIES, ROLE_BADGE, fmt } from "@/constants";
+import { CATEGORIES, ROLE_BADGE, OBREIRO_ROLES, fmt } from "@/constants";
 import BadgePrint from "@/components/BadgePrint";
 import { sb } from "@/lib/supabase";
 import { findSimilarMembers } from "@/lib/similarity";
@@ -271,12 +271,12 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
   const [primarySearch, setPrimarySearch] = useState("");
   const [primaryNotFound, setPrimaryNotFound] = useState(false);
   const [showManualPrimary, setShowManualPrimary] = useState(false);
-  const [manualPrimary, setManualPrimary] = useState({ name: "", gender: "M", category: "Adulto" });
+  const [manualPrimary, setManualPrimary] = useState({ name: "", gender: "M", category: "Adulto", role: "" });
   const [familyMembers, setFamilyMembers] = useState([]);
   const [famSearch, setFamSearch] = useState("");
   const [famNotFound, setFamNotFound] = useState(false);
   const [showManualFam, setShowManualFam] = useState(false);
-  const [manualFam, setManualFam] = useState({ name: "", gender: "M", category: "Adulto" });
+  const [manualFam, setManualFam] = useState({ name: "", gender: "M", category: "Adulto", role: "" });
   const [contact, setContact] = useState({ phone: "", email: "", whatsapp: true });
   const [translations, setTranslations] = useState({ en: false, es: false });
   const [allergies, setAllergies] = useState({ hasAny: false, other: "" });
@@ -307,7 +307,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
 
   const eventFee = (cat) => event?.fees?.[cat] ?? 0;
   const allParticipants = primary ? [primary, ...familyMembers] : [];
-  const totalFee = allParticipants.reduce((s, m) => s + (m.role === "Pastor" ? 0 : eventFee(m.category)), 0);
+  const totalFee = allParticipants.reduce((s, m) => s + (["Pastor", "Ungido"].includes(m.role) ? 0 : eventFee(m.category)), 0);
 
   const validateStep1 = () => {
     const e = {};
@@ -499,6 +499,14 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                             </select>
                           </div>
                         </div>
+                        <div>
+                          <label>{t.manualMemberRole}</label>
+                          <select value={manualPrimary.role} onChange={(e) => setManualPrimary({ ...manualPrimary, role: e.target.value })}>
+                            <option value="">{t.noRole}</option>
+                            {OBREIRO_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                          <p style={{ fontSize: 11, color: "#92400e", marginTop: 3 }}>{t.manualMemberRoleHint}</p>
+                        </div>
                         <div style={{ display: "flex", gap: 8 }}>
                           <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => setShowManualPrimary(false)}>{t.back}</button>
                           <button
@@ -512,7 +520,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                                 gender: manualPrimary.gender,
                                 category: manualPrimary.category,
                                 verified: false,
-                                role: "",
+                                role: manualPrimary.role,
                                 church: "",
                                 badgeName: manualPrimary.name.trim(),
                               });
@@ -580,7 +588,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                     <span style={{ fontWeight: 600 }}>{primary.name}</span>
                     <div style={{ display: "flex", gap: 6 }}>
                       <span className="badge badge-blue">{primary.category}</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "#2d8a4e" }}>{primary.role === "Pastor" ? t.exempt : eventFee(primary.category) === 0 ? t.free : fmt(eventFee(primary.category))}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "#2d8a4e" }}>{["Pastor", "Ungido"].includes(primary.role) ? t.exempt : eventFee(primary.category) === 0 ? t.free : fmt(eventFee(primary.category))}</span>
                     </div>
                   </div>
                 </div>
@@ -597,7 +605,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                         <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{m.category} · {m.gender}</span>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "#2d8a4e" }}>{eventFee(m.category) === 0 ? t.free : fmt(eventFee(m.category))}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#2d8a4e" }}>{["Pastor", "Ungido"].includes(m.role) ? t.exempt : eventFee(m.category) === 0 ? t.free : fmt(eventFee(m.category))}</span>
                         <button onClick={() => setFamilyMembers((prev) => prev.filter((_, j) => j !== i))} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 18, lineHeight: 1 }}>×</button>
                       </div>
                     </div>
@@ -664,7 +672,15 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                         <div><label>{t.manualMemberGender}</label><select value={manualFam.gender} onChange={(e) => setManualFam({ ...manualFam, gender: e.target.value })}><option value="M">{t.genderM}</option><option value="F">{t.genderF}</option></select></div>
                         <div><label>{t.manualMemberCategory}</label><select value={manualFam.category} onChange={(e) => setManualFam({ ...manualFam, category: e.target.value })}>{CATEGORIES.map((c) => <option key={c} value={c}>{c} — {eventFee(c) === 0 ? t.free : fmt(eventFee(c))}</option>)}</select></div>
                       </div>
-                      <button className="btn btn-warn btn-sm" onClick={() => { if (!manualFam.name) return; setFamilyMembers((prev) => [...prev, { ...manualFam, id: "MANUAL-" + Date.now(), verified: false, role: "", church: "", badgeName: manualFam.name }]); setManualFam({ name: "", gender: "M", category: "Adulto" }); setShowManualFam(false); }}>
+                      <div>
+                        <label>{t.manualMemberRole}</label>
+                        <select value={manualFam.role} onChange={(e) => setManualFam({ ...manualFam, role: e.target.value })}>
+                          <option value="">{t.noRole}</option>
+                          {OBREIRO_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                        <p style={{ fontSize: 11, color: "#92400e", marginTop: 3 }}>{t.manualMemberRoleHint}</p>
+                      </div>
+                      <button className="btn btn-warn btn-sm" onClick={() => { if (!manualFam.name) return; setFamilyMembers((prev) => [...prev, { ...manualFam, id: "MANUAL-" + Date.now(), verified: false, church: "", badgeName: manualFam.name }]); setManualFam({ name: "", gender: "M", category: "Adulto", role: "" }); setShowManualFam(false); }}>
                         + {lang === "en" ? "Add Unverified Member" : "Adicionar Membro Não Verificado"}
                       </button>
                     </div>
