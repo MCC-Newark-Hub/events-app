@@ -267,7 +267,7 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
   );
 }
 
-function PublicPortal({ event, members: propMembers, setMembers, churches, loading, regs, addReg, lang, setLang, onReset }) {
+function PublicPortal({ event, members: propMembers, setMembers, churches, loading, regs, addReg, lang, setLang, onReset, onLookup }) {
   const t = STRINGS[lang || "pt"];
   const [step, setStep] = useState(1);
   const [primary, setPrimary] = useState(null);
@@ -597,9 +597,16 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
                         <p style={{ fontSize: 12, color: "#78350f", marginTop: 10, marginBottom: 8 }}>
                           {t.needHelpContactClerk}
                         </p>
-                        <button onClick={() => { setPrimary(null); setPrimarySearch(""); }} style={{ background: "none", border: "1px solid #f59e0b", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", color: "#92400e" }}>
-                          {t.searchAnotherName}
-                        </button>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          {onLookup && (
+                            <button onClick={() => onLookup(primary.name)} style={{ background: "#f59e0b", border: "1px solid #f59e0b", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", color: "#fff", fontWeight: 600 }}>
+                              {t.viewMyConfirmation}
+                            </button>
+                          )}
+                          <button onClick={() => { setPrimary(null); setPrimarySearch(""); }} style={{ background: "none", border: "1px solid #f59e0b", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", color: "#92400e" }}>
+                            {t.searchAnotherName}
+                          </button>
+                        </div>
                       </div>
                     );
                   })()}

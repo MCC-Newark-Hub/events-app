@@ -11,6 +11,10 @@ import RegModal from "@/components/RegModal";
 import DetailModal from "@/components/DetailModal";
 import ApprovalsPanel from "@/components/ApprovalsPanel";
 import SearchSelect from "@/components/SearchSelect";
+import ConfirmDelete from "@/components/ConfirmDelete";
+import BulkBar from "@/components/BulkBar";
+import FamiliesPanel from "@/components/directory/FamiliesPanel";
+import GroupsPanel from "@/components/directory/GroupsPanel";
 import RegistrationsTab from "./admin/RegistrationsTab";
 import TeamsTab from "./admin/TeamsTab";
 import EventsTab from "./admin/EventsTab";
@@ -769,49 +773,6 @@ function makeTh(sk, sd, toggle) {
 }
 
 // ── Directory ─────────────────────────────────────────────────────────────────
-function ConfirmDelete({ label, count, onConfirm, onCancel }) {
-  return (
-    <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && onCancel()}>
-      <div className="modal" style={{ maxWidth: 360, textAlign: "center" }}>
-        <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
-        <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 8 }}>Confirmar exclusão</h3>
-        <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 20 }}>
-          {count > 1
-            ? <>Excluir <strong>{count} itens</strong>? Esta ação não pode ser desfeita.</>
-            : <>Remover <strong>{label}</strong>? Esta ação não pode ser desfeita.</>}
-        </p>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>Cancelar</button>
-          <button className="btn btn-danger" style={{ flex: 1 }} onClick={onConfirm}>Excluir</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Shared bulk-action bar shown when rows are selected
-function BulkBar({ selected, total, onSelectAll, onClearAll, onDeleteSelected, label, children }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 12, padding: "10px 14px",
-      background: "var(--sidebar-active-bg)", border: "1.5px solid var(--primary)",
-      borderRadius: 8, marginBottom: 10, flexWrap: "wrap",
-    }}>
-      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--primary)" }}>
-        {selected} selecionado{selected !== 1 ? "s" : ""}
-      </span>
-      <button className="btn btn-ghost btn-sm" onClick={onSelectAll} disabled={selected === total}>
-        Selecionar todos ({total})
-      </button>
-      <button className="btn btn-ghost btn-sm" onClick={onClearAll}>Limpar seleção</button>
-      {children}
-      <button className="btn btn-danger btn-sm" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5 }}
-        onClick={onDeleteSelected}>
-        <Trash2 size={13} /> Excluir {selected} {label}
-      </button>
-    </div>
-  );
-}
 
 function AdminDirectory({ churches, setChurches, members, setMembers, families, setFamilies, gas, setGas, rosters, setRosters, dbTeams, setDbTeams, events, regs, setRegs, notify }) {
   const TABS = [
@@ -841,14 +802,11 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   // Sort state
   const [chSk, setChSk] = useState("display"); const [chSd, setChSd] = useState("asc");
   const [mbSk, setMbSk] = useState("name");    const [mbSd, setMbSd] = useState("asc");
-  const [gaSk, setGaSk] = useState("name");    const [gaSd, setGaSd] = useState("asc");
   const mkToggle = (sk, setSk, sd, setSd) => (k) => { if (sk === k) setSd((d) => d === "asc" ? "desc" : "asc"); else { setSk(k); setSd("asc"); } };
   const chToggle = mkToggle(chSk, setChSk, chSd, setChSd);
   const mbToggle = mkToggle(mbSk, setMbSk, mbSd, setMbSd);
-  const gaToggle = mkToggle(gaSk, setGaSk, gaSd, setGaSd);
   const ChTh = makeTh(chSk, chSd, chToggle);
   const MbTh = makeTh(mbSk, mbSd, mbToggle);
-  const GaTh = makeTh(gaSk, gaSd, gaToggle);
 
   const switchTab = (id) => { setTab(id); setSearch(""); setEditing(null); setSelected([]); setFormData({}); };
 
@@ -1334,288 +1292,14 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       })()}
 
       {/* ── Families ─────────────────────────────────────────────────────── */}
-      {tab === "families" && (() => {
-        const list = (families || []).filter((f) =>
-          norm(f.name).includes(norm(search)) ||
-          (search.length > 0 && (f.memberIds || []).some((mid) => {
-            const m = (members || []).find((x) => x.id === mid);
-            return m && norm(m.name).includes(norm(search));
-          }))
-        ).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-        const allIds = list.map((f) => f.id).filter(Boolean);
-        return (
-          <>
-            {editing !== null && (
-              <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
-                <div className="modal" style={{ maxWidth: 480 }}>
-                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Nova Família" : "Editar Família"}</h3>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div><label>Nome *</label><input value={formData.name || ""} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Família Silva" /></div>
-                    <div>
-                      <label>Membros</label>
-                      <SearchSelect
-                        value=""
-                        onSelect={(id) => {
-                          if (!id) return;
-                          const sel = (members || []).find((m) => m.id === id);
-                          if (!sel) return;
-                          const cur = formData.selectedMembers || [];
-                          if (cur.find((m) => m.id === id)) return;
-                          setFormData({ ...formData, selectedMembers: [...cur, sel] });
-                        }}
-                        items={(members || []).filter((m) => !(formData.selectedMembers || []).find((s) => s.id === m.id))}
-                        getLabel={(m) => m.name}
-                        getId={(m) => m.id}
-                        placeholder="Buscar membro…"
-                      />
-                      {(formData.selectedMembers || []).length > 0 && (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-                          {(formData.selectedMembers || []).map((m) => (
-                            <span key={m.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "var(--sidebar-active-bg)", border: "1px solid var(--primary)", borderRadius: 12, padding: "2px 8px", fontSize: 12 }}>
-                              {m.name}
-                              <button onClick={() => setFormData({ ...formData, selectedMembers: (formData.selectedMembers || []).filter((x) => x.id !== m.id) })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
-                    <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
-                      if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
-                      const ids = (formData.selectedMembers || []).map((m) => m.id);
-                      const row = { name: formData.name.trim(), member_ids: ids };
-                      row.id = isNew ? ("F" + String(Date.now()).slice(-8)) : editing.id;
-                      saveRow("families", row, isNew, families, setFamilies, mapFamily);
-                    }}>{saving ? "Salvando…" : "Salvar"}</button>
-                  </div>
-                </div>
-              </div>
-            )}
-            {deleting && <ConfirmDelete label={deleting.label} count={deleting.ids.length}
-              onCancel={() => setDeleting(null)}
-              onConfirm={() => deleteRows("families", deleting.ids, families, setFamilies)} />}
-
-            {selected.length > 0 && (
-              <BulkBar selected={selected.length} total={allIds.length} label="famílias"
-                onSelectAll={() => selAll(allIds)} onClearAll={clearSel}
-                onDeleteSelected={() => setDeleting({ ids: selected, label: "" })} />
-            )}
-            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 36 }}>
-                      <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
-                        onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
-                    </th>
-                    <th>Nome</th><th>Membros</th><th style={{ width: 90 }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.map((f) => (
-                    <tr key={f.id} style={{ background: selected.includes(f.id) ? "var(--sidebar-active-bg)" : "" }}>
-                      <td><input type="checkbox" checked={selected.includes(f.id)} onChange={() => toggleSel(f.id)} /></td>
-                      <td style={{ fontWeight: 500 }}>{f.name}</td>
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                          {(f.memberIds || []).slice(0, expanded === f.id ? undefined : 3).map((mid) => {
-                            const m = (members || []).find((x) => x.id === mid);
-                            return <span key={mid} className="badge badge-gray">{m ? m.name : mid}</span>;
-                          })}
-                          {(f.memberIds || []).length > 3 && (
-                            <button onClick={() => setExpanded(expanded === f.id ? null : f.id)}
-                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", fontSize: 12, padding: 0 }}>
-                              {expanded === f.id ? <ChevronUp size={14} /> : `+${(f.memberIds || []).length - 3} mais`}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(f, { name: f.name, selectedMembers: (f.memberIds || []).map((mid) => (members || []).find((m) => m.id === mid)).filter(Boolean) })}><Pencil size={12} /></button>
-                          <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [f.id], label: f.name })}><Trash2 size={12} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {list.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", selectedMembers: [] })}><Plus size={14} /> Nova Família</button>
-              {(families || []).length > 0 && (
-                <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
-                  onClick={() => setDeleting({ ids: (families || []).map((f) => f.id).filter(Boolean), label: "" })}>
-                  <Trash2 size={13} /> Excluir TODAS ({(families || []).length})
-                </button>
-              )}
-            </div>
-          </>
-        );
-      })()}
+      {tab === "families" && (
+        <FamiliesPanel members={members} families={families} setFamilies={setFamilies} notify={notify} />
+      )}
 
       {/* ── GA Groups ────────────────────────────────────────────────────── */}
-      {tab === "groups" && (() => {
-        const rawList = (gas || []).filter((g) =>
-          ["name", "church"].some((f) => norm(g[f]).includes(norm(search)))
-        ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        const list = sortData(rawList, gaSk, gaSd);
-        const allIds = list.map((g) => g.id).filter(Boolean);
-        return (
-          <>
-            {editing !== null && (
-              <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
-                <div className="modal" style={{ maxWidth: 460 }}>
-                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Novo Grupo" : "Editar Grupo"}</h3>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div><label>Nome *</label><input value={formData.name || ""} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
-                    <div>
-                      <label>Igreja</label>
-                      <SearchSelect
-                        value={formData.church || ""}
-                        onSelect={(v) => setFormData({ ...formData, church: v })}
-                        items={churches || []}
-                        getLabel={(c) => c.display || c}
-                        getId={(c) => c.display || c}
-                        placeholder="Buscar igreja…"
-                      />
-                    </div>
-                    <div>
-                      <label>Líder</label>
-                      <SearchSelect
-                        value={formData.leaderId || ""}
-                        onSelect={(v) => setFormData({ ...formData, leaderId: v })}
-                        items={members || []}
-                        getLabel={(m) => m.name}
-                        getId={(m) => m.id}
-                        placeholder="Buscar membro…"
-                      />
-                    </div>
-                    <div><label>Descrição</label><input value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} /></div>
-                  </div>
-                  <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
-                    <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
-                      if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
-                      const row = { name: formData.name.trim(), church: formData.church || "", leader_id: formData.leaderId || null, description: formData.description || "" };
-                      row.id = isNew ? ("GA" + String(Date.now()).slice(-8)) : editing.id;
-                      saveRow("assistance_groups", row, isNew, gas, setGas, mapGA);
-                    }}>{saving ? "Salvando…" : "Salvar"}</button>
-                  </div>
-                </div>
-              </div>
-            )}
-            {deleting && <ConfirmDelete label={deleting.label} count={deleting.ids.length}
-              onCancel={() => setDeleting(null)}
-              onConfirm={() => deleteRows("assistance_groups", deleting.ids, gas, setGas)} />}
-
-            {managingGA && (() => {
-              const gaMembers = (members || []).filter((m) => m.gaId === managingGA.id);
-              const unassigned = (members || []).filter((m) => !m.gaId || m.gaId !== managingGA.id);
-              return (
-                <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setManagingGA(null)}>
-                  {/* overflow:visible so the SearchSelect dropdown isn't clipped by the modal's overflow-y:auto */}
-                  <div className="modal" style={{ maxWidth: 520, overflow: "visible" }}>
-                    <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 4 }}>
-                      {managingGA.name} — Membros
-                    </h3>
-                    <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
-                      {gaMembers.length} membro{gaMembers.length !== 1 ? "s" : ""} neste grupo
-                    </p>
-                    <div style={{ marginBottom: 16, position: "relative", zIndex: 10 }}>
-                      <label style={{ fontWeight: 600, fontSize: 13 }}>Adicionar membro</label>
-                      <SearchSelect
-                        value=""
-                        onSelect={async (memberId) => {
-                          if (!memberId) return;
-                          const { error } = await sb.from("members").update({ ga_id: managingGA.id }).eq("id", memberId);
-                          if (error) { notify("Erro: " + error.message); return; }
-                          setMembers((prev) => prev.map((m) => m.id === memberId ? { ...m, gaId: managingGA.id } : m));
-                        }}
-                        items={unassigned}
-                        getLabel={(m) => m.name}
-                        getId={(m) => m.id}
-                        placeholder="Buscar membro para adicionar…"
-                      />
-                    </div>
-                    <div style={{ maxHeight: 320, overflowY: "auto", border: "1px solid var(--border)", borderRadius: 8 }}>
-                      {gaMembers.length === 0 ? (
-                        <p style={{ textAlign: "center", color: "var(--muted)", padding: 20, fontSize: 13 }}>Nenhum membro neste grupo.</p>
-                      ) : gaMembers.map((m) => (
-                        <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid var(--border)" }}>
-                          <div>
-                            <span style={{ fontWeight: 500, fontSize: 14 }}>{m.name}</span>
-                            <span style={{ fontSize: 12, color: "var(--muted)", marginLeft: 8 }}>{m.category} · {m.church}</span>
-                          </div>
-                          <button className="btn btn-ghost btn-xs" title="Remover do grupo" onClick={async () => {
-                            const { error } = await sb.from("members").update({ ga_id: null }).eq("id", m.id);
-                            if (error) { notify("Erro: " + error.message); return; }
-                            setMembers((prev) => prev.map((x) => x.id === m.id ? { ...x, gaId: null } : x));
-                          }}>✕</button>
-                        </div>
-                      ))}
-                    </div>
-                    <button className="btn btn-ghost" style={{ marginTop: 16, width: "100%" }} onClick={() => setManagingGA(null)}>Fechar</button>
-                  </div>
-                </div>
-              );
-            })()}
-            {selected.length > 0 && (
-              <BulkBar selected={selected.length} total={allIds.length} label="grupos"
-                onSelectAll={() => selAll(allIds)} onClearAll={clearSel}
-                onDeleteSelected={() => setDeleting({ ids: selected, label: "" })} />
-            )}
-            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 36 }}>
-                      <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
-                        onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
-                    </th>
-                    <GaTh k="name">Nome</GaTh><th>Igreja</th><th>Líder</th><th style={{ width: 90 }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.map((g) => {
-                    const leader = (members || []).find((m) => m.id === g.leaderId);
-                    return (
-                      <tr key={g.id} style={{ background: selected.includes(g.id) ? "var(--sidebar-active-bg)" : "" }}>
-                        <td><input type="checkbox" checked={selected.includes(g.id)} onChange={() => toggleSel(g.id)} /></td>
-                        <td style={{ fontWeight: 500 }}>{g.name}</td>
-                        <td style={{ fontSize: 12 }}>{g.church}</td>
-                        <td style={{ fontSize: 13 }}>{leader ? leader.name : (g.leaderId || <span style={{ color: "var(--muted)" }}>—</span>)}</td>
-                        <td>
-                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                            <button className="btn btn-ghost btn-xs" style={{ fontSize: 11 }} onClick={() => setManagingGA(g)}>
-                              👥 {(members || []).filter((m) => m.gaId === g.id).length}
-                            </button>
-                            <button className="btn btn-ghost btn-xs" onClick={() => openEdit(g, { name: g.name, church: g.church || "", leaderId: g.leaderId || "", description: g.description || "" })}><Pencil size={12} /></button>
-                            <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [g.id], label: g.name })}><Trash2 size={12} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {list.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", church: "", leaderId: "", description: "" })}><Plus size={14} /> Novo Grupo</button>
-              {(gas || []).length > 0 && (
-                <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
-                  onClick={() => setDeleting({ ids: (gas || []).map((g) => g.id).filter(Boolean), label: "" })}>
-                  <Trash2 size={13} /> Excluir TODOS ({(gas || []).length})
-                </button>
-              )}
-            </div>
-          </>
-        );
-      })()}
+      {tab === "groups" && (
+        <GroupsPanel members={members} setMembers={setMembers} gas={gas} setGas={setGas} churches={churches} notify={notify} />
+      )}
 
       {/* ── Teams Domain ─────────────────────────────────────────────────── */}
       {tab === "teams_dir" && (() => {

@@ -90,10 +90,10 @@ function RegCard({ reg, onCancel, lang }) {
   );
 }
 
-export default function RegistrationLookup({ event, regs, members, churches, updateReg, addReg, lang, onBack }) {
-  const [searchMode, setSearchMode] = useState("number"); // "number" | "name"
+export default function RegistrationLookup({ event, regs, members, churches, updateReg, addReg, lang, onBack, initialName }) {
+  const [searchMode, setSearchMode] = useState(initialName ? "name" : "number"); // "number" | "name"
   const [query, setQuery] = useState("");
-  const [nameQuery, setNameQuery] = useState("");
+  const [nameQuery, setNameQuery] = useState(initialName || "");
   const [found, setFound] = useState(null);
   const [related, setRelated] = useState([]);
   const [notFound, setNotFound] = useState(false);

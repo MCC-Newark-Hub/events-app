@@ -164,7 +164,7 @@ export const STRINGS = {
     pendPayWarn: "com pagamento pendente.",
     payAtDesk: "Podem pagar no credenciamento ou com o atendente.",
     readOnlyNote:
-      "Você vê apenas seu(s) grupo(s). Para atualizar pagamentos, procure um atendente.",
+      "Você vê apenas seu(s) grupo(s). Você pode adicionar ou remover membros do grupo. Para atualizar pagamentos, procure um atendente.",
     teamReadOnly: "Você pode adicionar e remover membros. Para pagamentos, procure um atendente.",
     // approvals
     capacityOverride: "⚡ Inscrição Excedente",
@@ -290,6 +290,7 @@ export const STRINGS = {
     membersAvailableHint: "membros disponíveis — digite para buscar",
     needHelpContactClerk: "Se precisar de ajuda, fale com um atendente.",
     searchAnotherName: "Buscar outro nome",
+    viewMyConfirmation: "Ver confirmação",
     cantFindMyself: "Não encontrei meu nome",
     didYouMean: "Você quis dizer:",
     isThisYou: "Encontramos este nome parecido no sistema. É você?",
@@ -440,7 +441,7 @@ export const STRINGS = {
     reachOut: "Reach out to confirm attendance.",
     pendPayWarn: "with pending payment.",
     payAtDesk: "They can pay at check-in or with the clerk.",
-    readOnlyNote: "You only see your group(s). For payment updates, find a clerk.",
+    readOnlyNote: "You only see your group(s). You can add or remove group members. For payment updates, find a clerk.",
     teamReadOnly: "You can add and remove members. For payments, find a clerk.",
     capacityOverride: "⚡ Over-Capacity Registration",
     exemptionReq: "💸 Exemption Request",
@@ -557,6 +558,7 @@ export const STRINGS = {
     membersAvailableHint: "members available — type to search",
     needHelpContactClerk: "If you need help, speak with a clerk.",
     searchAnotherName: "Search another name",
+    viewMyConfirmation: "View confirmation",
     cantFindMyself: "I couldn't find my name",
     didYouMean: "Did you mean:",
     isThisYou: "We found this similar name on file. Is this you?",

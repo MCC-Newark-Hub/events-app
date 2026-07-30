@@ -29,6 +29,7 @@ export default function App() {
   // Restore session from localStorage on mount
   const [view, setView] = useState(() => localStorage.getItem("mcc_view") || "login");
   const [savedPin] = useState(() => localStorage.getItem("mcc_pin") || null);
+  const [lookupPrefill, setLookupPrefill] = useState("");
   const [toast, setToast] = useState(null);
   const userRef = useRef(null);
 
@@ -109,7 +110,8 @@ export default function App() {
             updateReg={appData.updateReg}
             addReg={appData.addReg}
             lang={lang}
-            onBack={() => setView("login")}
+            initialName={lookupPrefill}
+            onBack={() => { setLookupPrefill(""); setView("login"); }}
           />
         )}
         {!checkinParam && !selfCheckinParam && view === "public" && (
@@ -124,6 +126,7 @@ export default function App() {
             lang={lang}
             setLang={setLang}
             onReset={() => setView("login")}
+            onLookup={(name) => { setLookupPrefill(name || ""); setView("lookup"); }}
           />
         )}
         {!checkinParam && !selfCheckinParam && view === ROLES_SYS.CLERK && <ClerkView {...shared} />}

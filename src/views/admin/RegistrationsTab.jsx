@@ -9,25 +9,11 @@ import DetailModal from "@/components/DetailModal";
 import BadgePrint from "@/components/BadgePrint";
 import Modal from "@/components/Modal";
 import { resendConfirmation } from "@/lib/resendConfirmation";
+import { useSortable } from "@/hooks/useSortable";
 
 const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-function useSortable(data, defaultKey) {
-  const [sk, setSk] = useState(defaultKey);
-  const [sd, setSd] = useState("asc");
-  const toggle = (k) => { if (sk === k) setSd((d) => d === "asc" ? "desc" : "asc"); else { setSk(k); setSd("asc"); } };
-  const sorted = [...(data || [])].sort((a, b) => {
-    const av = a[sk] ?? ""; const bv = b[sk] ?? "";
-    const c = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" });
-    return sd === "asc" ? c : -c;
-  });
-  const Th = ({ k, children, style }) => (
-    <th onClick={() => toggle(k)} style={{ cursor: "pointer", userSelect: "none", ...style }}>
-      {children}{sk === k ? (sd === "asc" ? " \u2191" : " \u2193") : ""}
-    </th>
-  );
-  return { sorted, Th };
-}
+const statusSortOf = (r) => r.cancelled ? "cancelado" : r.waitlisted ? "lista de espera" : r.excedente ? "excedente" : r.exempt ? "isento" : r.paid ? "pago" : "pendente";
 
 export default function RegistrationsTab(props) {
   const {
@@ -68,9 +54,15 @@ export default function RegistrationsTab(props) {
   const all = regs.filter((r) => r.eventId === event?.id);
   const active = all.filter((r) => !r.cancelled && !r.waitlisted);
   const preFiltered = all.filter((r) => {
+    const q = norm(search);
     const ms =
-      norm(r.memberName).includes(norm(search)) ||
-      norm(r.regNumber).includes(norm(search));
+      norm(r.memberName).includes(q) ||
+      norm(r.regNumber).includes(q) ||
+      norm(r.role).includes(q) ||
+      norm(r.category).includes(q) ||
+      norm(r.church).includes(q) ||
+      norm(r.team).includes(q) ||
+      norm(statusSortOf(r)).includes(q);
     const mf =
       filter === "all" ||
       (filter === "paid" && r.paid) ||
@@ -80,7 +72,7 @@ export default function RegistrationsTab(props) {
       (filter === "excedente" && r.excedente) ||
       (filter === "cancelled" && r.cancelled);
     return ms && mf;
-  });
+  }).map((r) => ({ ...r, statusSort: statusSortOf(r) }));
   const { sorted: filtered, Th } = useSortable(preFiltered, "memberName");
   return (
     <div>
@@ -143,13 +135,13 @@ export default function RegistrationsTab(props) {
                 </th>
                 <th>{t.regNum}</th>
                 <Th k="memberName">{t.memberName}</Th>
-                <th>{t.cargo}</th>
+                <Th k="role">{t.cargo}</Th>
                 <Th k="category">{t.cat}</Th>
-                <th>{t.churchH}</th>
+                <Th k="church">{t.churchH}</Th>
                 <Th k="team">{t.teamH}</Th>
                 <Th k="fee">{t.feeH}</Th>
                 <Th k="registeredAt">{t.regDate}</Th>
-                <th>{t.statusH}</th>
+                <Th k="statusSort">{t.statusH}</Th>
                 <th></th>
               </tr>
             </thead>

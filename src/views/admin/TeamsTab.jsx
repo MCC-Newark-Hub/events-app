@@ -34,6 +34,14 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
     return r.paid || r.exempt ? "confirmed" : "pending";
   };
 
+  const sortedMids = (mids) => {
+    return [...mids].sort((a, b) => {
+      const ma = members.find((x) => x.id === a);
+      const mb = members.find((x) => x.id === b);
+      return norm(ma?.name || "").localeCompare(norm(mb?.name || ""));
+    });
+  };
+
   const addToRoster = async (team, mid) => {
     let updatedRoster = null;
     setRosters((prev) => {
@@ -96,6 +104,9 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
       return { ...prev, [team]: next };
     });
   };
+
+  const selectAllTeam = (team, ids) => setSelected((prev) => ({ ...prev, [team]: ids }));
+  const clearTeamSelection = (team) => setSelected((prev) => ({ ...prev, [team]: [] }));
 
   const registerSelected = async (team) => {
     const mids = selected[team] || [];
@@ -375,6 +386,8 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
           const mids = roster?.memberIds || [];
           const counts = { confirmed: 0, pending: 0, not_registered: 0 };
           mids.forEach((mid) => counts[getStatus(mid)]++);
+          const visible = sortedMids(mids);
+          const visibleNotRegisteredIds = visible.filter((mid) => getStatus(mid) === "not_registered");
           return (
             <div className="card" key={team} style={{ padding: 0, overflow: "hidden" }}>
               <div
@@ -414,6 +427,9 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
                   )}
                 </div>
                 <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                  {mids.length > 0 && (
+                    <span className="badge badge-blue">{mids.length} total</span>
+                  )}
                   {counts.confirmed > 0 && (
                     <span className="badge badge-green">{counts.confirmed}✓</span>
                   )}
@@ -422,6 +438,20 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
                   )}
                   {counts.not_registered > 0 && (
                     <span className="badge badge-gray">{counts.not_registered}○</span>
+                  )}
+                  {visibleNotRegisteredIds.length > 0 && (
+                    <button
+                      className="btn btn-ghost btn-xs"
+                      onClick={() => selectAllTeam(team, visibleNotRegisteredIds)}
+                      disabled={(selected[team]?.length || 0) === visibleNotRegisteredIds.length}
+                    >
+                      Selecionar todos
+                    </button>
+                  )}
+                  {(selected[team]?.length || 0) > 0 && (
+                    <button className="btn btn-ghost btn-xs" onClick={() => clearTeamSelection(team)}>
+                      Limpar
+                    </button>
                   )}
                   {(selected[team]?.length || 0) > 0 && (
                     <button
@@ -526,7 +556,7 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
                 {mids.length === 0 && (
                   <p style={{ fontSize: 13, color: "#9ca3af", padding: "8px 0" }}>{t.noMembers}</p>
                 )}
-                {mids.map((mid) => {
+                {visible.map((mid) => {
                   const m = members.find((x) => x.id === mid);
                   const s = getStatus(mid);
                   const cfg = STATUS_CFG[s];

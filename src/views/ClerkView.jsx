@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, ClipboardList, Users } from "lucide-react";
+import { Search, ClipboardList, Users, Home, HeartHandshake } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { ROLE_BADGE, CATEGORIES, ROLE_GROUPS, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
@@ -11,11 +11,17 @@ import StatusBadge from "@/components/StatusBadge";
 import RegModal from "@/components/RegModal";
 import DetailModal from "@/components/DetailModal";
 import Modal from "@/components/Modal";
+import FamiliesPanel from "@/components/directory/FamiliesPanel";
+import GroupsPanel from "@/components/directory/GroupsPanel";
 import { resendConfirmation } from "@/lib/resendConfirmation";
 import { syncRegistrationNames } from "@/lib/syncMemberName";
+import { useSortable } from "@/hooks/useSortable";
+
+const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const statusSortOf = (r) => r.cancelled ? "cancelado" : r.waitlisted ? "lista de espera" : r.excedente ? "excedente" : r.exempt ? "isento" : r.paid ? "pago" : "pendente";
 
 function ClerkView(props) {
-  const { event, regs, setRegs, members, setMembers, families, setFamilies, dbTeams, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify } = props;
+  const { event, regs, setRegs, members, setMembers, families, setFamilies, gas, setGas, churches, dbTeams, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify } = props;
   const t = useT();
   const [sec, setSec] = useState("regs");
   const [search, setSearch] = useState("");
@@ -50,7 +56,12 @@ function ClerkView(props) {
   const allActiveAll = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const allActive = allActiveAll.filter((r) => cityOf(r.church) === myCity);
   const myWlRegs = (wlRegs || []).filter((r) => cityOf(r.church) === myCity);
-  const viewRegs = (tab === "active" ? allActive : tab === "waitlist" ? myWlRegs : regs.filter((r) => r.eventId === event?.id && r.cancelled && cityOf(r.church) === myCity)).filter((r) => (r.memberName || "").toLowerCase().includes(search.toLowerCase()) || (r.regNumber || "").toLowerCase().includes(search.toLowerCase()) || (r.church || "").toLowerCase().includes(search.toLowerCase()));
+  const viewRegsBase = (tab === "active" ? allActive : tab === "waitlist" ? myWlRegs : regs.filter((r) => r.eventId === event?.id && r.cancelled && cityOf(r.church) === myCity)).filter((r) => {
+    const q = norm(search);
+    return norm(r.memberName).includes(q) || norm(r.regNumber).includes(q) || norm(r.church).includes(q) ||
+      norm(r.role).includes(q) || norm(r.category).includes(q) || norm(r.team).includes(q) || norm(statusSortOf(r)).includes(q);
+  }).map((r) => ({ ...r, statusSort: statusSortOf(r) }));
+  const { sorted: viewRegs, Th } = useSortable(viewRegsBase, "memberName");
   const suggestions = sec === "regs" && tab !== "approvals" && search.length > 1 ? myMembers.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()) && !allActiveAll.find((r) => r.memberId === m.id)).slice(0, 5) : [];
   const memberList = myMembers
     .filter((m) => (m.name || "").toLowerCase().includes(search.toLowerCase()))
@@ -63,9 +74,14 @@ function ClerkView(props) {
     { k: "approvals", l: `Solicitações${pendingApprovalList.length > 0 ? ` (${pendingApprovalList.length})` : ""}` },
   ];
 
+  const myFamilies = families.filter((f) => (f.memberIds || []).some((id) => myMembers.some((m) => m.id === id)));
+  const myGas = (gas || []).filter((g) => cityOf(g.church) === myCity);
+
   const navItems = [
     { id: "regs", icon: <ClipboardList size={16} />, label: t.registrations || "Inscrições" },
     { id: "members", icon: <Users size={16} />, label: `Membros (${myMembers.length})` },
+    { id: "families", icon: <Home size={16} />, label: `Famílias (${myFamilies.length})` },
+    { id: "groups", icon: <HeartHandshake size={16} />, label: `Grupos (${myGas.length})` },
   ];
   const switchSec = (id) => { setSec(id); setSearch(""); };
 
@@ -242,15 +258,16 @@ function ClerkView(props) {
                 ) : (
                   <div className="table-wrap">
                     <table className="table">
-                      <thead><tr><th>{t.regNum}</th><th>{t.memberName}</th><th>{t.cargo}</th><th>{t.cat}</th><th>{t.teamH}</th><th>{t.feeH}</th><th>{t.regDate}</th><th>{t.statusH}</th><th>Presença</th><th>{t.actions}</th></tr></thead>
+                      <thead><tr><th>{t.regNum}</th><Th k="memberName">{t.memberName}</Th><Th k="role">{t.cargo}</Th><Th k="category">{t.cat}</Th><Th k="church">{t.churchH}</Th><Th k="team">{t.teamH}</Th><Th k="fee">{t.feeH}</Th><Th k="registeredAt">{t.regDate}</Th><Th k="statusSort">{t.statusH}</Th><th>Presença</th><th>{t.actions}</th></tr></thead>
                       <tbody>
-                        {viewRegs.length === 0 && <tr><td colSpan={10} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
+                        {viewRegs.length === 0 && <tr><td colSpan={11} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
                         {viewRegs.map((r) => (
                           <tr key={r.id}>
                             <td style={{ fontFamily: "monospace", fontSize: 11, color: "#1a3a6b", fontWeight: 600, whiteSpace: "nowrap" }}>{r.regNumber || "—"}</td>
                             <td><div style={{ fontWeight: 600 }}>{r.memberName || "—"}</div></td>
                             <td>{r.role ? <span className={`badge ${ROLE_BADGE[r.role] || "badge-gray"}`}>{r.role}</span> : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}</td>
                             <td><span className="badge badge-blue">{r.category || "—"}</span></td>
+                            <td style={{ fontSize: 12, color: "#6b7280" }}>{r.church || "—"}</td>
                             <td style={{ fontSize: 12 }}>{r.team || "—"}</td>
                             <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{r.exempt ? <span style={{ color: "#6b7280" }}>{t.exempt}</span> : fmt(r.fee ?? 0)}</td>
                             <td style={{ fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }}>{r.registeredAt || "—"}</td>
@@ -290,7 +307,7 @@ function ClerkView(props) {
                 )}
               </div>
             </>
-          ) : (
+          ) : sec === "members" ? (
             <>
               <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                 <div className="sb" style={{ flex: 1 }}>
@@ -332,6 +349,10 @@ function ClerkView(props) {
                 </div>
               </div>
             </>
+          ) : sec === "families" ? (
+            <FamiliesPanel members={myMembers} families={myFamilies} setFamilies={setFamilies} notify={notify} />
+          ) : (
+            <GroupsPanel members={myMembers} setMembers={setMembers} gas={myGas} setGas={setGas} churches={churches} notify={notify} defaultChurch={myChurch} lockChurch />
           )}
         </div>
         </div>
