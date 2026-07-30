@@ -120,7 +120,12 @@ export function useAppData({ getUserRef, notify }) {
   const [churches, setChurches] = useState(CHURCH_LIST);
   const [rosters, setRosters] = useState([]);
   const [approvals, setApprovals] = useState([]);
-  const [event, setEvent] = useState(null);
+  const [event, setEventState] = useState(null);
+  const setEvent = function (e) {
+    setEventState(e);
+    if (e && e.id) localStorage.setItem("mcc_event_id", e.id);
+    else localStorage.removeItem("mcc_event_id");
+  };
   const [seq, setSeq] = useState(0);
   const [dbCategories, setDbCategories] = useState([]);
   const [dbFunctions, setDbFunctions] = useState([]);
@@ -158,7 +163,9 @@ export function useAppData({ getUserRef, notify }) {
         if (memRes.error) console.error("Members query failed:", memRes.error);
         var evList = evRes.data || [];
         setEvents(evList);
-        setEvent(evList[0] || null);
+        var storedEventId = localStorage.getItem("mcc_event_id");
+        var restoredEvent = storedEventId && evList.find(function (e) { return e.id === storedEventId; });
+        setEventState(restoredEvent || evList[0] || null);
         var memberList = (memRes.data || []).map(mapMember);
         if (memberList.length === 0) console.warn("Members loaded as empty — check Supabase RLS on the members table");
         setMembers(memberList);

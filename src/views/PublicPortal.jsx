@@ -4,6 +4,7 @@ import { STRINGS } from "@/i18n/strings";
 import { CATEGORIES, ROLE_BADGE, fmt } from "@/constants";
 import BadgePrint from "@/components/BadgePrint";
 import { sb } from "@/lib/supabase";
+import { findSimilarMembers } from "@/lib/similarity";
 
 // Accent-insensitive search: "joao" matches "João"
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -296,6 +297,12 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
   // Include already-registered members in primary search so we can show their status
   const primaryResults = primarySearch.length > 0 ? allMembers.filter((m) => norm(m.name).includes(norm(primarySearch))).slice(0, 20) : [];
   const famResults = famSearch.length > 0 ? allMembers.filter((m) => norm(m.name).includes(norm(famSearch)) && m.id !== primary?.id && !familyMembers.find((fm) => fm.id === m.id)).slice(0, 8) : [];
+  const similarPrimary = primarySearch.length > 2 && primaryResults.length === 0
+    ? findSimilarMembers(primarySearch, allMembers, { limit: 4 })
+    : [];
+  const similarFam = famSearch.length > 2 && famResults.length === 0
+    ? findSimilarMembers(famSearch, allMembers, { limit: 4, excludeIds: [primary?.id, ...familyMembers.map((fm) => fm.id)].filter(Boolean) })
+    : [];
   const existingReg = primary ? (regs || []).find((r) => r.eventId === event?.id && r.memberId === primary.id && !r.cancelled) : null;
 
   const eventFee = (cat) => event?.fees?.[cat] ?? 0;
@@ -450,6 +457,17 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                   )}
                   {primarySearch.length > 0 && primaryResults.length === 0 && !primary && (
                     <div style={{ marginTop: 8, padding: "10px 14px", background: "#fef3c7", borderRadius: 8, fontSize: 13, color: "#92400e" }}>{t.nameNotFound} {t.nameNotFoundClerk}</div>
+                  )}
+                  {similarPrimary.length > 0 && !primary && (
+                    <div style={{ marginTop: 8, border: "1.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+                      <div style={{ padding: "6px 14px", background: "#f8f9fb", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{t.didYouMean}</div>
+                      {similarPrimary.map((m) => (
+                        <div key={m.id} onClick={() => { setPrimary(m); setPrimarySearch(m.name); setPrimaryNotFound(false); }} style={{ padding: "9px 14px", cursor: "pointer", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}>
+                          <span style={{ fontWeight: 600 }}>{m.name}</span>
+                          <span style={{ display: "flex", gap: 5 }}><span className="badge badge-blue">{m.category}</span><span style={{ fontSize: 12, color: "#6b7280" }}>{m.church}</span></span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                   {primarySearch.length > 0 && primaryResults.length === 0 && !primary && !showManualPrimary && (
                     <button
@@ -619,6 +637,17 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                   </div>
                 )}
                 {famSearch.length > 1 && famResults.length === 0 && <div style={{ marginTop: 8, padding: "10px 14px", background: "#fef3c7", borderRadius: 8, fontSize: 13, color: "#92400e" }}>{t.nameNotFound}</div>}
+                {similarFam.length > 0 && (
+                  <div style={{ marginTop: 8, border: "1.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+                    <div style={{ padding: "6px 14px", background: "#f8f9fb", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{t.didYouMean}</div>
+                    {similarFam.map((m) => (
+                      <div key={m.id} onClick={() => { setFamilyMembers((prev) => [...prev, { ...m, verified: true }]); setFamSearch(""); }} style={{ padding: "9px 14px", cursor: "pointer", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}>
+                        <span style={{ fontWeight: 600 }}>{m.name}</span>
+                        <span style={{ display: "flex", gap: 5 }}><span className="badge badge-blue">{m.category}</span><span style={{ fontSize: 12, color: "#6b7280" }}>{m.gender}</span></span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -628,7 +657,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                 </div>
                 {showManualFam && (
                   <div style={{ background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 10, padding: "14px" }}>
-                    <p style={{ fontSize: 12, color: "#92400e", marginBottom: 10 }}>{t.nameNotFoundClerk}</p>
+                    <p style={{ fontSize: 12, color: "#92400e", marginBottom: 10 }}>{t.addManuallyHint}</p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       <div><label>{t.manualMemberName}</label><input value={manualFam.name} onChange={(e) => setManualFam({ ...manualFam, name: e.target.value })} /></div>
                       <div className="fr">

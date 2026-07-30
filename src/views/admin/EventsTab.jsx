@@ -16,8 +16,12 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
   const [importLoading, setImportLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null); // { id, name, checking, regCount }
   const [deleting, setDeleting] = useState(false);
+  const [showForceDelete, setShowForceDelete] = useState(false);
+  const [forceConfirmText, setForceConfirmText] = useState("");
 
   const requestDelete = async (ev) => {
+    setShowForceDelete(false);
+    setForceConfirmText("");
     setConfirmDelete({ id: ev.id, name: ev.name, checking: true, regCount: 0 });
     const { count } = await sb
       .from("registrations")
@@ -26,20 +30,42 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
     setConfirmDelete({ id: ev.id, name: ev.name, checking: false, regCount: count || 0 });
   };
 
+  const deleteEventRow = async (id) => {
+    await sb.from("rosters").delete().eq("event_id", id);
+    await sb.from("approvals").delete().eq("event_id", id);
+    await sb.from("registrations").delete().eq("event_id", id);
+    const { error } = await sb.from("events").delete().eq("id", id);
+    if (error) throw error;
+    setEvents((prev) => prev.filter((e) => e.id !== id));
+    if (setRosters) setRosters((prev) => prev.filter((r) => r.eventId !== id));
+    if (event?.id === id) setEvent(null);
+  };
+
   const confirmDeleteEvent = async () => {
     if (!confirmDelete || confirmDelete.regCount > 0) return;
     const { id } = confirmDelete;
     setDeleting(true);
     try {
-      await sb.from("rosters").delete().eq("event_id", id);
-      await sb.from("approvals").delete().eq("event_id", id);
-      const { error } = await sb.from("events").delete().eq("id", id);
-      if (error) throw error;
-      setEvents((prev) => prev.filter((e) => e.id !== id));
-      if (setRosters) setRosters((prev) => prev.filter((r) => r.eventId !== id));
-      if (event?.id === id) setEvent(null);
+      await deleteEventRow(id);
       notify("Evento excluído.");
       setConfirmDelete(null);
+    } catch (err) {
+      notify("Erro ao excluir evento: " + (err?.message || "erro desconhecido"));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const forceDeleteEvent = async () => {
+    if (!confirmDelete || forceConfirmText !== confirmDelete.name) return;
+    const { id } = confirmDelete;
+    setDeleting(true);
+    try {
+      await deleteEventRow(id);
+      notify("Evento e todas as inscrições foram excluídos.");
+      setConfirmDelete(null);
+      setShowForceDelete(false);
+      setForceConfirmText("");
     } catch (err) {
       notify("Erro ao excluir evento: " + (err?.message || "erro desconhecido"));
     } finally {
@@ -225,6 +251,43 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
                 </button>
               )}
             </div>
+
+            {!confirmDelete.checking && confirmDelete.regCount > 0 && (
+              <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px dashed var(--border)", textAlign: "left" }}>
+                {!showForceDelete ? (
+                  <button
+                    onClick={() => setShowForceDelete(true)}
+                    style={{ background: "none", border: "none", color: "#c0392b", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 }}
+                  >
+                    Sou administrador e quero excluir mesmo assim
+                  </button>
+                ) : (
+                  <div style={{ background: "#fef2f2", border: "1.5px solid #fca5a5", borderRadius: 8, padding: "12px 14px" }}>
+                    <p style={{ fontSize: 12, color: "#991b1b", marginBottom: 10, lineHeight: 1.5 }}>
+                      ⚠️ Isso excluirá permanentemente o evento e <strong>todas as {confirmDelete.regCount} inscrições</strong> vinculadas,
+                      incluindo pagamentos registrados. Não pode ser desfeito.
+                    </p>
+                    <label style={{ fontSize: 12, color: "#991b1b" }}>
+                      Digite <strong>{confirmDelete.name}</strong> para confirmar:
+                    </label>
+                    <input
+                      value={forceConfirmText}
+                      onChange={(e) => setForceConfirmText(e.target.value)}
+                      style={{ marginTop: 4, marginBottom: 10 }}
+                      autoFocus
+                    />
+                    <button
+                      className="btn btn-danger"
+                      style={{ width: "100%" }}
+                      disabled={deleting || forceConfirmText !== confirmDelete.name}
+                      onClick={forceDeleteEvent}
+                    >
+                      {deleting ? "Excluindo..." : `Excluir evento e ${confirmDelete.regCount} inscrições`}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </Modal>
       )}

@@ -99,7 +99,7 @@ export default function App() {
             setLang={setLang}
           />
         )}
-        {!checkinParam && !selfCheckinParam && view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} onPublicRegister={() => setView("public")} onLookup={() => setView("lookup")} />}
+        {!checkinParam && !selfCheckinParam && view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} event={appData.event} onPublicRegister={() => setView("public")} onLookup={() => setView("lookup")} />}
         {!checkinParam && !selfCheckinParam && view === "lookup" && (
           <RegistrationLookup
             event={appData.event}

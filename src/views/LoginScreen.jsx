@@ -4,7 +4,7 @@ import { STRINGS } from "@/i18n/strings";
 import ICMLogo from "@/components/ICMLogo";
 import PinLogin from "@/components/PinLogin";
 
-function LoginScreen({ login, lang, setLang, onPublicRegister, onLookup }) {
+function LoginScreen({ login, lang, setLang, event, onPublicRegister, onLookup }) {
   const t = STRINGS[lang];
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
@@ -57,9 +57,28 @@ function LoginScreen({ login, lang, setLang, onPublicRegister, onLookup }) {
           >
             {t.appName}
           </h1>
-          <p style={{ color: "rgba(255,255,255,.7)", fontSize: 15, marginBottom: 32 }}>
+          <p style={{ color: "rgba(255,255,255,.7)", fontSize: 15, marginBottom: event ? 16 : 32 }}>
             {t.appSub}
           </p>
+          {event && (
+            <div
+              style={{
+                display: "inline-block",
+                background: "rgba(255,255,255,.1)",
+                border: "1px solid rgba(255,255,255,.25)",
+                borderRadius: 10,
+                padding: "10px 18px",
+                marginBottom: 28,
+              }}
+            >
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 15, fontFamily: "'Lora',Georgia,serif" }}>
+                {event.name}
+              </div>
+              <div style={{ color: "rgba(255,255,255,.7)", fontSize: 12, marginTop: 2 }}>
+                {event.date}{event.location ? ` · ${event.location}` : ""}
+              </div>
+            </div>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <button
               className="btn btn-accent"
