@@ -3,8 +3,11 @@ import { Search, ArrowLeft, CheckCircle2, ClipboardList, Share2, AlertTriangle }
 import { STRINGS } from "@/i18n/strings";
 import { CATEGORIES, ROLE_BADGE, OBREIRO_ROLES, fmt } from "@/constants";
 import BadgePrint from "@/components/BadgePrint";
+import Modal from "@/components/Modal";
+import ChurchSearch from "@/components/ChurchSearch";
 import { sb } from "@/lib/supabase";
 import { findSimilarMembers } from "@/lib/similarity";
+import { syncRegistrationNames } from "@/lib/syncMemberName";
 
 // Accent-insensitive search: "joao" matches "João"
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -264,19 +267,22 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
   );
 }
 
-function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang, setLang, onReset }) {
+function PublicPortal({ event, members: propMembers, setMembers, churches, loading, regs, addReg, lang, setLang, onReset }) {
   const t = STRINGS[lang || "pt"];
   const [step, setStep] = useState(1);
   const [primary, setPrimary] = useState(null);
   const [primarySearch, setPrimarySearch] = useState("");
   const [primaryNotFound, setPrimaryNotFound] = useState(false);
   const [showManualPrimary, setShowManualPrimary] = useState(false);
-  const [manualPrimary, setManualPrimary] = useState({ name: "", gender: "M", category: "Adulto", role: "" });
+  const [manualPrimary, setManualPrimary] = useState({ name: "", gender: "M", category: "Adulto", role: "", church: "" });
+  const [correctingSuggestion, setCorrectingSuggestion] = useState(null); // { member, target: "primary" | "family" }
+  const [correctedName, setCorrectedName] = useState("");
+  const [savingCorrection, setSavingCorrection] = useState(false);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [famSearch, setFamSearch] = useState("");
   const [famNotFound, setFamNotFound] = useState(false);
   const [showManualFam, setShowManualFam] = useState(false);
-  const [manualFam, setManualFam] = useState({ name: "", gender: "M", category: "Adulto", role: "" });
+  const [manualFam, setManualFam] = useState({ name: "", gender: "M", category: "Adulto", role: "", church: "" });
   const [contact, setContact] = useState({ phone: "", email: "", whatsapp: true });
   const [translations, setTranslations] = useState({ en: false, es: false });
   const [allergies, setAllergies] = useState({ hasAny: false, other: "" });
@@ -315,6 +321,38 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
     if (existingReg) e.primary = t.alreadyRegisteredError;
     setErrors(e);
     return Object.keys(e).length === 0;
+  };
+
+  const openSuggestion = (member, target) => {
+    setCorrectingSuggestion({ member, target });
+    setCorrectedName(member.name);
+  };
+
+  const confirmSuggestion = async () => {
+    if (!correctingSuggestion) return;
+    const { member, target } = correctingSuggestion;
+    const finalName = correctedName.trim();
+    let resolved = member;
+    if (finalName && finalName !== member.name) {
+      setSavingCorrection(true);
+      const { data, error } = await sb.from("members").update({ name: finalName, badge_name: finalName }).eq("id", member.id).select().single();
+      setSavingCorrection(false);
+      if (!error && data) {
+        resolved = { ...member, name: finalName, badgeName: finalName };
+        if (setMembers) setMembers((prev) => prev.map((mm) => (mm.id === member.id ? { ...mm, name: finalName, badgeName: finalName } : mm)));
+        syncRegistrationNames({ memberId: member.id, oldName: member.name, newName: finalName, newBadgeName: finalName });
+      }
+    }
+    if (target === "primary") {
+      setPrimary(resolved);
+      setPrimarySearch(resolved.name);
+      setPrimaryNotFound(false);
+      setErrors({});
+    } else {
+      setFamilyMembers((prev) => [...prev, { ...resolved, verified: true }]);
+      setFamSearch("");
+    }
+    setCorrectingSuggestion(null);
   };
 
   const handleSubmit = () => {
@@ -462,7 +500,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                     <div style={{ marginTop: 8, border: "1.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
                       <div style={{ padding: "6px 14px", background: "#f8f9fb", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{t.didYouMean}</div>
                       {similarPrimary.map((m) => (
-                        <div key={m.id} onClick={() => { setPrimary(m); setPrimarySearch(m.name); setPrimaryNotFound(false); }} style={{ padding: "9px 14px", cursor: "pointer", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}>
+                        <div key={m.id} onClick={() => openSuggestion(m, "primary")} style={{ padding: "9px 14px", cursor: "pointer", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}>
                           <span style={{ fontWeight: 600 }}>{m.name}</span>
                           <span style={{ display: "flex", gap: 5 }}><span className="badge badge-blue">{m.category}</span><span style={{ fontSize: 12, color: "#6b7280" }}>{m.church}</span></span>
                         </div>
@@ -507,6 +545,15 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                           </select>
                           <p style={{ fontSize: 11, color: "#92400e", marginTop: 3 }}>{t.manualMemberRoleHint}</p>
                         </div>
+                        <div>
+                          <label>{t.church}</label>
+                          <ChurchSearch
+                            churches={churches}
+                            value={manualPrimary.church}
+                            onChange={(v) => setManualPrimary({ ...manualPrimary, church: v })}
+                            placeholder={t.selectChurch}
+                          />
+                        </div>
                         <div style={{ display: "flex", gap: 8 }}>
                           <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => setShowManualPrimary(false)}>{t.back}</button>
                           <button
@@ -521,7 +568,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                                 category: manualPrimary.category,
                                 verified: false,
                                 role: manualPrimary.role,
-                                church: "",
+                                church: manualPrimary.church,
                                 badgeName: manualPrimary.name.trim(),
                               });
                               setShowManualPrimary(false);
@@ -649,7 +696,7 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                   <div style={{ marginTop: 8, border: "1.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
                     <div style={{ padding: "6px 14px", background: "#f8f9fb", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{t.didYouMean}</div>
                     {similarFam.map((m) => (
-                      <div key={m.id} onClick={() => { setFamilyMembers((prev) => [...prev, { ...m, verified: true }]); setFamSearch(""); }} style={{ padding: "9px 14px", cursor: "pointer", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}>
+                      <div key={m.id} onClick={() => openSuggestion(m, "family")} style={{ padding: "9px 14px", cursor: "pointer", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}>
                         <span style={{ fontWeight: 600 }}>{m.name}</span>
                         <span style={{ display: "flex", gap: 5 }}><span className="badge badge-blue">{m.category}</span><span style={{ fontSize: 12, color: "#6b7280" }}>{m.gender}</span></span>
                       </div>
@@ -680,7 +727,16 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
                         </select>
                         <p style={{ fontSize: 11, color: "#92400e", marginTop: 3 }}>{t.manualMemberRoleHint}</p>
                       </div>
-                      <button className="btn btn-warn btn-sm" onClick={() => { if (!manualFam.name) return; setFamilyMembers((prev) => [...prev, { ...manualFam, id: "MANUAL-" + Date.now(), verified: false, church: "", badgeName: manualFam.name }]); setManualFam({ name: "", gender: "M", category: "Adulto", role: "" }); setShowManualFam(false); }}>
+                      <div>
+                        <label>{t.church}</label>
+                        <ChurchSearch
+                          churches={churches}
+                          value={manualFam.church}
+                          onChange={(v) => setManualFam({ ...manualFam, church: v })}
+                          placeholder={t.selectChurch}
+                        />
+                      </div>
+                      <button className="btn btn-warn btn-sm" onClick={() => { if (!manualFam.name) return; setFamilyMembers((prev) => [...prev, { ...manualFam, id: "MANUAL-" + Date.now(), verified: false, badgeName: manualFam.name }]); setManualFam({ name: "", gender: "M", category: "Adulto", role: "", church: "" }); setShowManualFam(false); }}>
                         + {lang === "en" ? "Add Unverified Member" : "Adicionar Membro Não Verificado"}
                       </button>
                     </div>
@@ -836,6 +892,27 @@ function PublicPortal({ event, members: propMembers, loading, regs, addReg, lang
           )}
         </div>
       </div>
+      {correctingSuggestion && (
+        <Modal onClose={() => !savingCorrection && setCorrectingSuggestion(null)} maxWidth={380}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 10 }}>👋</div>
+            <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 6 }}>{t.isThisYou}</h3>
+            <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 14 }}>{t.fixNameHint}</p>
+            <input
+              value={correctedName}
+              onChange={(e) => setCorrectedName(e.target.value)}
+              style={{ textAlign: "center", fontWeight: 700, fontSize: 16, marginBottom: 18 }}
+              autoFocus
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} disabled={savingCorrection} onClick={() => setCorrectingSuggestion(null)}>{t.cancel}</button>
+              <button className="btn btn-primary" style={{ flex: 2 }} disabled={savingCorrection || !correctedName.trim()} onClick={confirmSuggestion}>
+                {savingCorrection ? "…" : t.confirmSelection}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

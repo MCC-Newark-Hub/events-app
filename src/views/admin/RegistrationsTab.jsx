@@ -6,6 +6,9 @@ import { sb } from "@/lib/supabase";
 import StatusBadge from "@/components/StatusBadge";
 import RegModal from "@/components/RegModal";
 import DetailModal from "@/components/DetailModal";
+import BadgePrint from "@/components/BadgePrint";
+import Modal from "@/components/Modal";
+import { resendConfirmation } from "@/lib/resendConfirmation";
 
 const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
@@ -41,9 +44,21 @@ export default function RegistrationsTab(props) {
     user,
     isFull,
     notify,
+    lang,
   } = props;
   const [confirmDelete, setConfirmDelete] = useState(null); // single reg
   const [bulkSel, setBulkSel] = useState([]);
+  const [badgeReg, setBadgeReg] = useState(null);
+  const [resendingId, setResendingId] = useState(null);
+
+  const handleResend = async (reg) => {
+    setResendingId(reg.id);
+    const result = await resendConfirmation(reg.id);
+    setResendingId(null);
+    if (result.ok) notify(t.resendSuccess);
+    else if (result.reason === "no_email") notify(t.resendNoEmail);
+    else notify(t.resendError);
+  };
   const toggleBulk = (id) => setBulkSel((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
   const t = useT();
   const [search, setSearch] = useState("");
@@ -133,7 +148,8 @@ export default function RegistrationsTab(props) {
                 <th>{t.churchH}</th>
                 <Th k="team">{t.teamH}</Th>
                 <Th k="fee">{t.feeH}</Th>
-                <Th k="registeredAt">{t.statusH}</Th>
+                <Th k="registeredAt">{t.regDate}</Th>
+                <th>{t.statusH}</th>
                 <th></th>
               </tr>
             </thead>
@@ -173,6 +189,9 @@ export default function RegistrationsTab(props) {
                   <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
                     {r.exempt ? <span style={{ color: "#6b7280" }}>{t.exempt}</span> : fmt(r.fee)}
                   </td>
+                  <td style={{ fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }}>
+                    {r.registeredAt || "—"}
+                  </td>
                   <td>
                     <StatusBadge r={r} event={event} allRegs={active} />
                   </td>
@@ -188,6 +207,18 @@ export default function RegistrationsTab(props) {
                     )}
                     <button className="btn btn-ghost btn-sm" onClick={() => setDetail(r)}>
                       {t.edit}
+                    </button>
+                    <button className="btn btn-ghost btn-sm" style={{ marginLeft: 4 }} onClick={() => setBadgeReg(r)}>
+                      🖨️
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ marginLeft: 4 }}
+                      disabled={resendingId === r.id}
+                      onClick={() => handleResend(r)}
+                      title={t.resendConfirmation}
+                    >
+                      {resendingId === r.id ? "…" : "📧"}
                     </button>
                     <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => setConfirmDelete(r)}>
                       🗑
@@ -231,6 +262,18 @@ export default function RegistrationsTab(props) {
             setDetail(null);
           }}
         />
+      )}
+      {badgeReg && (
+        <Modal onClose={() => setBadgeReg(null)}>
+          <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 4 }}>
+            Crachá — {badgeReg.memberName}
+          </h3>
+          <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>{badgeReg.regNumber}</p>
+          <BadgePrint regs={[badgeReg]} event={event} lang={lang} />
+          <button className="btn btn-ghost" style={{ width: "100%", marginTop: 8 }} onClick={() => setBadgeReg(null)}>
+            {t.close}
+          </button>
+        </Modal>
       )}
       {confirmDelete && (
         <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setConfirmDelete(null)}>

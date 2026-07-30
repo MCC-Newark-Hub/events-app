@@ -105,6 +105,7 @@ export default function App() {
             event={appData.event}
             regs={appData.regs}
             members={appData.members}
+            churches={appData.churches}
             updateReg={appData.updateReg}
             addReg={appData.addReg}
             lang={lang}
@@ -115,6 +116,8 @@ export default function App() {
           <PublicPortal
             event={appData.event}
             members={appData.members}
+            setMembers={appData.setMembers}
+            churches={appData.churches}
             loading={appData.loading}
             regs={appData.regs}
             addReg={appData.addReg}

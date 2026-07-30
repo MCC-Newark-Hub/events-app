@@ -6,7 +6,7 @@ import { fetchEventTeams, importTeamsFromEvent } from "@/lib/rosterImport";
 const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
 import { SERVICE_TEAMS, STATUS_CFG } from "@/constants";
 
-export default function TeamsTab({ event, events, regs, members, rosters, setRosters, notify }) {
+export default function TeamsTab({ event, events, regs, members, rosters, setRosters, addReg, notify }) {
   const t = useT();
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
@@ -20,6 +20,8 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
   const [importTeams, setImportTeams] = useState([]); // [{ team, memberCount, checked }]
   const [importLoading, setImportLoading] = useState(false);
   const [importSaving, setImportSaving] = useState(false);
+  const [selected, setSelected] = useState({}); // { [team]: string[] of memberIds }
+  const [registering, setRegistering] = useState(null); // team name currently registering
 
   const eventRosters = rosters.filter((r) => r.eventId === event?.id);
   const eventRegs = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
@@ -85,6 +87,40 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
       })
     );
     if (rosterId) await sb.from("rosters").update({ member_ids: updatedIds }).eq("id", rosterId);
+  };
+
+  const toggleSelected = (team, mid) => {
+    setSelected((prev) => {
+      const cur = prev[team] || [];
+      const next = cur.includes(mid) ? cur.filter((x) => x !== mid) : [...cur, mid];
+      return { ...prev, [team]: next };
+    });
+  };
+
+  const registerSelected = async (team) => {
+    const mids = selected[team] || [];
+    if (!mids.length || !addReg) return;
+    setRegistering(team);
+    for (const mid of mids) {
+      const m = members.find((x) => x.id === mid);
+      if (!m) continue;
+      addReg({
+        memberId: m.id,
+        memberName: m.name,
+        badgeName: m.badgeName || m.name,
+        category: m.category,
+        church: m.church,
+        role: m.role || "",
+        familyId: m.familyId || null,
+        team,
+        paid: false,
+        exempt: false,
+        note: "Registrado em lote (Equipes)",
+      });
+    }
+    setSelected((prev) => ({ ...prev, [team]: [] }));
+    setRegistering(null);
+    notify(`${mids.length} membro(s) registrado(s) em ${team}!`);
   };
 
   const removeTeam = (team) => {
@@ -387,6 +423,15 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
                   {counts.not_registered > 0 && (
                     <span className="badge badge-gray">{counts.not_registered}○</span>
                   )}
+                  {(selected[team]?.length || 0) > 0 && (
+                    <button
+                      className="btn btn-ok btn-xs"
+                      disabled={registering === team}
+                      onClick={() => registerSelected(team)}
+                    >
+                      {registering === team ? "…" : `Registrar ${selected[team].length} selecionado(s)`}
+                    </button>
+                  )}
                   <button
                     className="btn btn-ghost btn-xs"
                     onClick={() => {
@@ -497,6 +542,16 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
                         borderBottom: "1px solid #f3f4f6",
                       }}
                     >
+                      {s === "not_registered" ? (
+                        <input
+                          type="checkbox"
+                          checked={(selected[team] || []).includes(mid)}
+                          onChange={() => toggleSelected(team, mid)}
+                          style={{ width: "auto", margin: 0 }}
+                        />
+                      ) : (
+                        <span style={{ width: 13, flexShrink: 0 }} />
+                      )}
                       <span className={`dot ${cfg.dot}`}></span>
                       <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{m.name}</span>
                       <span className={`badge ${cfg.badge}`} style={{ fontSize: 10 }}>

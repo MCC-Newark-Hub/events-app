@@ -1,16 +1,29 @@
+import { useState } from "react";
 import { useT } from "@/i18n/strings";
 import { ROLE_BADGE } from "@/constants";
 import Topbar from "@/components/Topbar";
+import { resendConfirmation } from "@/lib/resendConfirmation";
 
 function GALeaderView(props) {
-  const { event, regs, members, gas, user, logout, lang, setLang, theme, toggleTheme } = props;
+  const { event, regs, members, gas, user, logout, lang, setLang, theme, toggleTheme, notify } = props;
   const t = useT();
+  const [resendingId, setResendingId] = useState(null);
   const myGAs = gas.filter((g) => user?.gaIds?.includes(g.id));
   const eventRegs = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const getStatus = (mid) => {
     const r = eventRegs.find((x) => x.memberId === mid);
     if (!r) return "not_registered";
     return r.paid || r.exempt ? "confirmed" : "pending";
+  };
+  const getReg = (mid) => eventRegs.find((x) => x.memberId === mid);
+
+  const handleResend = async (reg) => {
+    setResendingId(reg.id);
+    const result = await resendConfirmation(reg.id);
+    setResendingId(null);
+    if (result.ok) notify(t.resendSuccess);
+    else if (result.reason === "no_email") notify(t.resendNoEmail);
+    else notify(t.resendError);
   };
 
   // Summary stats across all my GAs
@@ -112,11 +125,13 @@ function GALeaderView(props) {
                           <th>{t.cargo}</th>
                           <th>{t.regH}</th>
                           <th>{t.situH}</th>
+                          <th></th>
                         </tr>
                       </thead>
                       <tbody>
                         {gam.map((m) => {
                           const s = getStatus(m.id);
+                          const reg = getReg(m.id);
                           return (
                             <tr key={m.id}>
                               <td style={{ fontWeight: 600 }}>{m.name}</td>
@@ -145,6 +160,18 @@ function GALeaderView(props) {
                                   : s === "pending"
                                     ? t.payAtDesk
                                     : `✓ ${t.confirmed}`}
+                              </td>
+                              <td>
+                                {reg && (
+                                  <button
+                                    className="btn btn-ghost btn-xs"
+                                    disabled={resendingId === reg.id}
+                                    onClick={() => handleResend(reg)}
+                                    title={t.resendConfirmation}
+                                  >
+                                    {resendingId === reg.id ? "…" : "📧"}
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           );

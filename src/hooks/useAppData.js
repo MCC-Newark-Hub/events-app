@@ -382,6 +382,7 @@ export function useAppData({ getUserRef, notify }) {
       }
     }
     if (upd.badgeName != null)  dbUpd.badge_name     = upd.badgeName;
+    if (upd.memberName != null) dbUpd.member_name    = upd.memberName;
     if (upd.presence != null)   dbUpd.presence       = upd.presence;
     if (timelineEntry && updatedReg) dbUpd.timeline = updatedReg.timeline;
     if (Object.keys(dbUpd).length > 0) {

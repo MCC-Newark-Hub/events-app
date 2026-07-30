@@ -1,28 +1,43 @@
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, ClipboardList, Users } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { ROLE_BADGE, CATEGORIES, ROLE_GROUPS, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
 import { mapMember } from "@/hooks/useAppData";
 import Topbar from "@/components/Topbar";
+import Sidebar from "@/components/Sidebar";
 import CapBar from "@/components/CapBar";
 import StatusBadge from "@/components/StatusBadge";
 import RegModal from "@/components/RegModal";
 import DetailModal from "@/components/DetailModal";
 import Modal from "@/components/Modal";
+import { resendConfirmation } from "@/lib/resendConfirmation";
+import { syncRegistrationNames } from "@/lib/syncMemberName";
 
 function ClerkView(props) {
-  const { event, regs, members, setMembers, families, dbTeams, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify } = props;
+  const { event, regs, setRegs, members, setMembers, families, setFamilies, dbTeams, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify } = props;
   const t = useT();
+  const [sec, setSec] = useState("regs");
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("active");
   const [showReg, setShowReg] = useState(false);
   const [detail, setDetail] = useState(null);
   const [prefill, setPrefill] = useState(null);
+  const [resendingId, setResendingId] = useState(null);
+
+  const handleResend = async (reg) => {
+    setResendingId(reg.id);
+    const result = await resendConfirmation(reg.id);
+    setResendingId(null);
+    if (result.ok) notify(t.resendSuccess);
+    else if (result.reason === "no_email") notify(t.resendNoEmail);
+    else notify(t.resendError);
+  };
   const [editingMember, setEditingMember] = useState(null);
   const [savingMember, setSavingMember] = useState(false);
   const [confirmDeleteMember, setConfirmDeleteMember] = useState(null);
   const [deletingMember, setDeletingMember] = useState(false);
+  const [newFamilyName, setNewFamilyName] = useState("");
 
   const cityOf = (s) => (s || "").split(",")[0].trim().toLowerCase();
   const myChurch = user?.church || "";
@@ -36,7 +51,7 @@ function ClerkView(props) {
   const allActive = allActiveAll.filter((r) => cityOf(r.church) === myCity);
   const myWlRegs = (wlRegs || []).filter((r) => cityOf(r.church) === myCity);
   const viewRegs = (tab === "active" ? allActive : tab === "waitlist" ? myWlRegs : regs.filter((r) => r.eventId === event?.id && r.cancelled && cityOf(r.church) === myCity)).filter((r) => (r.memberName || "").toLowerCase().includes(search.toLowerCase()) || (r.regNumber || "").toLowerCase().includes(search.toLowerCase()) || (r.church || "").toLowerCase().includes(search.toLowerCase()));
-  const suggestions = tab !== "approvals" && tab !== "members" && search.length > 1 ? myMembers.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()) && !allActiveAll.find((r) => r.memberId === m.id)).slice(0, 5) : [];
+  const suggestions = sec === "regs" && tab !== "approvals" && search.length > 1 ? myMembers.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()) && !allActiveAll.find((r) => r.memberId === m.id)).slice(0, 5) : [];
   const memberList = myMembers
     .filter((m) => (m.name || "").toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
@@ -45,18 +60,24 @@ function ClerkView(props) {
     { k: "active", l: `${t.activeTab} (${allActive.length})` },
     { k: "waitlist", l: `${t.waitlistTab} (${myWlRegs.length})` },
     { k: "cancelled", l: t.cancelledTab },
-    { k: "members", l: `Membros (${myMembers.length})` },
     { k: "approvals", l: `Solicitações${pendingApprovalList.length > 0 ? ` (${pendingApprovalList.length})` : ""}` },
   ];
 
-  const openNewMember = () => setEditingMember({ id: null, firstName: "", lastName: "", badgeName: "", gender: "M", category: "Adulto", role: "", allergies: "", specialNeeds: "", notes: "" });
-  const openEditMember = (m) => setEditingMember({ id: m.id, firstName: m.firstName || "", lastName: m.lastName || "", badgeName: m.badgeName || "", gender: m.gender || "M", category: m.category || "Adulto", role: m.role || "", allergies: m.allergies || "", specialNeeds: m.specialNeeds || "", notes: m.notes || "" });
+  const navItems = [
+    { id: "regs", icon: <ClipboardList size={16} />, label: t.registrations || "Inscrições" },
+    { id: "members", icon: <Users size={16} />, label: `Membros (${myMembers.length})` },
+  ];
+  const switchSec = (id) => { setSec(id); setSearch(""); };
+
+  const openNewMember = () => { setEditingMember({ id: null, firstName: "", lastName: "", badgeName: "", gender: "M", category: "Adulto", role: "", familyId: "", allergies: "", specialNeeds: "", notes: "" }); setNewFamilyName(""); };
+  const openEditMember = (m) => { setEditingMember({ id: m.id, firstName: m.firstName || "", lastName: m.lastName || "", badgeName: m.badgeName || "", gender: m.gender || "M", category: m.category || "Adulto", role: m.role || "", familyId: m.familyId || "", allergies: m.allergies || "", specialNeeds: m.specialNeeds || "", notes: m.notes || "" }); setNewFamilyName(""); };
 
   const saveMember = async () => {
     const fn = editingMember.firstName.trim();
     const ln = editingMember.lastName.trim();
     const fullName = (fn + " " + ln).trim();
     if (!fullName) { notify("Nome é obrigatório."); return; }
+    if (editingMember.familyId === "__new__" && !newFamilyName.trim()) { notify("Nome da família é obrigatório."); return; }
     setSavingMember(true);
     try {
       const row = {
@@ -69,21 +90,48 @@ function ClerkView(props) {
         church: myChurch.split(",")[0].trim(),
         role: editingMember.role || "",
         roles: editingMember.role ? [editingMember.role] : [],
+        family_id: editingMember.familyId && editingMember.familyId !== "__new__" ? editingMember.familyId : null,
         allergies: editingMember.allergies || null,
         special_needs: editingMember.specialNeeds || null,
         notes: editingMember.notes || null,
       };
+      let memberId = editingMember.id;
       if (editingMember.id) {
+        const oldMember = members.find((m) => m.id === editingMember.id);
         const { error } = await sb.from("members").update(row).eq("id", editingMember.id);
         if (error) throw error;
         setMembers((prev) => prev.map((m) => (m.id === editingMember.id ? mapMember({ ...m, ...row, id: editingMember.id }) : m)));
+        if (oldMember && oldMember.name !== fullName) {
+          syncRegistrationNames({ memberId: editingMember.id, oldName: oldMember.name, newName: fullName, newBadgeName: row.badge_name, setRegs });
+        }
       } else {
         const { data, error } = await sb.from("members").insert(row).select().single();
         if (error) throw error;
+        memberId = data.id;
         setMembers((prev) => [...prev, mapMember(data)]);
       }
+
+      if (editingMember.familyId === "__new__") {
+        const famName = newFamilyName.trim();
+        const { data: fam, error: famErr } = await sb.from("families").insert({ name: famName, member_ids: [memberId] }).select().single();
+        if (famErr) throw famErr;
+        setFamilies((prev) => [...prev, { id: fam.id, name: famName, memberIds: [memberId] }]);
+        const { error: linkErr } = await sb.from("members").update({ family_id: fam.id }).eq("id", memberId);
+        if (linkErr) throw linkErr;
+        setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, familyId: fam.id } : m)));
+      } else if (editingMember.familyId) {
+        const fam = families.find((f) => f.id === editingMember.familyId);
+        if (fam && !(fam.memberIds || []).includes(memberId)) {
+          const mergedIds = [...new Set([...(fam.memberIds || []), memberId])];
+          const { error: famErr } = await sb.from("families").update({ member_ids: mergedIds }).eq("id", fam.id);
+          if (famErr) throw famErr;
+          setFamilies((prev) => prev.map((f) => (f.id === fam.id ? { ...f, memberIds: mergedIds } : f)));
+        }
+      }
+
       notify(editingMember.id ? "Membro atualizado!" : "Membro criado!");
       setEditingMember(null);
+      setNewFamilyName("");
     } catch (err) {
       notify("Erro ao salvar membro: " + (err?.message || "erro desconhecido"));
     } finally {
@@ -115,148 +163,177 @@ function ClerkView(props) {
   return (
     <div className="app-shell">
       <Topbar title={user?.name || t.clerkTitle} sub={`${t.clerkTitle} · ${event?.name || ""}`} user={user} logout={logout} pendingCount={pendingApprovalList.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
-      <div className="main-scroll">
+      <div className="body-with-sidebar">
+        <Sidebar navItems={navItems} activeId={sec} onSelect={switchSec} />
+        <div className="main-scroll">
         <div className="page-pad">
           {pendingApprovalList.length > 0 && (
-            <div onClick={() => setTab("approvals")} style={{ background: "#fffbeb", border: "1.5px solid #f59e0b", borderRadius: 10, padding: "10px 16px", marginBottom: 14, cursor: "pointer", fontSize: 14, fontWeight: 600, color: "#92400e" }}>
+            <div onClick={() => { switchSec("regs"); setTab("approvals"); }} style={{ background: "#fffbeb", border: "1.5px solid #f59e0b", borderRadius: 10, padding: "10px 16px", marginBottom: 14, cursor: "pointer", fontSize: 14, fontWeight: 600, color: "#92400e" }}>
               ⏳ Você tem {pendingApprovalList.length} solicitaç{pendingApprovalList.length === 1 ? "ão pendente" : "ões pendentes"}.
             </div>
           )}
 
-          <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} />
+          {sec === "regs" ? (
+            <>
+              <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} />
 
-          <div className="stat-grid-4" style={{ marginBottom: 18 }}>
-            {[
-              { label: t.registered, value: allActive.length, color: "#1a3a6b" },
-              { label: t.paid, value: allActive.filter((r) => r.paid || r.exempt).length, color: "#2d8a4e" },
-              { label: t.pending, value: allActive.filter((r) => !r.paid && !r.exempt).length, color: "#d4820a" },
-              { label: t.waitlist, value: myWlRegs.length, color: "#92400e" },
-            ].map((s) => (
-              <div className="stat-card" key={s.label} style={{ textAlign: "center", borderTop: `3px solid ${s.color}` }}>
-                <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
-                <div style={{ fontSize: 12, color: "#6b7280" }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
-
-          {tab !== "approvals" && (
-            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-              <div className="sb" style={{ flex: 1 }}>
-                <span className="si-icon"><Search size={16} /></span>
-                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tab === "members" ? "Buscar membro..." : `${t.searchMember}...`} />
-              </div>
-              {tab === "members" ? (
-                <button className="btn btn-primary" onClick={openNewMember}>+ Novo Membro</button>
-              ) : (
-                <button className="btn btn-primary" onClick={() => { setPrefill(null); setShowReg(true); }}>{t.addNew}</button>
-              )}
-            </div>
-          )}
-
-          {suggestions.length > 0 && (
-            <div style={{ background: "#fff", border: "1.5px solid var(--border)", borderRadius: 10, marginBottom: 10, overflow: "hidden" }}>
-              <div style={{ padding: "6px 14px", background: "#f8f9fb", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{t.notRegistered}</div>
-              {suggestions.map((m) => (
-                <div key={m.id} onClick={() => { setPrefill(m); setShowReg(true); }} style={{ padding: "9px 14px", borderTop: "1px solid var(--border)", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}>
-                  <div><span style={{ fontWeight: 600, fontSize: 14 }}>{m.name}</span><span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{m.church}</span></div>
-                  <div style={{ display: "flex", gap: 5 }}><span className="badge badge-blue">{m.category}</span>{m.role && <span className={`badge ${ROLE_BADGE[m.role]}`}>{m.role}</span>}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-            <div style={{ padding: "11px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-              <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                {tabs.map(({ k, l }) => (
-                  <button key={k} className={`tab ${tab === k ? "active" : ""}`} onClick={() => setTab(k)}>{l}</button>
-                ))}
-              </div>
-              {tab !== "approvals" && <span style={{ fontSize: 12, color: "#6b7280" }}>{tab === "members" ? memberList.length : viewRegs.length}</span>}
-            </div>
-
-            {tab === "members" ? (
-              <div className="table-wrap">
-                <table className="table">
-                  <thead><tr><th>{t.memberName}</th><th>{t.cargo}</th><th>{t.cat}</th><th>{t.actions}</th></tr></thead>
-                  <tbody>
-                    {memberList.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
-                    {memberList.map((m) => (
-                      <tr key={m.id}>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{m.name}</div>
-                          {m.badgeName && m.badgeName !== m.name && <div style={{ fontSize: 11, color: "#6b7280" }}>🏷 {m.badgeName}</div>}
-                        </td>
-                        <td>{m.role ? <span className={`badge ${ROLE_BADGE[m.role] || "badge-gray"}`}>{m.role}</span> : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}</td>
-                        <td><span className="badge badge-blue">{m.category}</span></td>
-                        <td>
-                          <div style={{ display: "flex", gap: 4 }}>
-                            <button className="btn btn-ghost btn-sm" onClick={() => openEditMember(m)}>{t.edit}</button>
-                            <button className="btn btn-danger btn-sm" onClick={() => requestDeleteMember(m)}>🗑</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : tab === "approvals" ? (
-              <div>
-                {pendingApprovalList.length === 0 && (
-                  <div style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>Nenhuma solicitação pendente.</div>
-                )}
-                {pendingApprovalList.map((a) => (
-                  <div key={a.id} style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, background: "#fffbeb" }}>
-                    <div>
-                      <span style={{ fontWeight: 600 }}>{a.memberName}</span>
-                      <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{a.type === "capacity_override" ? "Excedente" : "Isenção"} · {a.category}</span>
-                      <span style={{ marginLeft: 8, fontSize: 11, color: "#92400e" }}>por {a.requestedBy}</span>
-                    </div>
-                    <span className="badge badge-yellow">Aguardando Pastor</span>
+              <div className="stat-grid-4" style={{ marginBottom: 18 }}>
+                {[
+                  { label: t.registered, value: allActive.length, color: "#1a3a6b" },
+                  { label: t.paid, value: allActive.filter((r) => r.paid || r.exempt).length, color: "#2d8a4e" },
+                  { label: t.pending, value: allActive.filter((r) => !r.paid && !r.exempt).length, color: "#d4820a" },
+                  { label: t.waitlist, value: myWlRegs.length, color: "#92400e" },
+                ].map((s) => (
+                  <div className="stat-card" key={s.label} style={{ textAlign: "center", borderTop: `3px solid ${s.color}` }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
+                    <div style={{ fontSize: 12, color: "#6b7280" }}>{s.label}</div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="table-wrap">
-                <table className="table">
-                  <thead><tr><th>{t.regNum}</th><th>{t.memberName}</th><th>{t.cargo}</th><th>{t.cat}</th><th>{t.teamH}</th><th>{t.feeH}</th><th>{t.statusH}</th><th>Presença</th><th>{t.actions}</th></tr></thead>
-                  <tbody>
-                    {viewRegs.length === 0 && <tr><td colSpan={9} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
-                    {viewRegs.map((r) => (
-                      <tr key={r.id}>
-                        <td style={{ fontFamily: "monospace", fontSize: 11, color: "#1a3a6b", fontWeight: 600, whiteSpace: "nowrap" }}>{r.regNumber || "—"}</td>
-                        <td><div style={{ fontWeight: 600 }}>{r.memberName || "—"}</div></td>
-                        <td>{r.role ? <span className={`badge ${ROLE_BADGE[r.role] || "badge-gray"}`}>{r.role}</span> : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}</td>
-                        <td><span className="badge badge-blue">{r.category || "—"}</span></td>
-                        <td style={{ fontSize: 12 }}>{r.team || "—"}</td>
-                        <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{r.exempt ? <span style={{ color: "#6b7280" }}>{t.exempt}</span> : fmt(r.fee ?? 0)}</td>
-                        <td><StatusBadge r={r} event={event} allRegs={allActive} /></td>
-                        <td>
-                          <select
-                            value={r.presence || 'unknown'}
-                            onChange={(e) => updatePresence && updatePresence(r.id, e.target.value, 'manual')}
-                            style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--border)", background: r.presence === 'present' ? '#d1fae5' : r.presence === 'absent' ? '#fee2e2' : r.presence === 'walk_in' ? '#dbeafe' : '#f3f4f6', color: r.presence === 'present' ? '#065f46' : r.presence === 'absent' ? '#991b1b' : r.presence === 'walk_in' ? '#1e3a8a' : '#374151' }}
-                          >
-                            <option value="unknown">🔲 Desconhecida</option>
-                            <option value="present">✅ Presente</option>
-                            <option value="absent">❌ Ausente</option>
-                            <option value="walk_in">🚶 Walk-in</option>
-                          </select>
-                        </td>
-                        <td>
-                          <div style={{ display: "flex", gap: 4 }}>
-                            {r.waitlisted && <button className="btn btn-ok btn-sm" onClick={() => promoteFromWaitlist(r.id)}>{t.confirm}</button>}
-                            {!r.waitlisted && !r.paid && !r.exempt && !r.cancelled && <button className="btn btn-ok btn-sm" onClick={() => updateReg(r.id, { paid: true })}>{t.markPaid}</button>}
-                            <button className="btn btn-ghost btn-sm" onClick={() => setDetail(r)}>{t.edit}</button>
-                          </div>
-                        </td>
-                      </tr>
+
+              {tab !== "approvals" && (
+                <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                  <div className="sb" style={{ flex: 1 }}>
+                    <span className="si-icon"><Search size={16} /></span>
+                    <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t.searchMember}...`} />
+                  </div>
+                  <button className="btn btn-primary" onClick={() => { setPrefill(null); setShowReg(true); }}>{t.addNew}</button>
+                </div>
+              )}
+
+              {suggestions.length > 0 && (
+                <div style={{ background: "#fff", border: "1.5px solid var(--border)", borderRadius: 10, marginBottom: 10, overflow: "hidden" }}>
+                  <div style={{ padding: "6px 14px", background: "#f8f9fb", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{t.notRegistered}</div>
+                  {suggestions.map((m) => (
+                    <div key={m.id} onClick={() => { setPrefill(m); setShowReg(true); }} style={{ padding: "9px 14px", borderTop: "1px solid var(--border)", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}>
+                      <div><span style={{ fontWeight: 600, fontSize: 14 }}>{m.name}</span><span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{m.church}</span></div>
+                      <div style={{ display: "flex", gap: 5 }}><span className="badge badge-blue">{m.category}</span>{m.role && <span className={`badge ${ROLE_BADGE[m.role]}`}>{m.role}</span>}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+                <div style={{ padding: "11px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                    {tabs.map(({ k, l }) => (
+                      <button key={k} className={`tab ${tab === k ? "active" : ""}`} onClick={() => setTab(k)}>{l}</button>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                  {tab !== "approvals" && <span style={{ fontSize: 12, color: "#6b7280" }}>{viewRegs.length}</span>}
+                </div>
+
+                {tab === "approvals" ? (
+                  <div>
+                    {pendingApprovalList.length === 0 && (
+                      <div style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>Nenhuma solicitação pendente.</div>
+                    )}
+                    {pendingApprovalList.map((a) => (
+                      <div key={a.id} style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, background: "#fffbeb" }}>
+                        <div>
+                          <span style={{ fontWeight: 600 }}>{a.memberName}</span>
+                          <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{a.type === "capacity_override" ? "Excedente" : "Isenção"} · {a.category}</span>
+                          <span style={{ marginLeft: 8, fontSize: 11, color: "#92400e" }}>por {a.requestedBy}</span>
+                        </div>
+                        <span className="badge badge-yellow">Aguardando Pastor</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="table-wrap">
+                    <table className="table">
+                      <thead><tr><th>{t.regNum}</th><th>{t.memberName}</th><th>{t.cargo}</th><th>{t.cat}</th><th>{t.teamH}</th><th>{t.feeH}</th><th>{t.regDate}</th><th>{t.statusH}</th><th>Presença</th><th>{t.actions}</th></tr></thead>
+                      <tbody>
+                        {viewRegs.length === 0 && <tr><td colSpan={10} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
+                        {viewRegs.map((r) => (
+                          <tr key={r.id}>
+                            <td style={{ fontFamily: "monospace", fontSize: 11, color: "#1a3a6b", fontWeight: 600, whiteSpace: "nowrap" }}>{r.regNumber || "—"}</td>
+                            <td><div style={{ fontWeight: 600 }}>{r.memberName || "—"}</div></td>
+                            <td>{r.role ? <span className={`badge ${ROLE_BADGE[r.role] || "badge-gray"}`}>{r.role}</span> : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}</td>
+                            <td><span className="badge badge-blue">{r.category || "—"}</span></td>
+                            <td style={{ fontSize: 12 }}>{r.team || "—"}</td>
+                            <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{r.exempt ? <span style={{ color: "#6b7280" }}>{t.exempt}</span> : fmt(r.fee ?? 0)}</td>
+                            <td style={{ fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }}>{r.registeredAt || "—"}</td>
+                            <td><StatusBadge r={r} event={event} allRegs={allActive} /></td>
+                            <td>
+                              <select
+                                value={r.presence || 'unknown'}
+                                onChange={(e) => updatePresence && updatePresence(r.id, e.target.value, 'manual')}
+                                style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--border)", background: r.presence === 'present' ? '#d1fae5' : r.presence === 'absent' ? '#fee2e2' : r.presence === 'walk_in' ? '#dbeafe' : '#f3f4f6', color: r.presence === 'present' ? '#065f46' : r.presence === 'absent' ? '#991b1b' : r.presence === 'walk_in' ? '#1e3a8a' : '#374151' }}
+                              >
+                                <option value="unknown">🔲 Desconhecida</option>
+                                <option value="present">✅ Presente</option>
+                                <option value="absent">❌ Ausente</option>
+                                <option value="walk_in">🚶 Walk-in</option>
+                              </select>
+                            </td>
+                            <td>
+                              <div style={{ display: "flex", gap: 4 }}>
+                                {r.waitlisted && <button className="btn btn-ok btn-sm" onClick={() => promoteFromWaitlist(r.id)}>{t.confirm}</button>}
+                                {!r.waitlisted && !r.paid && !r.exempt && !r.cancelled && <button className="btn btn-ok btn-sm" onClick={() => updateReg(r.id, { paid: true })}>{t.markPaid}</button>}
+                                <button className="btn btn-ghost btn-sm" onClick={() => setDetail(r)}>{t.edit}</button>
+                                <button
+                                  className="btn btn-ghost btn-sm"
+                                  disabled={resendingId === r.id}
+                                  onClick={() => handleResend(r)}
+                                  title={t.resendConfirmation}
+                                >
+                                  {resendingId === r.id ? "…" : "📧"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <>
+              <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                <div className="sb" style={{ flex: 1 }}>
+                  <span className="si-icon"><Search size={16} /></span>
+                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar membro..." />
+                </div>
+                <button className="btn btn-primary" onClick={openNewMember}>+ Novo Membro</button>
+              </div>
+
+              <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+                <div style={{ padding: "11px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 16 }}>Membros</h3>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>{memberList.length}</span>
+                </div>
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead><tr><th>{t.memberName}</th><th>{t.cargo}</th><th>{t.cat}</th><th>Família</th><th>{t.actions}</th></tr></thead>
+                    <tbody>
+                      {memberList.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
+                      {memberList.map((m) => (
+                        <tr key={m.id}>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{m.name}</div>
+                            {m.badgeName && m.badgeName !== m.name && <div style={{ fontSize: 11, color: "#6b7280" }}>🏷 {m.badgeName}</div>}
+                          </td>
+                          <td>{m.role ? <span className={`badge ${ROLE_BADGE[m.role] || "badge-gray"}`}>{m.role}</span> : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}</td>
+                          <td><span className="badge badge-blue">{m.category}</span></td>
+                          <td style={{ fontSize: 12 }}>{families.find((f) => f.id === m.familyId)?.name || <span style={{ color: "#9ca3af" }}>—</span>}</td>
+                          <td>
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button className="btn btn-ghost btn-sm" onClick={() => openEditMember(m)}>{t.edit}</button>
+                              <button className="btn btn-danger btn-sm" onClick={() => requestDeleteMember(m)}>🗑</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
         </div>
       </div>
       {showReg && <RegModal event={event} members={myMembers} families={families} dbTeams={dbTeams} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
@@ -311,6 +388,17 @@ function ClerkView(props) {
                   </optgroup>
                 ))}
               </select>
+            </div>
+            <div>
+              <label>Família</label>
+              <select value={editingMember.familyId} onChange={(e) => setEditingMember({ ...editingMember, familyId: e.target.value })}>
+                <option value="">— Nenhuma —</option>
+                {families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                <option value="__new__">+ Nova família…</option>
+              </select>
+              {editingMember.familyId === "__new__" && (
+                <input value={newFamilyName} onChange={(e) => setNewFamilyName(e.target.value)} placeholder="Nome da nova família" style={{ marginTop: 6 }} />
+              )}
             </div>
             <div>
               <label>Alergias</label>

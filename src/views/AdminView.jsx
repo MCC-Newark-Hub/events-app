@@ -10,10 +10,12 @@ import StatusBadge from "@/components/StatusBadge";
 import RegModal from "@/components/RegModal";
 import DetailModal from "@/components/DetailModal";
 import ApprovalsPanel from "@/components/ApprovalsPanel";
+import SearchSelect from "@/components/SearchSelect";
 import RegistrationsTab from "./admin/RegistrationsTab";
 import TeamsTab from "./admin/TeamsTab";
 import EventsTab from "./admin/EventsTab";
 import ReportsTab from "./admin/ReportsTab";
+import { syncRegistrationNames } from "@/lib/syncMemberName";
 
 // Accent-insensitive search: "joao" matches "João"
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -767,47 +769,6 @@ function makeTh(sk, sd, toggle) {
 }
 
 // ── Directory ─────────────────────────────────────────────────────────────────
-function SearchSelect({ value, onSelect, items, getLabel, getId, placeholder }) {
-  const [q, setQ] = useState("");
-  const [open, setOpen] = useState(false);
-  const selected = value ? items.find((i) => getId(i) === value) : null;
-  const label = selected ? getLabel(selected) : "";
-  const results = open
-    ? (q.length > 0
-        ? items.filter((i) => norm(getLabel(i)).includes(norm(q))).slice(0, 12)
-        : items.slice(0, 12))
-    : [];
-  return (
-    <div style={{ position: "relative" }}>
-      <input
-        value={open ? q : label}
-        onFocus={() => { setOpen(true); setQ(""); }}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder={placeholder || "Buscar…"}
-      />
-      {value && <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>{value}</div>}
-      {open && items.length === 0 && (
-        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Nenhum item cadastrado.</div>
-      )}
-      {open && results.length > 0 && (
-        <div style={{ position: "absolute", zIndex: 200, background: "var(--card)", border: "1.5px solid var(--border)", borderRadius: 8, left: 0, right: 0, maxHeight: 200, overflowY: "auto", boxShadow: "var(--shadow-md)" }}>
-          <div style={{ padding: "6px 12px", cursor: "pointer", fontSize: 12, color: "var(--muted)" }} onMouseDown={() => { onSelect(""); setOpen(false); setQ(""); }}>— Nenhum —</div>
-          {results.map((item) => (
-            <div key={getId(item)} onMouseDown={() => { onSelect(getId(item)); setOpen(false); setQ(""); }}
-              style={{ padding: "8px 12px", cursor: "pointer", borderTop: "1px solid var(--border)", fontSize: 13 }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "var(--sidebar-active-bg)"}
-              onMouseLeave={(e) => e.currentTarget.style.background = ""}>
-              {getLabel(item)}
-              <span style={{ marginLeft: 8, fontSize: 10, color: "var(--muted)" }}>{getId(item)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function ConfirmDelete({ label, count, onConfirm, onCancel }) {
   return (
     <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && onCancel()}>
@@ -852,7 +813,7 @@ function BulkBar({ selected, total, onSelectAll, onClearAll, onDeleteSelected, l
   );
 }
 
-function AdminDirectory({ churches, setChurches, members, setMembers, families, setFamilies, gas, setGas, rosters, setRosters, dbTeams, setDbTeams, events, notify }) {
+function AdminDirectory({ churches, setChurches, members, setMembers, families, setFamilies, gas, setGas, rosters, setRosters, dbTeams, setDbTeams, events, regs, setRegs, notify }) {
   const TABS = [
     { id: "churches",  label: "Igrejas",              count: churches?.length },
     { id: "members",   label: "Membros",              count: members?.length },
@@ -1208,6 +1169,9 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       const row = { name: fullName, first_name: formData.firstName || null, last_name: formData.lastName || null, badge_name: formData.badgeName || fullName, gender: formData.gender || "M", category: formData.category || "Adulto", church: formData.church || "", roles: formData.roles || [], role: (formData.roles || [])[0] || "", family_id: formData.familyId || null, ga_id: formData.gaId || null, allergies: formData.allergies || null, special_needs: formData.specialNeeds || null, notes: formData.notes || null };
                       if (!isNew) row.id = editing.id;
                       saveRow("members", row, isNew, members, setMembers, mapMember);
+                      if (!isNew && editing.name && editing.name !== fullName) {
+                        syncRegistrationNames({ memberId: editing.id, oldName: editing.name, newName: fullName, newBadgeName: row.badge_name, setRegs });
+                      }
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
                   </div>
                 </div>

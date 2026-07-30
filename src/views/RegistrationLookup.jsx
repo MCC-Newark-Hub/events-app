@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search, ArrowLeft, XCircle, CheckCircle2, AlertTriangle, UserPlus } from "lucide-react";
 import { fmt, CATEGORIES, ROLE_BADGE, OBREIRO_ROLES } from "@/constants";
+import ChurchSearch from "@/components/ChurchSearch";
 
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
@@ -89,7 +90,7 @@ function RegCard({ reg, onCancel, lang }) {
   );
 }
 
-export default function RegistrationLookup({ event, regs, members, updateReg, addReg, lang, onBack }) {
+export default function RegistrationLookup({ event, regs, members, churches, updateReg, addReg, lang, onBack }) {
   const [searchMode, setSearchMode] = useState("number"); // "number" | "name"
   const [query, setQuery] = useState("");
   const [nameQuery, setNameQuery] = useState("");
@@ -104,7 +105,7 @@ export default function RegistrationLookup({ event, regs, members, updateReg, ad
   const [famSearch, setFamSearch] = useState("");
   const [famSelected, setFamSelected] = useState(null);
   const [showManual, setShowManual] = useState(false);
-  const [manualMember, setManualMember] = useState({ name: "", category: "Adulto", role: "" });
+  const [manualMember, setManualMember] = useState({ name: "", category: "Adulto", role: "", church: "" });
   const [addDone, setAddDone] = useState(false);
 
   const registeredIds = (regs || [])
@@ -461,11 +462,20 @@ export default function RegistrationLookup({ event, regs, members, updateReg, ad
                                 {lang === "en" ? "Pastors and Ungidos are automatically identified as fee-exempt." : "Pastores e Ungidos são identificados automaticamente como isentos de taxa."}
                               </p>
                             </div>
+                            <div>
+                              <label style={{ fontSize: 13 }}>{lang === "en" ? "Church" : "Igreja"}</label>
+                              <ChurchSearch
+                                churches={churches}
+                                value={manualMember.church}
+                                onChange={(v) => setManualMember({ ...manualMember, church: v })}
+                                placeholder={lang === "en" ? "Select church..." : "Selecione a igreja..."}
+                              />
+                            </div>
                             <button
                               className="btn btn-warn btn-sm"
                               onClick={() => {
                                 if (!manualMember.name.trim()) return;
-                                setFamSelected({ id: "MANUAL-" + Date.now(), name: manualMember.name.trim(), category: manualMember.category, church: "", role: manualMember.role, verified: false });
+                                setFamSelected({ id: "MANUAL-" + Date.now(), name: manualMember.name.trim(), category: manualMember.category, church: manualMember.church, role: manualMember.role, verified: false });
                                 setShowManual(false);
                               }}
                             >
