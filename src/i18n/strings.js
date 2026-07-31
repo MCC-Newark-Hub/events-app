@@ -253,7 +253,7 @@ export const STRINGS = {
     totalMembers: "Total de participantes",
     totalFee: "Total a pagar",
     pendingPaymentNote:
-      "O pagamento deve ser efetuado presencialmente, com um dos responsáveis pelas inscrições. Sua vaga só será confirmada após o pagamento da taxa de inscrição.",
+      "O pagamento deve ser feito presencialmente com o secretário da sua igreja ou o responsável pelo seu grupo.",
     primaryRegistrant: "Titular da inscrição",
     familyMembers: "Membros da família",
     gender: "Gênero",
@@ -523,7 +523,7 @@ export const STRINGS = {
     totalMembers: "Total participants",
     totalFee: "Total due",
     pendingPaymentNote:
-      "Payment must be made in person with one of the registration coordinators. Your spot will only be confirmed after the registration fee is paid.",
+      "Payment must be made in person with your church's secretary or your group leader.",
     primaryRegistrant: "Primary registrant",
     familyMembers: "Family members",
     gender: "Gender",
