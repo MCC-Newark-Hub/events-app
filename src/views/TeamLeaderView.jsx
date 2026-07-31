@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useT } from "@/i18n/strings";
 
 const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
-import { STATUS_CFG } from "@/constants";
+import { STATUS_CFG, SERVICE_TEAMS } from "@/constants";
+import { sb } from "@/lib/supabase";
+import { canAssignToTeam } from "@/lib/teamAssignment";
 import Topbar from "@/components/Topbar";
 
 function TeamLeaderView(props) {
@@ -30,30 +32,69 @@ function TeamLeaderView(props) {
   };
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
-  const addToRoster = (team, mid) => {
+  const addToRoster = (team, mid, silent) => {
+    let updatedRoster = null;
     setRosters((prev) => {
       const ex = prev.find((r) => r.eventId === event?.id && r.team === team);
       if (ex) {
         if (ex.memberIds.includes(mid)) return prev;
+        updatedRoster = { ...ex, memberIds: [...ex.memberIds, mid] };
         return prev.map((r) =>
-          r.eventId === event?.id && r.team === team
-            ? { ...r, memberIds: [...r.memberIds, mid] }
-            : r
+          r.eventId === event?.id && r.team === team ? updatedRoster : r
         );
       }
-      return [...prev, { eventId: event?.id, team, memberIds: [mid] }];
+      updatedRoster = { eventId: event?.id, team, memberIds: [mid], leaderId: null };
+      return [...prev, updatedRoster];
     });
-    notify("✓ Added!");
+    setTimeout(async () => {
+      if (!updatedRoster) return;
+      if (updatedRoster.id) {
+        await sb.from("rosters").update({ member_ids: updatedRoster.memberIds }).eq("id", updatedRoster.id);
+      } else {
+        const { data } = await sb.from("rosters").insert({
+          event_id: updatedRoster.eventId,
+          team: updatedRoster.team,
+          member_ids: updatedRoster.memberIds,
+          leader_id: null,
+        }).select().single();
+        if (data) {
+          setRosters((p) =>
+            p.map((r) =>
+              r.eventId === updatedRoster.eventId && r.team === updatedRoster.team && !r.id
+                ? { ...r, id: data.id }
+                : r
+            )
+          );
+        }
+      }
+    }, 0);
+    if (!silent) notify("✓ Added!");
   };
-  const removeFromRoster = (team, mid) => {
+  const removeFromRoster = (team, mid, silent) => {
+    let updatedIds = [];
+    let rosterId = null;
     setRosters((prev) =>
-      prev.map((r) =>
-        r.eventId === event?.id && r.team === team
-          ? { ...r, memberIds: r.memberIds.filter((x) => x !== mid) }
-          : r
-      )
+      prev.map((r) => {
+        if (r.eventId === event?.id && r.team === team) {
+          updatedIds = r.memberIds.filter((x) => x !== mid);
+          rosterId = r.id;
+          return { ...r, memberIds: updatedIds };
+        }
+        return r;
+      })
     );
-    notify("Removed.");
+    if (rosterId) sb.from("rosters").update({ member_ids: updatedIds }).eq("id", rosterId);
+    if (!silent) notify("Removed.");
+  };
+  const transferMember = (fromTeam, member, toTeam) => {
+    const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: member.id, targetTeam: toTeam, memberRole: member.role, ignoreTeam: fromTeam });
+    if (!check.allowed) {
+      notify(`Não é possível transferir ${member.name}: já está na equipe ${check.conflictTeam}.`);
+      return;
+    }
+    removeFromRoster(fromTeam, member.id, true);
+    addToRoster(toTeam, member.id, true);
+    notify(`${member.name} transferido(a) para ${toTeam}.`);
   };
   const searchR =
     msearch.length > 1
@@ -89,7 +130,8 @@ function TeamLeaderView(props) {
             const mids = roster?.memberIds || [];
             const teamMembers = mids
               .map((mid) => members.find((m) => m.id === mid))
-              .filter(Boolean);
+              .filter(Boolean)
+              .sort((a, b) => norm(a.name).localeCompare(norm(b.name)));
             const counts = { confirmed: 0, pending: 0, not_registered: 0 };
             teamMembers.forEach((m) => counts[getStatus(m.id)]++);
             const notReg = teamMembers.filter((m) => getStatus(m.id) === "not_registered");
@@ -185,6 +227,11 @@ function TeamLeaderView(props) {
                               <button
                                 className="btn btn-ok btn-xs"
                                 onClick={() => {
+                                  const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: m.id, targetTeam: team, memberRole: m.role });
+                                  if (!check.allowed) {
+                                    notify(`Não é possível adicionar ${m.name} à sua equipe porque ele(a) já está na equipe ${check.conflictTeam}.`);
+                                    return;
+                                  }
                                   addToRoster(team, m.id);
                                   setMsearch("");
                                 }}
@@ -215,6 +262,7 @@ function TeamLeaderView(props) {
                             <th>{t.churchH}</th>
                             <th>{t.regH}</th>
                             <th></th>
+                            <th></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -243,6 +291,22 @@ function TeamLeaderView(props) {
                                       ]
                                     }
                                   </span>
+                                </td>
+                                <td>
+                                  <select
+                                    value=""
+                                    onChange={(e) => {
+                                      const dest = e.target.value;
+                                      if (dest) transferMember(team, m, dest);
+                                      e.target.value = "";
+                                    }}
+                                    style={{ fontSize: 11, padding: "3px 6px", width: "auto" }}
+                                  >
+                                    <option value="">Transferir…</option>
+                                    {SERVICE_TEAMS.filter((tm) => tm !== team).map((tm) => (
+                                      <option key={tm} value={tm}>{tm}</option>
+                                    ))}
+                                  </select>
                                 </td>
                                 <td>
                                   <button

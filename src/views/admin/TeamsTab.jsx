@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useT } from "@/i18n/strings";
 import { sb } from "@/lib/supabase";
 import { fetchEventTeams, importTeamsFromEvent } from "@/lib/rosterImport";
+import { canAssignToTeam } from "@/lib/teamAssignment";
 
 const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
 import { SERVICE_TEAMS, STATUS_CFG } from "@/constants";
@@ -516,6 +517,11 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
                           <button
                             className="btn btn-ok btn-xs"
                             onClick={() => {
+                              const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: m.id, targetTeam: team, memberRole: m.role });
+                              if (!check.allowed) {
+                                notify(`Não é possível adicionar ${m.name}: já está na equipe ${check.conflictTeam}.`);
+                                return;
+                              }
                               addToRoster(team, m.id);
                               setMsearch("");
                             }}

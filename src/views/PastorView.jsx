@@ -22,6 +22,7 @@ function PastorView(props) {
   const coll = paid.reduce((s, r) => s + r.fee, 0);
   const pendA = pend.reduce((s, r) => s + r.fee, 0);
   const pct = Math.round((coll / (coll + pendA)) * 100 || 0);
+  const workers = er.filter((r) => r.team && r.team !== "Participante");
   const byCatOf = (rows) => CATEGORIES.map((c) => ({ c, n: rows.filter((r) => r.category === c).length })).filter((x) => x.n > 0);
   const byChOf = (rows) => [...new Set(rows.map((r) => r.church))].map((ch) => ({ ch, total: rows.filter((r) => r.church === ch).length, paid: rows.filter((r) => r.church === ch && r.paid).length })).sort((a, b) => b.total - a.total);
   const byCat = byCatOf(er);
@@ -45,9 +46,10 @@ function PastorView(props) {
                   <p style={{ color: "#6b7280", fontSize: 13 }}>{event?.date} · {event?.location}</p>
                 </div>
                 <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} />
-                <div className="stat-grid-3" style={{ marginBottom: 18 }}>
+                <div className="stat-grid-4" style={{ marginBottom: 18 }}>
                   {[
                     { label: t.registered, value: er.length, color: "#1a3a6b", detail: `${t.cia}:${er.filter((r)=>["0-3","Criança","Intermediário"].includes(r.category)).length} · ${t.ya}:${er.filter((r)=>["Adolescente","Jovem","Adulto"].includes(r.category)).length}` },
+                    { label: t.workers, value: workers.length, color: "#5b21b6", detail: `${er.length > 0 ? Math.round((workers.length / er.length) * 100) : 0}% ${t.ofTotal}` },
                     { label: t.collected, value: fmt(coll), color: "#2d8a4e", detail: `${paid.length} ${t.payers}` },
                     { label: t.pendingAmt, value: fmt(pendA), color: "#d4820a", detail: `${pend.length} ${t.people}` },
                   ].map((s) => (

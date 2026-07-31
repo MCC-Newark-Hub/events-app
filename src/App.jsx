@@ -15,6 +15,17 @@ import GALeaderView from "@/views/GALeaderView";
 import TeamLeaderView from "@/views/TeamLeaderView";
 import RegistrationLookup from "@/views/RegistrationLookup";
 
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+const isSessionValid = () => {
+  const ts = localStorage.getItem("mcc_pin_ts");
+  return !!ts && Date.now() - Number(ts) < SESSION_TTL_MS;
+};
+const clearSession = () => {
+  localStorage.removeItem("mcc_pin");
+  localStorage.removeItem("mcc_view");
+  localStorage.removeItem("mcc_pin_ts");
+};
+
 export default function App() {
   const [lang, setLangState] = useState(() => localStorage.getItem("mcc_lang") || "pt");
   const setLang = (l) => {
@@ -26,9 +37,9 @@ export default function App() {
   const checkinParam = urlParams.get('checkin');
   const selfCheckinParam = urlParams.get('selfcheckin');
   const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
-  // Restore session from localStorage on mount
-  const [view, setView] = useState(() => localStorage.getItem("mcc_view") || "login");
-  const [savedPin] = useState(() => localStorage.getItem("mcc_pin") || null);
+  // Restore session from localStorage on mount, unless it's past the TTL
+  const [view, setView] = useState(() => (isSessionValid() && localStorage.getItem("mcc_view")) || "login");
+  const [savedPin] = useState(() => (isSessionValid() && localStorage.getItem("mcc_pin")) || null);
   const [lookupPrefill, setLookupPrefill] = useState("");
   const [toast, setToast] = useState(null);
   const userRef = useRef(null);
@@ -42,6 +53,11 @@ export default function App() {
   const { user, login: authLogin, logout: authLogout } = useAuth(appData.dbUsers || []);
   useEffect(() => { userRef.current = user; });
 
+  // Clean up a stale/expired cached session that didn't get picked up above
+  useEffect(() => {
+    if (!savedPin && localStorage.getItem("mcc_pin")) clearSession();
+  }, []);
+
   // Re-login from saved PIN once DB users have loaded
   useEffect(() => {
     if (savedPin && !user && appData.dbUsers && appData.dbUsers.length > 0) {
@@ -51,8 +67,7 @@ export default function App() {
         setView(restoredView);
       } else {
         // PIN no longer valid, clear session
-        localStorage.removeItem("mcc_pin");
-        localStorage.removeItem("mcc_view");
+        clearSession();
         setView("login");
       }
     }
@@ -63,6 +78,7 @@ export default function App() {
     if (mapped) {
       localStorage.setItem("mcc_pin", pin);
       localStorage.setItem("mcc_view", mapped.sysRole);
+      localStorage.setItem("mcc_pin_ts", String(Date.now()));
       setView(mapped.sysRole);
       return true;
     }
@@ -70,8 +86,7 @@ export default function App() {
   };
   const logout = () => {
     authLogout();
-    localStorage.removeItem("mcc_pin");
-    localStorage.removeItem("mcc_view");
+    clearSession();
     setView("login");
   };
 
