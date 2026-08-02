@@ -20,6 +20,7 @@ export default function RegistrationsTab(props) {
     regs,
     setRegs,
     members,
+    setMembers,
     families,
     dbTeams,
     addReg,
@@ -226,6 +227,7 @@ export default function RegistrationsTab(props) {
         <RegModal
           event={event}
           members={members}
+          setMembers={setMembers}
           families={families}
           dbTeams={dbTeams}
           isFull={isFull}

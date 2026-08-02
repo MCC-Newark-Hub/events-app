@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, ROLE_GROUPS, TEAMS, OBREIRO_ROLES, ROLE_BADGE, fmt } from "@/constants";
+import { sb } from "@/lib/supabase";
+import { mapMember } from "@/hooks/useAppData";
+import { genMemberId } from "@/lib/genMemberId";
 import FeeBox from "./FeeBox";
 import ChurchSearch from "./ChurchSearch";
+import SearchSelect from "./SearchSelect";
 
 // Accent-insensitive search: "joao" matches "João"
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -10,6 +14,7 @@ const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u
 function RegModal({
   event,
   members,
+  setMembers,
   families,
   churches,
   dbTeams,
@@ -32,6 +37,8 @@ function RegModal({
   const [showOverride, setShowOverride] = useState(false);
   const [pendingData, setPendingData] = useState(null);
   const [bulkSel, setBulkSel] = useState([]);
+  const [creatingMember, setCreatingMember] = useState(false);
+  const [manualError, setManualError] = useState(null);
   const [f, setF] = useState({
     team:
       prefill?.role === "Pastor"
@@ -50,6 +57,7 @@ function RegModal({
     category: "Adulto",
     church: "",
     role: "",
+    invitedByMemberId: "",
   });
 
   const avail = members.filter((m) => !existingRegs.find((r) => r.memberId === m.id));
@@ -88,6 +96,34 @@ function RegModal({
       setPendingData(data);
       setShowOverride(true);
     } else { onSave(data); onClose(); }
+  };
+
+  // Manual entries don't exist in `members` yet. registrations.member_id is a FK
+  // to members.id, so a placeholder id ("GUEST-...") fails the insert silently —
+  // create the real row first and use its server-generated id.
+  const saveManual = async () => {
+    if (!f.memberName || creatingMember) return;
+    setManualError(null);
+    setCreatingMember(true);
+    const row = {
+      id: genMemberId(),
+      name: f.memberName,
+      badge_name: f.badgeName || f.memberName,
+      gender: "M",
+      category: f.category,
+      church: f.church,
+      role: f.role,
+      roles: f.role ? [f.role] : [],
+    };
+    const { data, error } = await sb.from("members").insert(row).select().single();
+    setCreatingMember(false);
+    if (error) {
+      console.error("saveManual member insert error:", error);
+      setManualError(t.errorSavingMember || "Erro ao salvar novo membro. Tente novamente.");
+      return;
+    }
+    if (setMembers) setMembers((prev) => [...prev, mapMember(data)]);
+    trySave({ memberId: data.id, ...f });
   };
 
   if (showOverride)
@@ -734,6 +770,17 @@ function RegModal({
               />
             </div>
             <div>
+              <label>Convidado por <span style={{ fontSize: 11, fontWeight: 400, textTransform: "none" }}>({t.optional})</span></label>
+              <SearchSelect
+                value={f.invitedByMemberId}
+                onSelect={(id) => setF({ ...f, invitedByMemberId: id })}
+                items={members}
+                getLabel={(m) => m?.name || ""}
+                getId={(m) => m?.id || ""}
+                placeholder="Buscar nome..."
+              />
+            </div>
+            <div>
               <label>{t.team}</label>
               <select value={f.team} onChange={(e) => setF({ ...f, team: e.target.value })}>
                 {teamList.map((t2) => (
@@ -762,12 +809,13 @@ function RegModal({
               </div>
             </div>
             <FeeBox fee={manFee} isExempt={["Pastor", "Ungido"].includes(f.role) || f.exempt} />
+            {manualError && <p style={{ color: "#c0392b", fontSize: 12 }}>{manualError}</p>}
             <button
               className="btn btn-primary"
-              disabled={!f.memberName}
-              onClick={() => trySave({ memberId: "GUEST-" + Date.now(), ...f })}
+              disabled={!f.memberName || creatingMember}
+              onClick={saveManual}
             >
-              {t.confirmReg}
+              {creatingMember ? "…" : t.confirmReg}
             </button>
           </div>
         )}

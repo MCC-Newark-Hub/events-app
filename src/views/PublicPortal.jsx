@@ -5,8 +5,11 @@ import { CATEGORIES, ROLE_BADGE, OBREIRO_ROLES, fmt } from "@/constants";
 import BadgePrint from "@/components/BadgePrint";
 import Modal from "@/components/Modal";
 import ChurchSearch from "@/components/ChurchSearch";
+import SearchSelect from "@/components/SearchSelect";
 import { sb } from "@/lib/supabase";
+import { mapMember } from "@/hooks/useAppData";
 import { findSimilarMembers } from "@/lib/similarity";
+import { genMemberId } from "@/lib/genMemberId";
 import { syncRegistrationNames } from "@/lib/syncMemberName";
 
 // Accent-insensitive search: "joao" matches "João"
@@ -284,6 +287,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
   const [showManualFam, setShowManualFam] = useState(false);
   const [manualFam, setManualFam] = useState({ name: "", gender: "M", category: "Adulto", role: "", church: "" });
   const [contact, setContact] = useState({ phone: "", email: "", whatsapp: true });
+  const [invitedByMemberId, setInvitedByMemberId] = useState("");
   const [translations, setTranslations] = useState({ en: false, es: false });
   const [allergies, setAllergies] = useState({ hasAny: false, other: "" });
   const [specialNeeds, setSpecialNeeds] = useState({ hasAny: false, other: "" });
@@ -293,6 +297,8 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
   const [deadlineError, setDeadlineError] = useState(false);
   const [termLang, setTermLang] = useState(lang || "pt");
   const [submitted, setSubmitted] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   const [errors, setErrors] = useState({});
   const [badgeNames, setBadgeNames] = useState({});
 
@@ -355,10 +361,35 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
     setCorrectingSuggestion(null);
   };
 
-  const handleSubmit = () => {
+  // Unverified participants ("I couldn't find my name") don't exist in `members` yet.
+  // registrations.member_id is a FK to members.id, so we must create the row first
+  // and use the real server-generated id — a placeholder like "GUEST" fails the insert silently.
+  const createUnverifiedMember = async (m) => {
+    const row = {
+      id: genMemberId(),
+      name: m.name,
+      badge_name: m.badgeName || m.name,
+      gender: m.gender || "M",
+      category: m.category || "Adulto",
+      church: m.church || "",
+      role: m.role || "",
+      roles: m.role ? [m.role] : [],
+    };
+    const { data, error } = await sb.from("members").insert(row).select().single();
+    if (error) {
+      console.error("createUnverifiedMember error:", error);
+      return null;
+    }
+    if (setMembers) setMembers((prev) => [...prev, mapMember(data)]);
+    return data.id;
+  };
+
+  const handleSubmit = async () => {
     if (!termsAccepted) { setTermsError(true); return; }
     if (deadlineDays && !deadlineAccepted) { setDeadlineError(true); return; }
-    if (!addReg) return;
+    if (!addReg || submitting) return;
+    setSubmitError(null);
+    setSubmitting(true);
     // Batch token groups all regs from this submission for family lookup, even when contact info is empty
     const batchId = "B" + Date.now();
     const sharedNote = [
@@ -368,15 +399,28 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
       allergies.hasAny ? "Alergias: " + allergies.other : "",
       specialNeeds.hasAny ? "Nec. especiais: " + specialNeeds.other : "",
     ].filter(Boolean).join(" | ");
-    const submittedRegs = allParticipants.map((m) => {
+    const submittedRegs = [];
+    for (const m of allParticipants) {
       const isVerifiedMember = m.verified !== false && m.id && !m.id.startsWith("MANUAL-");
       const resolvedBadge = (badgeNames[m.id] || "").trim() || m.badgeName || m.name;
-      // Persist badge name change to DB if member exists and name was customised
-      if (isVerifiedMember && (badgeNames[m.id] || "").trim() && (badgeNames[m.id] || "").trim() !== m.badgeName) {
-        sb.from("members").update({ badge_name: resolvedBadge }).eq("id", m.id);
+      let memberId = m.id;
+      if (isVerifiedMember) {
+        // Persist badge name change to DB if member exists and name was customised
+        if ((badgeNames[m.id] || "").trim() && (badgeNames[m.id] || "").trim() !== m.badgeName) {
+          sb.from("members").update({ badge_name: resolvedBadge }).eq("id", m.id);
+        }
+      } else {
+        memberId = await createUnverifiedMember({ ...m, badgeName: resolvedBadge });
+        if (!memberId) {
+          setSubmitting(false);
+          setSubmitError(lang === "en"
+            ? "Could not save one of the registrants. Please check your connection and try again."
+            : "Não foi possível salvar um dos participantes. Verifique sua conexão e tente novamente.");
+          return;
+        }
       }
-      return addReg({
-        memberId: isVerifiedMember ? m.id : "GUEST",
+      submittedRegs.push(addReg({
+        memberId,
         memberName: m.name,
         badgeName: resolvedBadge,
         category: m.category || "Adulto",
@@ -388,8 +432,10 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
         exempt: false,
         needsTranslation: translations.en || translations.es,
         note: sharedNote,
-      });
-    });
+        invitedByMemberId: invitedByMemberId || null,
+      }));
+    }
+    setSubmitting(false);
     setSubmitted({ regs: submittedRegs, email: contact.email });
   };
 
@@ -832,6 +878,17 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
                   <input type="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} placeholder="seu@email.com" />
                 </div>
                 <div>
+                  <label>{lang === "en" ? "Invited by someone? " : "Foi convidado(a) por alguém? "}<span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400, textTransform: "none" }}>({lang === "en" ? "optional" : "opcional"})</span></label>
+                  <SearchSelect
+                    value={invitedByMemberId}
+                    onSelect={setInvitedByMemberId}
+                    items={allMembers}
+                    getLabel={(m) => m?.name || ""}
+                    getId={(m) => m?.id || ""}
+                    placeholder={lang === "en" ? "Search name..." : "Buscar nome..."}
+                  />
+                </div>
+                <div>
                   <label>{t.translationNeededLabel}</label>
                   <div style={{ display: "flex", gap: 16, marginTop: 4 }}>
                     <div className="cb"><input type="checkbox" id="ten" checked={translations.en} onChange={(e) => setTranslations({ ...translations, en: e.target.checked })} /><label htmlFor="ten">{t.translationEN}</label></div>
@@ -891,9 +948,13 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
                 <div style={{ marginTop: 4, color: "#6b7280" }}>{t.pendingPaymentNote}</div>
               </div>
 
+              {submitError && <p style={{ color: "#c0392b", fontSize: 13, marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={13} /> {submitError}</p>}
+
               <div style={{ display: "flex", gap: 10 }}>
-                <button className="btn btn-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }} onClick={() => setStep(3)}><ArrowLeft size={14} /> {t.back}</button>
-                <button className="btn btn-accent" style={{ flex: 2, fontSize: 15 }} onClick={handleSubmit}>{lang === "en" ? "Submit Registration" : "Confirmar Inscrição"} →</button>
+                <button className="btn btn-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }} onClick={() => setStep(3)} disabled={submitting}><ArrowLeft size={14} /> {t.back}</button>
+                <button className="btn btn-accent" style={{ flex: 2, fontSize: 15 }} onClick={handleSubmit} disabled={submitting}>
+                  {submitting ? (lang === "en" ? "Submitting…" : "Enviando…") : `${lang === "en" ? "Submit Registration" : "Confirmar Inscrição"} →`}
+                </button>
               </div>
             </div>
           )}

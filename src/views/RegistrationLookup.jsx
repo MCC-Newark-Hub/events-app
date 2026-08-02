@@ -2,6 +2,10 @@ import { useState } from "react";
 import { Search, ArrowLeft, XCircle, CheckCircle2, AlertTriangle, UserPlus } from "lucide-react";
 import { fmt, CATEGORIES, ROLE_BADGE, OBREIRO_ROLES } from "@/constants";
 import ChurchSearch from "@/components/ChurchSearch";
+import SearchSelect from "@/components/SearchSelect";
+import { sb } from "@/lib/supabase";
+import { mapMember } from "@/hooks/useAppData";
+import { genMemberId } from "@/lib/genMemberId";
 
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
@@ -90,7 +94,7 @@ function RegCard({ reg, onCancel, lang }) {
   );
 }
 
-export default function RegistrationLookup({ event, regs, members, churches, updateReg, addReg, lang, onBack, initialName }) {
+export default function RegistrationLookup({ event, regs, members, setMembers, churches, updateReg, addReg, lang, onBack, initialName }) {
   const [searchMode, setSearchMode] = useState(initialName ? "name" : "number"); // "number" | "name"
   const [query, setQuery] = useState("");
   const [nameQuery, setNameQuery] = useState(initialName || "");
@@ -106,7 +110,10 @@ export default function RegistrationLookup({ event, regs, members, churches, upd
   const [famSelected, setFamSelected] = useState(null);
   const [showManual, setShowManual] = useState(false);
   const [manualMember, setManualMember] = useState({ name: "", category: "Adulto", role: "", church: "" });
+  const [famInvitedBy, setFamInvitedBy] = useState("");
   const [addDone, setAddDone] = useState(false);
+  const [addingFamily, setAddingFamily] = useState(false);
+  const [addFamilyError, setAddFamilyError] = useState(null);
 
   const registeredIds = (regs || [])
     .filter((r) => r.eventId === event?.id && !r.cancelled)
@@ -185,11 +192,39 @@ export default function RegistrationLookup({ event, regs, members, churches, upd
     setCancelDone(true);
   };
 
-  const handleAddFamily = () => {
-    if (!famSelected || !found || !addReg) return;
+  const handleAddFamily = async () => {
+    if (!famSelected || !found || !addReg || addingFamily) return;
+    setAddFamilyError(null);
     const isVerified = !famSelected.id?.startsWith("MANUAL-");
+    let memberId = famSelected.id;
+    if (!isVerified) {
+      // Unverified ("couldn't find name") members don't exist in `members` yet.
+      // registrations.member_id is a FK to members.id, so it must be created first.
+      setAddingFamily(true);
+      const row = {
+        id: genMemberId(),
+        name: famSelected.name,
+        badge_name: famSelected.name,
+        gender: famSelected.gender || "M",
+        category: famSelected.category || "Adulto",
+        church: famSelected.church || "",
+        role: famSelected.role || "",
+        roles: famSelected.role ? [famSelected.role] : [],
+      };
+      const { data, error } = await sb.from("members").insert(row).select().single();
+      setAddingFamily(false);
+      if (error) {
+        console.error("handleAddFamily member insert error:", error);
+        setAddFamilyError(lang === "en"
+          ? "Could not save this person. Please check your connection and try again."
+          : "Não foi possível salvar esta pessoa. Verifique sua conexão e tente novamente.");
+        return;
+      }
+      memberId = data.id;
+      if (setMembers) setMembers((prev) => [...prev, mapMember(data)]);
+    }
     const newReg = addReg({
-      memberId: isVerified ? famSelected.id : "GUEST",
+      memberId,
       memberName: famSelected.name,
       badgeName: famSelected.name,
       category: famSelected.category || "Adulto",
@@ -200,13 +235,15 @@ export default function RegistrationLookup({ event, regs, members, churches, upd
       paid: false,
       exempt: false,
       note: found.note, // inherit batch token + contact info from existing registration
+      invitedByMemberId: famInvitedBy || null,
     });
     setRelated((prev) => [...prev, newReg]);
     setAddDone(true);
     setShowAddFamily(false);
     setFamSelected(null);
     setFamSearch("");
-    setManualMember({ name: "", category: "Adulto" });
+    setManualMember({ name: "", category: "Adulto", role: "", church: "" });
+    setFamInvitedBy("");
     setShowManual(false);
   };
 
@@ -500,21 +537,34 @@ export default function RegistrationLookup({ event, regs, members, churches, upd
                         </div>
                         <button onClick={() => { setFamSelected(null); setFamSearch(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 18 }}>×</button>
                       </div>
+                      <div style={{ marginTop: 10 }}>
+                        <label style={{ fontSize: 13 }}>{lang === "en" ? "Invited by someone?" : "Foi convidado(a) por alguém?"} <span style={{ fontSize: 11, color: "#9ca3af" }}>({lang === "en" ? "optional" : "opcional"})</span></label>
+                        <SearchSelect
+                          value={famInvitedBy}
+                          onSelect={setFamInvitedBy}
+                          items={members}
+                          getLabel={(m) => m?.name || ""}
+                          getId={(m) => m?.id || ""}
+                          placeholder={lang === "en" ? "Search name..." : "Buscar nome..."}
+                        />
+                      </div>
                     </div>
                   )}
 
+                  {addFamilyError && <p style={{ color: "#c0392b", fontSize: 12, marginBottom: 8 }}>{addFamilyError}</p>}
+
                   <div style={{ display: "flex", gap: 8, marginTop: famSelected ? 0 : 12 }}>
-                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setShowAddFamily(false); setFamSelected(null); setFamSearch(""); setShowManual(false); }}>
+                    <button className="btn btn-ghost" style={{ flex: 1 }} disabled={addingFamily} onClick={() => { setShowAddFamily(false); setFamSelected(null); setFamSearch(""); setFamInvitedBy(""); setShowManual(false); }}>
                       {lang === "en" ? "Cancel" : "Cancelar"}
                     </button>
                     <button
                       className="btn btn-primary"
                       style={{ flex: 2 }}
-                      disabled={!famSelected}
+                      disabled={!famSelected || addingFamily}
                       onClick={handleAddFamily}
                     >
                       <UserPlus size={14} style={{ marginRight: 4 }} />
-                      {lang === "en" ? "Add to registration" : "Adicionar à inscrição"}
+                      {addingFamily ? (lang === "en" ? "Adding…" : "Adicionando…") : (lang === "en" ? "Add to registration" : "Adicionar à inscrição")}
                     </button>
                   </div>
                 </div>

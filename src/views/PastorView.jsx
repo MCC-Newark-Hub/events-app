@@ -9,13 +9,17 @@ import ApprovalsPanel from "@/components/ApprovalsPanel";
 import ReportsTab from "./admin/ReportsTab";
 
 function PastorView(props) {
-  const { event, regs, approvals, resolveApproval, user, logout, activeCount, wlRegs, exRegs, pendingApprovals, lang, setLang, theme, toggleTheme } = props;
+  const { event, regs, approvals, resolveApproval, user, logout, activeCount, wlRegs, exRegs, pendingApprovals, lang, setLang, theme, toggleTheme, churches, members } = props;
   const t = useT();
   const [sec, setSec] = useState("dashboard");
   const [expandedCat, setExpandedCat] = useState({});
   const [expandedCh, setExpandedCh] = useState({});
+  const [expandedHub, setExpandedHub] = useState({});
+  const [expandedGuest, setExpandedGuest] = useState({});
   const toggleCat = (key) => setExpandedCat((p) => ({ ...p, [key]: !p[key] }));
   const toggleCh = (key) => setExpandedCh((p) => ({ ...p, [key]: !p[key] }));
+  const toggleHub = (key) => setExpandedHub((p) => ({ ...p, [key]: !p[key] }));
+  const toggleGuest = (key) => setExpandedGuest((p) => ({ ...p, [key]: !p[key] }));
   const er = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const paid = er.filter((r) => r.paid && !r.exempt);
   const pend = er.filter((r) => !r.paid && !r.exempt);
@@ -27,6 +31,25 @@ function PastorView(props) {
   const byChOf = (rows) => [...new Set(rows.map((r) => r.church))].map((ch) => ({ ch, total: rows.filter((r) => r.church === ch).length, paid: rows.filter((r) => r.church === ch && r.paid).length })).sort((a, b) => b.total - a.total);
   const byCat = byCatOf(er);
   const byCh = byChOf(er);
+
+  const hubChurchNames = new Set((churches || []).filter((c) => c.is_hub).map((c) => c.display));
+  const isHubChurch = (church) => hubChurchNames.has(church);
+  const byHubOf = (rows) => {
+    const label = (h) => h ? "Hub" : (lang === "en" ? "Outside the Hub" : "Fora do Hub");
+    return [true, false].map((h) => ({
+      key: label(h),
+      isHub: h,
+      total: rows.filter((r) => isHubChurch(r.church) === h).length,
+      paid: rows.filter((r) => isHubChurch(r.church) === h && r.paid).length,
+    })).filter((x) => x.total > 0);
+  };
+  const byHub = byHubOf(er);
+
+  const memberName = (id) => (members || []).find((m) => m.id === id)?.name || (lang === "en" ? "Unknown" : "Desconhecido");
+  const guestRegs = er.filter((r) => r.invitedByMemberId);
+  const guestsByInviter = [...new Set(guestRegs.map((r) => r.invitedByMemberId))]
+    .map((id) => ({ id, name: memberName(id), guests: guestRegs.filter((r) => r.invitedByMemberId === id) }))
+    .sort((a, b) => b.guests.length - a.guests.length);
   const navItems = [
     { id: "dashboard", icon: <LayoutDashboard size={16} />, label: t.dashboard },
     { id: "approvals", icon: <Clock size={16} />, label: `${t.approvals}${pendingApprovals.length > 0 ? ` (${pendingApprovals.length})` : ""}` },
@@ -110,6 +133,59 @@ function PastorView(props) {
                     })}
                   </div>
                 </div>
+                {(byHub.length > 0 || guestsByInviter.length > 0) && (
+                  <div className="two-col" style={{ marginBottom: 14 }}>
+                    <div className="card">
+                      <h4 style={{ fontWeight: 700, marginBottom: 10 }}>{lang === "en" ? "Hub × Outside the Hub" : "Hub × Fora do Hub"}</h4>
+                      {byHub.map((x) => {
+                        const isOpen = !!expandedHub[x.key];
+                        const subRows = isOpen ? byChOf(er.filter((r) => isHubChurch(r.church) === x.isHub)) : [];
+                        return (
+                          <Fragment key={x.key}>
+                            <div onClick={() => toggleHub(x.key)} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)", cursor: "pointer" }}>
+                              <span style={{ fontSize: 13 }}>
+                                <span style={{ display: "inline-block", width: 14, color: "#9ca3af" }}>{isOpen ? "▾" : "▸"}</span>
+                                {x.key}
+                              </span>
+                              <div style={{ display: "flex", gap: 5 }}><span className="badge badge-green">{x.paid}✓</span><span className="badge badge-blue">{x.total}</span></div>
+                            </div>
+                            {subRows.map((sr) => (
+                              <div key={x.key + ":" + sr.ch} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0 5px 22px", borderBottom: "1px solid var(--border)", background: "var(--bg2)" }}>
+                                <span style={{ fontSize: 12, color: "var(--muted)" }}>{sr.ch}</span>
+                                <div style={{ display: "flex", gap: 6 }}><span className="badge badge-green" style={{ fontSize: 11 }}>{sr.paid}✓</span><span className="badge badge-blue" style={{ fontSize: 11 }}>{sr.total}</span></div>
+                              </div>
+                            ))}
+                          </Fragment>
+                        );
+                      })}
+                      {byHub.length === 0 && <p style={{ fontSize: 12, color: "var(--muted)" }}>{lang === "en" ? "No registrations yet." : "Nenhuma inscrição ainda."}</p>}
+                    </div>
+                    <div className="card">
+                      <h4 style={{ fontWeight: 700, marginBottom: 10 }}>{lang === "en" ? "Guests" : "Convidados"}</h4>
+                      {guestsByInviter.map((inv) => {
+                        const isOpen = !!expandedGuest[inv.id];
+                        return (
+                          <Fragment key={inv.id}>
+                            <div onClick={() => toggleGuest(inv.id)} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)", cursor: "pointer" }}>
+                              <span style={{ fontSize: 13 }}>
+                                <span style={{ display: "inline-block", width: 14, color: "#9ca3af" }}>{isOpen ? "▾" : "▸"}</span>
+                                {inv.name}
+                              </span>
+                              <span className="badge badge-blue">{inv.guests.length}</span>
+                            </div>
+                            {isOpen && inv.guests.map((g) => (
+                              <div key={g.id} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0 5px 22px", borderBottom: "1px solid var(--border)", background: "var(--bg2)" }}>
+                                <span style={{ fontSize: 12, color: "var(--muted)" }}>{g.memberName}</span>
+                                <span style={{ fontSize: 11, color: "var(--muted)" }}>{g.church || "—"}</span>
+                              </div>
+                            ))}
+                          </Fragment>
+                        );
+                      })}
+                      {guestsByInviter.length === 0 && <p style={{ fontSize: 12, color: "var(--muted)" }}>{lang === "en" ? "No guests recorded for this event." : "Nenhum convidado registrado para este evento."}</p>}
+                    </div>
+                  </div>
+                )}
                 <div className="card">
                   <h4 style={{ fontWeight: 700, marginBottom: 12 }}>{t.collected}</h4>
                   <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>

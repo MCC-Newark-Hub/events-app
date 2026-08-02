@@ -4,6 +4,7 @@ import { useT } from "@/i18n/strings";
 import { ROLE_BADGE, CATEGORIES, ROLE_GROUPS, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
 import { mapMember } from "@/hooks/useAppData";
+import { genMemberId } from "@/lib/genMemberId";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
 import CapBar from "@/components/CapBar";
@@ -121,7 +122,7 @@ function ClerkView(props) {
           syncRegistrationNames({ memberId: editingMember.id, oldName: oldMember.name, newName: fullName, newBadgeName: row.badge_name, setRegs });
         }
       } else {
-        const { data, error } = await sb.from("members").insert(row).select().single();
+        const { data, error } = await sb.from("members").insert({ ...row, id: genMemberId() }).select().single();
         if (error) throw error;
         memberId = data.id;
         setMembers((prev) => [...prev, mapMember(data)]);
@@ -357,7 +358,7 @@ function ClerkView(props) {
         </div>
         </div>
       </div>
-      {showReg && <RegModal event={event} members={myMembers} families={families} dbTeams={dbTeams} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
+      {showReg && <RegModal event={event} members={myMembers} setMembers={setMembers} families={families} dbTeams={dbTeams} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
       {detail && <DetailModal reg={detail} event={event} dbTeams={dbTeams} regs={regs} canEditPayment={true} onClose={() => setDetail(null)} lang={lang} onUpdate={(u) => { updateReg(detail.id, u); setDetail(null); }} />}
 
       {editingMember && (

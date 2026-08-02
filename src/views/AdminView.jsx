@@ -985,6 +985,13 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>ID: {formData.pastorId}</div>
                       )}
                     </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <input type="checkbox" id="is-hub" checked={!!formData.isHub}
+                        onChange={(e) => setFormData({ ...formData, isHub: e.target.checked })} />
+                      <label htmlFor="is-hub" style={{ margin: 0, cursor: "pointer", fontSize: 13, fontWeight: 500, textTransform: "none", letterSpacing: 0, color: "var(--text)" }}>
+                        Igreja do Hub (Newark, Filadélfia, Nova York, Toms River)
+                      </label>
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
                     <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
@@ -1003,6 +1010,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         address:      formData.address?.trim()    || null,
                         church_name:  formData.churchName?.trim() || null,
                         pastor_id:    formData.pastorId           || null,
+                        is_hub:       !!formData.isHub,
                       };
                       if (!isNew) row.id = editing.id;
                       saveRow("churches", row, isNew, churches, setChurches, null);
@@ -1035,7 +1043,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                   {list.map((c) => (
                     <tr key={c.id || c.display} style={{ background: c.id && selected.includes(c.id) ? "var(--sidebar-active-bg)" : "" }}>
                       <td><input type="checkbox" disabled={!c.id} checked={!!(c.id && selected.includes(c.id))} onChange={() => c.id && toggleSel(c.id)} /></td>
-                      <td style={{ fontWeight: 500 }}>{c.display}</td>
+                      <td style={{ fontWeight: 500 }}>{c.display}{c.is_hub && <span className="badge badge-green" style={{ marginLeft: 6 }}>Hub</span>}</td>
                       <td style={{ fontSize: 12 }}>{c.city || "—"}</td>
                       <td><span className="badge badge-gray">{c.state_code || c.stateCode || "—"}</span></td>
                       <td><span className="badge badge-blue">{c.country_code || c.code || "—"}</span></td>
@@ -1043,7 +1051,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       <td>
                         <div style={{ display: "flex", gap: 6 }}>
                           <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address || c.display)}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-xs" title="Ver no Maps">🗺</a>
-                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(c, { display: c.display, city: c.city || "", stateCode: c.state_code || "", stateName: c.state_name || "", countryCode: c.country_code || c.code || "EUA", country: c.country || "", address: c.address || "", churchName: c.church_name || "", pastorId: c.pastor_id || null })}><Pencil size={12} /></button>
+                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(c, { display: c.display, city: c.city || "", stateCode: c.state_code || "", stateName: c.state_name || "", countryCode: c.country_code || c.code || "EUA", country: c.country || "", address: c.address || "", churchName: c.church_name || "", pastorId: c.pastor_id || null, isHub: c.is_hub || false })}><Pencil size={12} /></button>
                           {c.id && <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [c.id], label: c.display })}><Trash2 size={12} /></button>}
                         </div>
                       </td>
@@ -1054,7 +1062,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
               </table>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ display: "", city: "", stateCode: "", stateName: "", countryCode: "EUA", country: "", address: "", churchName: "", pastorId: null })}><Plus size={14} /> Nova Igreja</button>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ display: "", city: "", stateCode: "", stateName: "", countryCode: "EUA", country: "", address: "", churchName: "", pastorId: null, isHub: false })}><Plus size={14} /> Nova Igreja</button>
               {(churches || []).filter((c) => c.id).length > 0 && (
                 <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
                   onClick={() => setDeleting({ ids: (churches || []).map((c) => c.id).filter(Boolean), label: "" })}>

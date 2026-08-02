@@ -121,6 +121,7 @@ export default function App() {
             event={appData.event}
             regs={appData.regs}
             members={appData.members}
+            setMembers={appData.setMembers}
             churches={appData.churches}
             updateReg={appData.updateReg}
             addReg={appData.addReg}

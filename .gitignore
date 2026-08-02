@@ -27,3 +27,4 @@ dist-ssr
 .vercel
 docs/dev/jsdoc/
 .env*
+supabase/.temp/
