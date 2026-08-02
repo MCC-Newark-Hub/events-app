@@ -24,6 +24,11 @@ function TeamLeaderView(props) {
   } = props;
   const t = useT();
   const myTeams = user?.teamLeads || [];
+  const joinNames = (names) =>
+    names.length === 0 ? "" :
+    names.length === 1 ? names[0] :
+    names.slice(0, -1).join(", ") + " e " + names[names.length - 1];
+  const greetingName = joinNames(myTeams) || user?.name;
   const eventRegs = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const getStatus = (mid) => {
     const r = eventRegs.find((x) => x.memberId === mid);
@@ -116,7 +121,7 @@ function TeamLeaderView(props) {
         <div className="page-pad">
           <div style={{ marginBottom: 16 }}>
             <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22 }}>
-              {t.hello}, {user?.name}!
+              {t.hello}, {greetingName}!
             </h2>
             <p style={{ color: "#6b7280", fontSize: 13 }}>{t.teamReadOnly}</p>
           </div>

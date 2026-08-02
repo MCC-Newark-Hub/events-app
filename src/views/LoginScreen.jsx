@@ -3,6 +3,7 @@ import { ClipboardList, Lock, Search } from "lucide-react";
 import { STRINGS } from "@/i18n/strings";
 import ICMLogo from "@/components/ICMLogo";
 import PinLogin from "@/components/PinLogin";
+import DeadlineBanner from "@/components/DeadlineBanner";
 
 function LoginScreen({ login, lang, setLang, event, onPublicRegister, onLookup }) {
   const t = STRINGS[lang];
@@ -77,6 +78,11 @@ function LoginScreen({ login, lang, setLang, event, onPublicRegister, onLookup }
               <div style={{ color: "rgba(255,255,255,.7)", fontSize: 12, marginTop: 2 }}>
                 {event.date}{event.location ? ` · ${event.location}` : ""}
               </div>
+            </div>
+          )}
+          {event && (
+            <div style={{ marginBottom: 20 }}>
+              <DeadlineBanner event={event} t={t} />
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

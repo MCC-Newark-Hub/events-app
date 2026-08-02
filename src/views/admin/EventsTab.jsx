@@ -105,6 +105,7 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
     location: "",
     capacity: 200,
     paymentDeadlineDays: 7,
+    registrationDeadline: "",
     fees: { "0-3": 0, Criança: 0, Intermediário: 0, Adolescente: 25, Jovem: 25, Adulto: 25 },
   });
 
@@ -134,6 +135,7 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
               location: "",
               capacity: 200,
               paymentDeadlineDays: 7,
+              registrationDeadline: "",
               fees: {
                 "0-3": 0,
                 Criança: 0,
@@ -394,6 +396,23 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
                 </div>
               </div>
               <div>
+                <label>
+                  {lang === "en" ? "Registration Deadline (optional)" : "Prazo de Inscrição (opcional)"}
+                </label>
+                <input
+                  type="date"
+                  value={cur.registrationDeadline ?? cur.registration_deadline ?? ""}
+                  onChange={(e) =>
+                    setCur({ ...cur, registrationDeadline: e.target.value })
+                  }
+                />
+                <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>
+                  {lang === "en"
+                    ? "After this date, submissions require pastor approval. Leave blank for no deadline."
+                    : "Após esta data, inscrições exigem aprovação do pastor. Deixe em branco para não ter prazo."}
+                </p>
+              </div>
+              <div>
                 <label>{t.feesPerCat}</label>
                 <div
                   style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 6 }}
@@ -471,6 +490,7 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
                         location: editEvt.location,
                         capacity: editEvt.capacity,
                         payment_deadline_days: editEvt.paymentDeadlineDays,
+                        registration_deadline: (editEvt.registrationDeadline ?? editEvt.registration_deadline) || null,
                         fees: editEvt.fees,
                       };
                       setEvents(function (p) {
@@ -501,6 +521,7 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
                         location: nEvt.location,
                         capacity: nEvt.capacity,
                         payment_deadline_days: nEvt.paymentDeadlineDays,
+                        registration_deadline: nEvt.registrationDeadline || null,
                         fees: nEvt.fees,
                         status: "active",
                       };

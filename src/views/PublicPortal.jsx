@@ -6,6 +6,8 @@ import BadgePrint from "@/components/BadgePrint";
 import Modal from "@/components/Modal";
 import ChurchSearch from "@/components/ChurchSearch";
 import SearchSelect from "@/components/SearchSelect";
+import DeadlineBanner from "@/components/DeadlineBanner";
+import { getDeadlineStatus } from "@/lib/registrationDeadline";
 import { sb } from "@/lib/supabase";
 import { mapMember } from "@/hooks/useAppData";
 import { findSimilarMembers } from "@/lib/similarity";
@@ -270,7 +272,7 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
   );
 }
 
-function PublicPortal({ event, members: propMembers, setMembers, churches, loading, regs, addReg, lang, setLang, onReset, onLookup }) {
+function PublicPortal({ event, members: propMembers, setMembers, churches, loading, regs, addReg, submitApproval, lang, setLang, onReset, onLookup }) {
   const t = STRINGS[lang || "pt"];
   const [step, setStep] = useState(1);
   const [primary, setPrimary] = useState(null);
@@ -399,6 +401,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
       allergies.hasAny ? "Alergias: " + allergies.other : "",
       specialNeeds.hasAny ? "Nec. especiais: " + specialNeeds.other : "",
     ].filter(Boolean).join(" | ");
+    const isPastDeadline = getDeadlineStatus(event?.registration_deadline) === "past";
     const submittedRegs = [];
     for (const m of allParticipants) {
       const isVerifiedMember = m.verified !== false && m.id && !m.id.startsWith("MANUAL-");
@@ -419,25 +422,66 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
           return;
         }
       }
-      submittedRegs.push(addReg({
-        memberId,
-        memberName: m.name,
-        badgeName: resolvedBadge,
-        category: m.category || "Adulto",
-        church: m.church || "",
-        role: m.role || "",
-        familyId: null,
-        team: "Participante",
-        paid: false,
-        exempt: false,
-        needsTranslation: translations.en || translations.es,
-        note: sharedNote,
-        invitedByMemberId: invitedByMemberId || null,
-      }));
+      const category = m.category || "Adulto";
+      if (isPastDeadline) {
+        submitApproval({
+          type: "late_registration",
+          eventId: event.id,
+          memberId,
+          memberName: m.name,
+          badgeName: resolvedBadge,
+          category,
+          church: m.church || "",
+          role: m.role || "",
+          team: "Participante",
+          fee: event?.fees?.[category] ?? 0,
+          reason: lang === "en" ? "Submitted after the registration deadline." : "Enviado após o prazo de encerramento das inscrições.",
+          note: sharedNote,
+        });
+      } else {
+        submittedRegs.push(addReg({
+          memberId,
+          memberName: m.name,
+          badgeName: resolvedBadge,
+          category,
+          church: m.church || "",
+          role: m.role || "",
+          familyId: null,
+          team: "Participante",
+          paid: false,
+          exempt: false,
+          needsTranslation: translations.en || translations.es,
+          note: sharedNote,
+          invitedByMemberId: invitedByMemberId || null,
+        }));
+      }
     }
     setSubmitting(false);
-    setSubmitted({ regs: submittedRegs, email: contact.email });
+    if (isPastDeadline) {
+      setSubmitted({ pendingApproval: true, participantNames: allParticipants.map((m) => m.name), email: contact.email });
+    } else {
+      setSubmitted({ regs: submittedRegs, email: contact.email });
+    }
   };
+
+  if (submitted && submitted.pendingApproval)
+    return (
+      <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#8B0000 0%,#b41926 50%,#03223f 100%)", padding: "24px 16px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ maxWidth: 480, width: "100%", background: "#fff", borderRadius: 20, padding: "32px 24px", textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>⏳</div>
+          <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, marginBottom: 10, color: "#03223f" }}>
+            {lang === "en" ? "Sent for pastor approval" : "Enviado para aprovação do pastor"}
+          </h2>
+          <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 16, lineHeight: 1.5 }}>{t.deadlinePast}</p>
+          <p style={{ color: "#374151", fontSize: 13, marginBottom: 20 }}>
+            {lang === "en" ? "Registered: " : "Inscritos: "}<strong>{submitted.participantNames.join(", ")}</strong>
+          </p>
+          <button className="btn btn-primary" style={{ width: "100%" }} onClick={onReset}>
+            {lang === "en" ? "Back to home" : "Voltar ao início"}
+          </button>
+        </div>
+      </div>
+    );
 
   if (submitted)
     return (
@@ -474,9 +518,10 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
         </div>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <h1 style={{ fontFamily: "'Lora',Georgia,serif", color: "#fff", fontSize: 24, marginBottom: 4 }}>{event?.name}</h1>
-          <p style={{ color: "rgba(255,255,255,.75)", fontSize: 13 }}>
+          <p style={{ color: "rgba(255,255,255,.75)", fontSize: 13, marginBottom: 10 }}>
             {event?.date} · {event?.time} · {event?.location}
           </p>
+          <DeadlineBanner event={event} t={t} />
         </div>
 
         <div style={{ display: "flex", gap: 4, marginBottom: 20, justifyContent: "center" }}>

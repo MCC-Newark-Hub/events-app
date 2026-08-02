@@ -75,11 +75,17 @@ export function mapApproval(a) {
     regId: a.reg_id,
     type: a.type,
     fee: Number(a.fee ?? 0),
+    category: a.category,
+    church: a.church,
+    badgeName: a.badge_name,
+    team: a.team,
     reason: a.reason,
+    note: a.note,
     status: a.status,
     requestedBy: a.requested_by,
     resolvedBy: a.resolved_by,
     resolvedAt: a.resolved_at,
+    pastorNote: a.pastor_note,
     createdAt: a.created_at,
   };
 }
@@ -264,9 +270,12 @@ export function useAppData({ getUserRef, notify }) {
     var n = seqRef.current + 1;
     seqRef.current = n;
     var d = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    var isAutoExempt = ["Pastor", "Ungido"].includes(data.role);
-    var isExempt = isAutoExempt || data.exempt || false;
-    var isWaitlisted = !forceExcedente && isFull && !isExempt;
+    var isRoleExempt = ["Pastor", "Ungido"].includes(data.role);
+    // Zero-fee categories (e.g. young children) don't need payment, so they're exempt too —
+    // but unlike role/manual exemption, they still count against event capacity.
+    var isExempt = isRoleExempt || fee === 0 || data.exempt || false;
+    var bypassesCapacity = isRoleExempt || data.exempt || false;
+    var isWaitlisted = !forceExcedente && isFull && !bypassesCapacity;
     var today = new Date().toISOString().slice(0, 10);
     var byName = getUser() ? getUser().name : "Sistema";
     var timeline = [
@@ -405,7 +414,14 @@ export function useAppData({ getUserRef, notify }) {
       member_name: data.memberName,
       reg_id: data.regId || null,
       type: data.type,
+      category: data.category || null,
+      church: data.church || null,
+      badge_name: data.badgeName || null,
+      team: data.team || null,
+      role: data.role || null,
+      fee: data.fee != null ? data.fee : null,
       reason: data.reason || "",
+      note: data.note || null,
       status: "pending",
       requested_by: getUser() ? getUser().name : "Sistema",
     };
@@ -455,6 +471,7 @@ export function useAppData({ getUserRef, notify }) {
         status: approved ? "approved" : "denied",
         resolved_by: getUser() ? getUser().name : "Pastor",
         resolved_at: today,
+        pastor_note: pastorNote || null,
       })
       .eq("id", id)
       .then(function (res) {
@@ -479,6 +496,24 @@ export function useAppData({ getUserRef, notify }) {
           },
           true
         );
+      } else if (apr.type === "late_registration") {
+        addReg(
+          {
+            memberId: apr.memberId,
+            memberName: apr.memberName,
+            badgeName: apr.badgeName || apr.memberName,
+            category: apr.category,
+            church: apr.church,
+            role: apr.role,
+            team: apr.team,
+            fee: apr.fee,
+            paid: false,
+            exempt: false,
+            note: apr.note,
+          },
+          true
+        );
+        notify("Inscrição atrasada aprovada para " + apr.memberName + ".");
       } else if (apr.type === "exemption") {
         var targetRegId = apr.regId;
         if (!targetRegId) {

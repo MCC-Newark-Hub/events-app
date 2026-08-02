@@ -3,6 +3,7 @@ import { Search, ArrowLeft, XCircle, CheckCircle2, AlertTriangle, UserPlus } fro
 import { fmt, CATEGORIES, ROLE_BADGE, OBREIRO_ROLES } from "@/constants";
 import ChurchSearch from "@/components/ChurchSearch";
 import SearchSelect from "@/components/SearchSelect";
+import BadgePrint from "@/components/BadgePrint";
 import { sb } from "@/lib/supabase";
 import { mapMember } from "@/hooks/useAppData";
 import { genMemberId } from "@/lib/genMemberId";
@@ -114,6 +115,7 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
   const [addDone, setAddDone] = useState(false);
   const [addingFamily, setAddingFamily] = useState(false);
   const [addFamilyError, setAddFamilyError] = useState(null);
+  const [showBadges, setShowBadges] = useState(false);
 
   const registeredIds = (regs || [])
     .filter((r) => r.eventId === event?.id && !r.cancelled)
@@ -153,6 +155,7 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
     setCancelDone(false);
     setAddDone(false);
     setShowAddFamily(false);
+    setShowBadges(false);
     setNameQuery("");
   };
 
@@ -407,6 +410,20 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
                       )}
                     </>
                   )}
+
+                  {/* Reprint badge(s) */}
+                  {!found.cancelled && !showBadges && (
+                    <button
+                      className="btn btn-ghost"
+                      style={{ width: "100%", marginTop: 8, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                      onClick={() => setShowBadges(true)}
+                    >
+                      🖨️ {activeRelated.length > 0
+                        ? (lang === "en" ? "Reprint badge(s)" : "Reimprimir crachá(s)")
+                        : (lang === "en" ? "Reprint badge" : "Reimprimir crachá")}
+                    </button>
+                  )}
+                  {showBadges && <BadgePrint regs={[found, ...activeRelated]} event={event} lang={lang} />}
 
                   {/* Add family member */}
                   {!found.cancelled && !showAddFamily && (

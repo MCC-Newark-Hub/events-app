@@ -5,16 +5,36 @@ import { sb } from "@/lib/supabase";
 import Topbar from "@/components/Topbar";
 import Modal from "@/components/Modal";
 import SearchSelect from "@/components/SearchSelect";
+import FamiliesPanel from "@/components/directory/FamiliesPanel";
+import MemberEditModal from "@/components/directory/MemberEditModal";
+import { newMemberForm, memberToForm } from "@/lib/memberForm";
 import { resendConfirmation } from "@/lib/resendConfirmation";
 
 const cityOf = (s) => (s || "").split(",")[0].trim().toLowerCase();
 
 function GALeaderView(props) {
-  const { event, regs, members, setMembers, gas, user, logout, lang, setLang, theme, toggleTheme, notify } = props;
+  const { event, regs, setRegs, members, setMembers, gas, families, setFamilies, user, logout, lang, setLang, theme, toggleTheme, notify } = props;
   const t = useT();
   const [resendingId, setResendingId] = useState(null);
   const [managingGA, setManagingGA] = useState(null);
+  const [pendingMove, setPendingMove] = useState(null); // { member, fromGA, toGA }
+  const [editingMember, setEditingMember] = useState(null);
+  const [savingMember, setSavingMember] = useState(false);
+  const [newFamilyName, setNewFamilyName] = useState("");
+  const [showFamilies, setShowFamilies] = useState(false);
+  const [transferMemberId, setTransferMemberId] = useState("");
+  const [transferTargetGaId, setTransferTargetGaId] = useState("");
   const myGAs = gas.filter((g) => user?.gaIds?.includes(g.id));
+  const myChurch = user?.church || "";
+  const myCity = cityOf(myChurch);
+  const myMembers = members.filter((m) => cityOf(m.church) === myCity);
+  const myFamilies = families.filter((f) => (f.memberIds || []).some((id) => myMembers.some((m) => m.id === id)));
+  const myChurchGAs = gas.filter((g) => cityOf(g.church) === myCity);
+  const joinNames = (names) =>
+    names.length === 0 ? "" :
+    names.length === 1 ? names[0] :
+    names.slice(0, -1).join(", ") + " e " + names[names.length - 1];
+  const greetingName = joinNames(myGAs.map((g) => g.name)) || user?.name;
   const eventRegs = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const getStatus = (mid) => {
     const r = eventRegs.find((x) => x.memberId === mid);
@@ -30,6 +50,26 @@ function GALeaderView(props) {
     if (result.ok) notify(t.resendSuccess);
     else if (result.reason === "no_email") notify(t.resendNoEmail);
     else notify(t.resendError);
+  };
+
+  const applyMove = async ({ member, toGA }) => {
+    const { error } = await sb.from("members").update({ ga_id: toGA.id }).eq("id", member.id);
+    if (error) { notify("Erro: " + error.message); return; }
+    setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, gaId: toGA.id } : m)));
+    notify(`${member.name} movido(a) para ${toGA.name}.`);
+    setPendingMove(null);
+  };
+
+  // Moving a member who's already in a different group needs confirmation so leaders
+  // don't silently pull members out from under another leader.
+  const requestMove = (member, toGA) => {
+    if (!member || !toGA) return;
+    const fromGA = member.gaId && member.gaId !== toGA.id ? gas.find((g) => g.id === member.gaId) : null;
+    if (fromGA) {
+      setPendingMove({ member, fromGA, toGA });
+    } else {
+      applyMove({ member, toGA });
+    }
   };
 
   // Summary stats across all my GAs
@@ -54,12 +94,70 @@ function GALeaderView(props) {
       />
       <div className="main-scroll">
         <div className="page-pad">
-          <div style={{ marginBottom: 16 }}>
-            <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22 }}>
-              {t.hello}, {user?.name}!
-            </h2>
-            <p style={{ color: "#6b7280", fontSize: 13 }}>{t.readOnlyNote}</p>
+          <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22 }}>
+                {t.hello}, {greetingName}!
+              </h2>
+              <p style={{ color: "#6b7280", fontSize: 13 }}>{t.readOnlyNote}</p>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowFamilies((v) => !v)}>
+                {showFamilies ? "Ocultar Famílias" : `👪 Famílias (${myFamilies.length})`}
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={() => { setEditingMember(newMemberForm()); setNewFamilyName(""); }}>
+                + Novo Membro
+              </button>
+            </div>
           </div>
+
+          {showFamilies && (
+            <div style={{ marginBottom: 20 }}>
+              <FamiliesPanel members={myMembers} families={myFamilies} setFamilies={setFamilies} notify={notify} />
+            </div>
+          )}
+
+          {/* ── Transfer member between groups (same church only) ── */}
+          {myChurchGAs.length > 1 && (
+            <div className="card" style={{ marginBottom: 20, padding: "14px 16px" }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>🔀 Transferir Membro Entre Grupos</div>
+              <div className="fr" style={{ marginBottom: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12 }}>Membro</label>
+                  <SearchSelect
+                    value={transferMemberId}
+                    onSelect={setTransferMemberId}
+                    items={myMembers}
+                    getLabel={(m) => m?.name || ""}
+                    getId={(m) => m?.id || ""}
+                    placeholder="Buscar membro…"
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12 }}>Grupo de destino</label>
+                  <select value={transferTargetGaId} onChange={(e) => setTransferTargetGaId(e.target.value)}>
+                    <option value="">Selecione…</option>
+                    {myChurchGAs.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={!transferMemberId || !transferTargetGaId}
+                onClick={() => {
+                  const member = myMembers.find((m) => m.id === transferMemberId);
+                  const toGA = myChurchGAs.find((g) => g.id === transferTargetGaId);
+                  if (!member || !toGA) return;
+                  if (member.gaId === toGA.id) { notify(`${member.name} já está em ${toGA.name}.`); return; }
+                  requestMove(member, toGA);
+                  setTransferMemberId("");
+                  setTransferTargetGaId("");
+                }}
+              >
+                Transferir
+              </button>
+            </div>
+          )}
 
           {/* ── Summary card ── */}
           {totalMembers > 0 && (
@@ -169,16 +267,25 @@ function GALeaderView(props) {
                                     : `✓ ${t.confirmed}`}
                               </td>
                               <td>
-                                {reg && (
+                                <div style={{ display: "flex", gap: 4 }}>
                                   <button
                                     className="btn btn-ghost btn-xs"
-                                    disabled={resendingId === reg.id}
-                                    onClick={() => handleResend(reg)}
-                                    title={t.resendConfirmation}
+                                    onClick={() => { setEditingMember(memberToForm(m)); setNewFamilyName(""); }}
+                                    title="Editar membro"
                                   >
-                                    {resendingId === reg.id ? "…" : "📧"}
+                                    ✏️
                                   </button>
-                                )}
+                                  {reg && (
+                                    <button
+                                      className="btn btn-ghost btn-xs"
+                                      disabled={resendingId === reg.id}
+                                      onClick={() => handleResend(reg)}
+                                      title={t.resendConfirmation}
+                                    >
+                                      {resendingId === reg.id ? "…" : "📧"}
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
@@ -243,11 +350,10 @@ function GALeaderView(props) {
               <label style={{ fontWeight: 600, fontSize: 13 }}>Adicionar membro</label>
               <SearchSelect
                 value=""
-                onSelect={async (memberId) => {
+                onSelect={(memberId) => {
                   if (!memberId) return;
-                  const { error } = await sb.from("members").update({ ga_id: managingGA.id }).eq("id", memberId);
-                  if (error) { notify("Erro: " + error.message); return; }
-                  setMembers((prev) => prev.map((m) => m.id === memberId ? { ...m, gaId: managingGA.id } : m));
+                  const member = members.find((m) => m.id === memberId);
+                  requestMove(member, managingGA);
                 }}
                 items={unassigned}
                 getLabel={(m) => m.name}
@@ -276,6 +382,39 @@ function GALeaderView(props) {
           </Modal>
         );
       })()}
+
+      <MemberEditModal
+        editingMember={editingMember}
+        setEditingMember={setEditingMember}
+        savingMember={savingMember}
+        setSavingMember={setSavingMember}
+        newFamilyName={newFamilyName}
+        setNewFamilyName={setNewFamilyName}
+        families={myFamilies}
+        setFamilies={setFamilies}
+        members={members}
+        setMembers={setMembers}
+        defaultChurch={myChurch}
+        notify={notify}
+        setRegs={setRegs}
+      />
+
+      {pendingMove && (
+        <Modal onClose={() => setPendingMove(null)} maxWidth={380}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 32, marginBottom: 10 }}>🔀</div>
+            <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, marginBottom: 10 }}>Mover membro?</h3>
+            <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 20 }}>
+              <strong>{pendingMove.member.name}</strong> já está em <strong>{pendingMove.fromGA.name}</strong>.
+              Mover para <strong>{pendingMove.toGA.name}</strong>?
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setPendingMove(null)}>Cancelar</button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => applyMove(pendingMove)}>Mover</button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

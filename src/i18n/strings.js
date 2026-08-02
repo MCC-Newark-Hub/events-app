@@ -164,11 +164,12 @@ export const STRINGS = {
     pendPayWarn: "com pagamento pendente.",
     payAtDesk: "Podem pagar no credenciamento ou com o atendente.",
     readOnlyNote:
-      "Você vê apenas seu(s) grupo(s). Você pode adicionar ou remover membros do grupo. Para atualizar pagamentos, procure um atendente.",
+      "Você vê apenas seu(s) grupo(s). Você pode editar membros, gerenciar famílias e transferir membros entre grupos da sua igreja. Para atualizar pagamentos, procure um atendente.",
     teamReadOnly: "Você pode adicionar e remover membros. Para pagamentos, procure um atendente.",
     // approvals
     capacityOverride: "⚡ Inscrição Excedente",
     exemptionReq: "💸 Solicitação de Isenção",
+    lateRegistrationReq: "⏰ Inscrição Atrasada",
     requestedBy: "Solicitado por",
     approved: "✓ Aprovado",
     denied: "✗ Negado",
@@ -254,6 +255,11 @@ export const STRINGS = {
     totalFee: "Total a pagar",
     pendingPaymentNote:
       "O pagamento deve ser feito presencialmente com o secretário da sua igreja ou o responsável pelo seu grupo.",
+    deadlineWeek: "As inscrições encerram em 1 semana.",
+    deadlineThreeDays: "As inscrições encerram em 3 dias.",
+    deadlineToday: "As inscrições encerram hoje às 23h59.",
+    deadlinePast:
+      "Inscrições encerradas. Se você já se inscreveu mas ainda precisa efetuar o pagamento, procure o líder do seu grupo ou a secretaria da sua igreja. Inscrições enviadas após o prazo de encerramento exigem aprovação do pastor.",
     primaryRegistrant: "Titular da inscrição",
     familyMembers: "Membros da família",
     gender: "Gênero",
@@ -444,10 +450,11 @@ export const STRINGS = {
     reachOut: "Reach out to confirm attendance.",
     pendPayWarn: "with pending payment.",
     payAtDesk: "They can pay at check-in or with the clerk.",
-    readOnlyNote: "You only see your group(s). You can add or remove group members. For payment updates, find a clerk.",
+    readOnlyNote: "You only see your group(s). You can edit members, manage families, and transfer members between groups in your church. For payment updates, find a clerk.",
     teamReadOnly: "You can add and remove members. For payments, find a clerk.",
     capacityOverride: "⚡ Over-Capacity Registration",
     exemptionReq: "💸 Exemption Request",
+    lateRegistrationReq: "⏰ Late Registration",
     requestedBy: "Requested by",
     approved: "✓ Approved",
     denied: "✗ Denied",
@@ -525,6 +532,11 @@ export const STRINGS = {
     totalFee: "Total due",
     pendingPaymentNote:
       "Payment must be made in person with your church's secretary or your group leader.",
+    deadlineWeek: "Registration closes in 1 week.",
+    deadlineThreeDays: "Registration closes in 3 days.",
+    deadlineToday: "Registration closes today at 11:59 PM.",
+    deadlinePast:
+      "Registration closed. If you have already registered but still need to make the payment, please contact your group leader or your church office. Any registrations submitted after the closing date require the pastor's approval.",
     primaryRegistrant: "Primary registrant",
     familyMembers: "Family members",
     gender: "Gender",

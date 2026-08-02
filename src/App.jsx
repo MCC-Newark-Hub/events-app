@@ -139,6 +139,7 @@ export default function App() {
             loading={appData.loading}
             regs={appData.regs}
             addReg={appData.addReg}
+            submitApproval={appData.submitApproval}
             lang={lang}
             setLang={setLang}
             onReset={() => setView("login")}

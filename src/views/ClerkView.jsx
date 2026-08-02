@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { Search, ClipboardList, Users, Home, HeartHandshake } from "lucide-react";
 import { useT } from "@/i18n/strings";
-import { ROLE_BADGE, CATEGORIES, ROLE_GROUPS, fmt } from "@/constants";
+import { ROLE_BADGE, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
-import { mapMember } from "@/hooks/useAppData";
-import { genMemberId } from "@/lib/genMemberId";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
 import CapBar from "@/components/CapBar";
@@ -14,8 +12,9 @@ import DetailModal from "@/components/DetailModal";
 import Modal from "@/components/Modal";
 import FamiliesPanel from "@/components/directory/FamiliesPanel";
 import GroupsPanel from "@/components/directory/GroupsPanel";
+import MemberEditModal from "@/components/directory/MemberEditModal";
+import { newMemberForm, memberToForm } from "@/lib/memberForm";
 import { resendConfirmation } from "@/lib/resendConfirmation";
-import { syncRegistrationNames } from "@/lib/syncMemberName";
 import { useSortable } from "@/hooks/useSortable";
 
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -86,75 +85,8 @@ function ClerkView(props) {
   ];
   const switchSec = (id) => { setSec(id); setSearch(""); };
 
-  const openNewMember = () => { setEditingMember({ id: null, firstName: "", lastName: "", badgeName: "", gender: "M", category: "Adulto", role: "", familyId: "", allergies: "", specialNeeds: "", notes: "" }); setNewFamilyName(""); };
-  const openEditMember = (m) => { setEditingMember({ id: m.id, firstName: m.firstName || "", lastName: m.lastName || "", badgeName: m.badgeName || "", gender: m.gender || "M", category: m.category || "Adulto", role: m.role || "", familyId: m.familyId || "", allergies: m.allergies || "", specialNeeds: m.specialNeeds || "", notes: m.notes || "" }); setNewFamilyName(""); };
-
-  const saveMember = async () => {
-    const fn = editingMember.firstName.trim();
-    const ln = editingMember.lastName.trim();
-    const fullName = (fn + " " + ln).trim();
-    if (!fullName) { notify("Nome é obrigatório."); return; }
-    if (editingMember.familyId === "__new__" && !newFamilyName.trim()) { notify("Nome da família é obrigatório."); return; }
-    setSavingMember(true);
-    try {
-      const row = {
-        name: fullName,
-        first_name: fn || null,
-        last_name: ln || null,
-        badge_name: editingMember.badgeName || fullName,
-        gender: editingMember.gender,
-        category: editingMember.category,
-        church: myChurch.split(",")[0].trim(),
-        role: editingMember.role || "",
-        roles: editingMember.role ? [editingMember.role] : [],
-        family_id: editingMember.familyId && editingMember.familyId !== "__new__" ? editingMember.familyId : null,
-        allergies: editingMember.allergies || null,
-        special_needs: editingMember.specialNeeds || null,
-        notes: editingMember.notes || null,
-      };
-      let memberId = editingMember.id;
-      if (editingMember.id) {
-        const oldMember = members.find((m) => m.id === editingMember.id);
-        const { error } = await sb.from("members").update(row).eq("id", editingMember.id);
-        if (error) throw error;
-        setMembers((prev) => prev.map((m) => (m.id === editingMember.id ? mapMember({ ...m, ...row, id: editingMember.id }) : m)));
-        if (oldMember && oldMember.name !== fullName) {
-          syncRegistrationNames({ memberId: editingMember.id, oldName: oldMember.name, newName: fullName, newBadgeName: row.badge_name, setRegs });
-        }
-      } else {
-        const { data, error } = await sb.from("members").insert({ ...row, id: genMemberId() }).select().single();
-        if (error) throw error;
-        memberId = data.id;
-        setMembers((prev) => [...prev, mapMember(data)]);
-      }
-
-      if (editingMember.familyId === "__new__") {
-        const famName = newFamilyName.trim();
-        const { data: fam, error: famErr } = await sb.from("families").insert({ name: famName, member_ids: [memberId] }).select().single();
-        if (famErr) throw famErr;
-        setFamilies((prev) => [...prev, { id: fam.id, name: famName, memberIds: [memberId] }]);
-        const { error: linkErr } = await sb.from("members").update({ family_id: fam.id }).eq("id", memberId);
-        if (linkErr) throw linkErr;
-        setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, familyId: fam.id } : m)));
-      } else if (editingMember.familyId) {
-        const fam = families.find((f) => f.id === editingMember.familyId);
-        if (fam && !(fam.memberIds || []).includes(memberId)) {
-          const mergedIds = [...new Set([...(fam.memberIds || []), memberId])];
-          const { error: famErr } = await sb.from("families").update({ member_ids: mergedIds }).eq("id", fam.id);
-          if (famErr) throw famErr;
-          setFamilies((prev) => prev.map((f) => (f.id === fam.id ? { ...f, memberIds: mergedIds } : f)));
-        }
-      }
-
-      notify(editingMember.id ? "Membro atualizado!" : "Membro criado!");
-      setEditingMember(null);
-      setNewFamilyName("");
-    } catch (err) {
-      notify("Erro ao salvar membro: " + (err?.message || "erro desconhecido"));
-    } finally {
-      setSavingMember(false);
-    }
-  };
+  const openNewMember = () => { setEditingMember(newMemberForm()); setNewFamilyName(""); };
+  const openEditMember = (m) => { setEditingMember(memberToForm(m)); setNewFamilyName(""); };
 
   const requestDeleteMember = (m) => {
     const regCount = regs.filter((r) => r.memberId === m.id && !r.cancelled).length;
@@ -361,86 +293,21 @@ function ClerkView(props) {
       {showReg && <RegModal event={event} members={myMembers} setMembers={setMembers} families={families} dbTeams={dbTeams} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
       {detail && <DetailModal reg={detail} event={event} dbTeams={dbTeams} regs={regs} canEditPayment={true} onClose={() => setDetail(null)} lang={lang} onUpdate={(u) => { updateReg(detail.id, u); setDetail(null); }} />}
 
-      {editingMember && (
-        <Modal onClose={() => !savingMember && setEditingMember(null)} maxWidth={460}>
-          <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 16 }}>
-            {editingMember.id ? "Editar Membro" : "Novo Membro"}
-          </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div className="fr">
-              <div>
-                <label>Primeiro Nome *</label>
-                <input value={editingMember.firstName} onChange={(e) => setEditingMember({ ...editingMember, firstName: e.target.value })} />
-              </div>
-              <div>
-                <label>Sobrenome</label>
-                <input value={editingMember.lastName} onChange={(e) => setEditingMember({ ...editingMember, lastName: e.target.value })} />
-              </div>
-            </div>
-            <div>
-              <label>Nome no Crachá</label>
-              <input value={editingMember.badgeName} onChange={(e) => setEditingMember({ ...editingMember, badgeName: e.target.value })} placeholder="Opcional" />
-            </div>
-            <div className="fr">
-              <div>
-                <label>Gênero</label>
-                <select value={editingMember.gender} onChange={(e) => setEditingMember({ ...editingMember, gender: e.target.value })}>
-                  <option value="M">Masculino</option>
-                  <option value="F">Feminino</option>
-                </select>
-              </div>
-              <div>
-                <label>Categoria</label>
-                <select value={editingMember.category} onChange={(e) => setEditingMember({ ...editingMember, category: e.target.value })}>
-                  {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-                </select>
-              </div>
-            </div>
-            <div>
-              <label>Igreja</label>
-              <input value={myChurch} disabled style={{ background: "var(--sidebar-active-bg)", color: "var(--muted)" }} />
-            </div>
-            <div>
-              <label>Função</label>
-              <select value={editingMember.role} onChange={(e) => setEditingMember({ ...editingMember, role: e.target.value })}>
-                <option value="">{t.noRole}</option>
-                {ROLE_GROUPS.map((g) => (
-                  <optgroup key={g.group} label={g.group}>
-                    {g.roles.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label>Família</label>
-              <select value={editingMember.familyId} onChange={(e) => setEditingMember({ ...editingMember, familyId: e.target.value })}>
-                <option value="">— Nenhuma —</option>
-                {families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                <option value="__new__">+ Nova família…</option>
-              </select>
-              {editingMember.familyId === "__new__" && (
-                <input value={newFamilyName} onChange={(e) => setNewFamilyName(e.target.value)} placeholder="Nome da nova família" style={{ marginTop: 6 }} />
-              )}
-            </div>
-            <div>
-              <label>Alergias</label>
-              <textarea rows={2} value={editingMember.allergies} onChange={(e) => setEditingMember({ ...editingMember, allergies: e.target.value })} style={{ resize: "vertical" }} />
-            </div>
-            <div>
-              <label>Necessidades Especiais</label>
-              <textarea rows={2} value={editingMember.specialNeeds} onChange={(e) => setEditingMember({ ...editingMember, specialNeeds: e.target.value })} style={{ resize: "vertical" }} />
-            </div>
-            <div>
-              <label>Notas</label>
-              <textarea rows={2} value={editingMember.notes} onChange={(e) => setEditingMember({ ...editingMember, notes: e.target.value })} style={{ resize: "vertical" }} />
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditingMember(null)} disabled={savingMember}>Cancelar</button>
-            <button className="btn btn-primary" style={{ flex: 2 }} onClick={saveMember} disabled={savingMember}>{savingMember ? "Salvando…" : "Salvar"}</button>
-          </div>
-        </Modal>
-      )}
+      <MemberEditModal
+        editingMember={editingMember}
+        setEditingMember={setEditingMember}
+        savingMember={savingMember}
+        setSavingMember={setSavingMember}
+        newFamilyName={newFamilyName}
+        setNewFamilyName={setNewFamilyName}
+        families={myFamilies}
+        setFamilies={setFamilies}
+        members={members}
+        setMembers={setMembers}
+        defaultChurch={myChurch}
+        notify={notify}
+        setRegs={setRegs}
+      />
 
       {confirmDeleteMember && (
         <Modal onClose={() => !deletingMember && setConfirmDeleteMember(null)} maxWidth={360}>

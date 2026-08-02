@@ -15,11 +15,12 @@ Run these files **in order** using the Supabase SQL editor or `psql`. Each migra
 | `009_id_defaults.sql` | Adds auto-generated ID defaults for `assistance_groups` and `families` so clients don't need to supply IDs on insert. |
 | `010_families_member_ids.sql` | Adds `member_ids text[]` to `families`; adds ID defaults for both `families` and `assistance_groups`. |
 | `011_hub_and_guests.sql` | Adds `is_hub` boolean to `churches` (flags Newark/Philadelphia/New York/Toms River); adds `invited_by_member_id` (FK → members) to `registrations` for guest tracking. |
+| `012_registration_deadline.sql` | Adds `registration_deadline` (date) to `events`; adds `category`/`church`/`badge_name`/`team`/`note`/`pastor_note` to `approvals` so late-registration requests can be approved into real registrations. |
 
 ## How to run
 
 1. Open your Supabase project → **SQL Editor**
-2. Run each file in numerical order (001 → 011)
+2. Run each file in numerical order (001 → 012)
 
 ## Notes
 
