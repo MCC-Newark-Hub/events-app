@@ -162,7 +162,18 @@ export const isDeadlineExempt = (reg, allEventRegs = []) => {
 
 export const deadlineStatus = (reg, event, allEventRegs = []) => {
   if (!event?.paymentDeadlineDays || isDeadlineExempt(reg, allEventRegs)) return null;
-  const days = daysSince(reg.registeredAt);
+  // Count from this member's earliest attempt at this event, including cancelled ones —
+  // otherwise cancelling an overdue registration and signing up again resets the clock,
+  // since a fresh row always starts with today's registeredAt.
+  const attempts =
+    reg.memberId && reg.memberId !== "GUEST"
+      ? allEventRegs.filter((r) => r.memberId === reg.memberId)
+      : [reg];
+  const earliestRegisteredAt = attempts.reduce(
+    (earliest, r) => (r.registeredAt && r.registeredAt < earliest ? r.registeredAt : earliest),
+    reg.registeredAt
+  );
+  const days = daysSince(earliestRegisteredAt);
   const deadline = event.paymentDeadlineDays;
   const remaining = deadline - days;
   if (remaining <= 0) return { overdue: true, remaining: 0, label: "Prazo expirado" };

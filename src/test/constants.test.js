@@ -76,6 +76,28 @@ describe("deadlineStatus", () => {
     const reg = { role: "", team: "Participante", paid: false, exempt: false, cancelled: false, waitlisted: false, registeredAt: "2026-01-01" };
     expect(deadlineStatus(reg, {})).toBeNull();
   });
+
+  const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+  const event = { paymentDeadlineDays: 7 };
+  const base = { memberId: "M1", role: "", team: "Participante", paid: false, exempt: false, cancelled: false, waitlisted: false, category: "Adulto" };
+
+  it("counts from the member's earliest attempt, including a cancelled one, not just this row", () => {
+    const cancelledAttempt = { ...base, registeredAt: daysAgo(10), cancelled: true };
+    const reg = { ...base, registeredAt: daysAgo(0) };
+    expect(deadlineStatus(reg, event, [cancelledAttempt, reg])?.overdue).toBe(true);
+  });
+
+  it("does not pick up another member's earlier attempt", () => {
+    const otherMembersOldAttempt = { ...base, memberId: "M2", registeredAt: daysAgo(30), cancelled: true };
+    const reg = { ...base, registeredAt: daysAgo(0) };
+    expect(deadlineStatus(reg, event, [otherMembersOldAttempt, reg])?.overdue).toBe(false);
+  });
+
+  it("does not pool history across GUEST registrations", () => {
+    const otherGuestOldAttempt = { ...base, memberId: "GUEST", registeredAt: daysAgo(30), cancelled: true };
+    const reg = { ...base, memberId: "GUEST", registeredAt: daysAgo(0) };
+    expect(deadlineStatus(reg, event, [otherGuestOldAttempt, reg])?.overdue).toBe(false);
+  });
 });
 
 describe("churchDisplay", () => {

@@ -56,6 +56,9 @@ function ClerkView(props) {
   const resolvedApprovalList = eventApprovals.filter((a) => a.status !== "pending");
   const allActiveAll = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const allActive = allActiveAll.filter((r) => cityOf(r.church) === myCity);
+  // Includes cancelled rows too, unlike allActive — deadlineStatus needs a member's
+  // full history to anchor the payment countdown to their earliest attempt.
+  const allForCity = regs.filter((r) => r.eventId === event?.id && cityOf(r.church) === myCity);
   const myWlRegs = (wlRegs || []).filter((r) => cityOf(r.church) === myCity);
   const viewRegsBase = (tab === "active" ? allActive : tab === "waitlist" ? myWlRegs : regs.filter((r) => r.eventId === event?.id && r.cancelled && cityOf(r.church) === myCity)).filter((r) => {
     const q = norm(search);
@@ -205,7 +208,7 @@ function ClerkView(props) {
                             <td style={{ fontSize: 12 }}>{r.team || "—"}</td>
                             <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{r.exempt ? <span style={{ color: "#6b7280" }}>{t.exempt}</span> : fmt(r.fee ?? 0)}</td>
                             <td style={{ fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }}>{r.registeredAt || "—"}</td>
-                            <td><StatusBadge r={r} event={event} allRegs={allActive} /></td>
+                            <td><StatusBadge r={r} event={event} allRegs={allForCity} /></td>
                             <td>
                               <select
                                 value={r.presence || 'unknown'}

@@ -188,7 +188,7 @@ export default function RegistrationsTab(props) {
                     {r.registeredAt || "—"}
                   </td>
                   <td>
-                    <StatusBadge r={r} event={event} allRegs={active} />
+                    <StatusBadge r={r} event={event} allRegs={all} />
                   </td>
                   <td>
                     {r.waitlisted && (
