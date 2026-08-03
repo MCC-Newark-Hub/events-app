@@ -34,6 +34,7 @@ export default function RegistrationsTab(props) {
     notify,
     lang,
   } = props;
+  const liveChurchOf = (r) => (members || []).find((m) => m.id === r.memberId)?.church || r.church || "—";
   const [confirmDelete, setConfirmDelete] = useState(null); // single reg
   const [bulkSel, setBulkSel] = useState([]);
   const [badgeReg, setBadgeReg] = useState(null);
@@ -62,7 +63,7 @@ export default function RegistrationsTab(props) {
       norm(r.regNumber).includes(q) ||
       norm(r.role).includes(q) ||
       norm(r.category).includes(q) ||
-      norm(r.church).includes(q) ||
+      norm(liveChurchOf(r)).includes(q) ||
       norm(r.team).includes(q) ||
       norm(statusSortOf(r)).includes(q);
     const mf =
@@ -178,7 +179,7 @@ export default function RegistrationsTab(props) {
                   <td>
                     <span className="badge badge-blue">{r.category}</span>
                   </td>
-                  <td style={{ fontSize: 12, color: "#6b7280" }}>{r.church}</td>
+                  <td style={{ fontSize: 12, color: "#6b7280" }}>{liveChurchOf(r)}</td>
                   <td style={{ fontSize: 12 }}>{r.team}</td>
                   <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
                     {r.exempt ? <span style={{ color: "#6b7280" }}>{t.exempt}</span> : fmt(r.fee)}
