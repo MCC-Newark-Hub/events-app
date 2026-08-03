@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
 
-import { ROLE_BADGE, fmt } from "@/constants";
+import { ROLE_BADGE, fmt, deadlineStatus } from "@/constants";
 import { sb } from "@/lib/supabase";
 import StatusBadge from "@/components/StatusBadge";
 import RegModal from "@/components/RegModal";
@@ -36,6 +36,7 @@ export default function RegistrationsTab(props) {
   } = props;
   const liveChurchOf = (r) => (members || []).find((m) => m.id === r.memberId)?.church || r.church || "—";
   const [confirmDelete, setConfirmDelete] = useState(null); // single reg
+  const [confirmBulkCancel, setConfirmBulkCancel] = useState(false);
   const [bulkSel, setBulkSel] = useState([]);
   const [badgeReg, setBadgeReg] = useState(null);
   const [resendingId, setResendingId] = useState(null);
@@ -56,6 +57,7 @@ export default function RegistrationsTab(props) {
   const [detail, setDetail] = useState(null);
   const all = regs.filter((r) => r.eventId === event?.id);
   const active = all.filter((r) => !r.cancelled && !r.waitlisted);
+  const isOverdue = (r) => !r.cancelled && !r.waitlisted && deadlineStatus(r, event, all)?.overdue;
   const preFiltered = all.filter((r) => {
     const q = norm(search);
     const ms =
@@ -73,7 +75,8 @@ export default function RegistrationsTab(props) {
       (filter === "exempt" && r.exempt) ||
       (filter === "waitlist" && r.waitlisted) ||
       (filter === "excedente" && r.excedente) ||
-      (filter === "cancelled" && r.cancelled);
+      (filter === "cancelled" && r.cancelled) ||
+      (filter === "overdue" && isOverdue(r));
     return ms && mf;
   }).map((r) => ({ ...r, statusSort: statusSortOf(r) }));
   const { sorted: filtered, Th } = useSortable(preFiltered, "memberName");
@@ -90,9 +93,14 @@ export default function RegistrationsTab(props) {
         <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22 }}>{t.registrations}</h2>
         <div style={{ display: "flex", gap: 8 }}>
           {bulkSel.length > 0 && (
-            <button className="btn btn-danger btn-sm" onClick={() => setConfirmDelete({ bulk: true, ids: bulkSel })}>
-              🗑 Excluir {bulkSel.length} selecionado(s)
-            </button>
+            <>
+              <button className="btn btn-warn btn-sm" onClick={() => setConfirmBulkCancel(true)}>
+                🚫 Cancelar {bulkSel.length} selecionado(s)
+              </button>
+              <button className="btn btn-danger btn-sm" onClick={() => setConfirmDelete({ bulk: true, ids: bulkSel })}>
+                🗑 Excluir {bulkSel.length} selecionado(s)
+              </button>
+            </>
           )}
           <button className="btn btn-primary" onClick={() => setShowReg(true)}>{t.addNew}</button>
         </div>
@@ -114,6 +122,7 @@ export default function RegistrationsTab(props) {
             [t.exemptTab, "exempt"],
             [t.waitlistTab, "waitlist"],
             [t.excenteTab, "excedente"],
+            [t.overdueTab, "overdue"],
             [t.cancelledTab, "cancelled"],
           ].map(([l, k]) => (
             <button
@@ -302,6 +311,28 @@ export default function RegistrationsTab(props) {
                 setBulkSel([]);
                 setConfirmDelete(null);
               }}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmBulkCancel && (
+        <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setConfirmBulkCancel(false)}>
+          <div className="modal" style={{ maxWidth: 380, textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🚫</div>
+            <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 8 }}>Cancelar inscrições em atraso?</h3>
+            <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 20 }}>
+              Cancelar <strong>{bulkSel.length}</strong> inscrições com pagamento em atraso? Esta ação não pode ser desfeita.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setConfirmBulkCancel(false)}>Manter</button>
+              <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => {
+                bulkSel.forEach((id) => {
+                  updateReg(id, { cancelled: true }, { status: "Cancelado", note: "Cancelado em lote — pagamento em atraso" }, { silent: true });
+                });
+                notify && notify(`${bulkSel.length} inscrição(ões) cancelada(s) por atraso no pagamento.`);
+                setBulkSel([]);
+                setConfirmBulkCancel(false);
+              }}>Sim, cancelar</button>
             </div>
           </div>
         </div>

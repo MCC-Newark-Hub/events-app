@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Search, ClipboardList, Users, Home, HeartHandshake } from "lucide-react";
 import { useT } from "@/i18n/strings";
-import { ROLE_BADGE, fmt } from "@/constants";
+import { ROLE_BADGE, fmt, deadlineStatus } from "@/constants";
 import { sb } from "@/lib/supabase";
 import { eventSubtitle } from "@/lib/registrationDeadline";
 import Topbar from "@/components/Topbar";
@@ -31,6 +31,9 @@ function ClerkView(props) {
   const [detail, setDetail] = useState(null);
   const [prefill, setPrefill] = useState(null);
   const [resendingId, setResendingId] = useState(null);
+  const [bulkSel, setBulkSel] = useState([]);
+  const [confirmBulkCancel, setConfirmBulkCancel] = useState(false);
+  const toggleBulk = (id) => setBulkSel((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   const handleResend = async (reg) => {
     setResendingId(reg.id);
@@ -60,7 +63,14 @@ function ClerkView(props) {
   // full history to anchor the payment countdown to their earliest attempt.
   const allForCity = regs.filter((r) => r.eventId === event?.id && cityOf(r.church) === myCity);
   const myWlRegs = (wlRegs || []).filter((r) => cityOf(r.church) === myCity);
-  const viewRegsBase = (tab === "active" ? allActive : tab === "waitlist" ? myWlRegs : regs.filter((r) => r.eventId === event?.id && r.cancelled && cityOf(r.church) === myCity)).filter((r) => {
+  const isOverdue = (r) => deadlineStatus(r, event, allForCity)?.overdue;
+  const myOverdueRegs = allActive.filter(isOverdue);
+  const viewRegsBase = (
+    tab === "active" ? allActive
+    : tab === "waitlist" ? myWlRegs
+    : tab === "overdue" ? myOverdueRegs
+    : regs.filter((r) => r.eventId === event?.id && r.cancelled && cityOf(r.church) === myCity)
+  ).filter((r) => {
     const q = norm(search);
     return norm(r.memberName).includes(q) || norm(r.regNumber).includes(q) || norm(r.church).includes(q) ||
       norm(r.role).includes(q) || norm(r.category).includes(q) || norm(r.team).includes(q) || norm(statusSortOf(r)).includes(q);
@@ -74,6 +84,7 @@ function ClerkView(props) {
   const tabs = [
     { k: "active", l: `${t.activeTab} (${allActive.length})` },
     { k: "waitlist", l: `${t.waitlistTab} (${myWlRegs.length})` },
+    { k: "overdue", l: `${t.overdueTab} (${myOverdueRegs.length})` },
     { k: "cancelled", l: t.cancelledTab },
     { k: "approvals", l: `Solicitações${pendingApprovalList.length > 0 ? ` (${pendingApprovalList.length})` : ""}` },
   ];
@@ -150,6 +161,11 @@ function ClerkView(props) {
                     <span className="si-icon"><Search size={16} /></span>
                     <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t.searchMember}...`} />
                   </div>
+                  {bulkSel.length > 0 && (
+                    <button className="btn btn-warn btn-sm" onClick={() => setConfirmBulkCancel(true)}>
+                      🚫 {t.bulkCancelBtn} {bulkSel.length}
+                    </button>
+                  )}
                   <button className="btn btn-primary" onClick={() => { setPrefill(null); setShowReg(true); }}>{t.addNew}</button>
                 </div>
               )}
@@ -170,7 +186,7 @@ function ClerkView(props) {
                 <div style={{ padding: "11px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                     {tabs.map(({ k, l }) => (
-                      <button key={k} className={`tab ${tab === k ? "active" : ""}`} onClick={() => setTab(k)}>{l}</button>
+                      <button key={k} className={`tab ${tab === k ? "active" : ""}`} onClick={() => { setTab(k); setBulkSel([]); }}>{l}</button>
                     ))}
                   </div>
                   {tab !== "approvals" && <span style={{ fontSize: 12, color: "#6b7280" }}>{viewRegs.length}</span>}
@@ -195,11 +211,18 @@ function ClerkView(props) {
                 ) : (
                   <div className="table-wrap">
                     <table className="table">
-                      <thead><tr><th>{t.regNum}</th><Th k="memberName">{t.memberName}</Th><Th k="role">{t.cargo}</Th><Th k="category">{t.cat}</Th><Th k="church">{t.churchH}</Th><Th k="team">{t.teamH}</Th><Th k="fee">{t.feeH}</Th><Th k="registeredAt">{t.regDate}</Th><Th k="statusSort">{t.statusH}</Th><th>Presença</th><th>{t.actions}</th></tr></thead>
+                      <thead><tr>
+                        <th style={{ width: 32 }}>
+                          <input type="checkbox"
+                            checked={viewRegs.length > 0 && viewRegs.every((r) => bulkSel.includes(r.id))}
+                            onChange={(e) => setBulkSel(e.target.checked ? viewRegs.map((r) => r.id) : [])} />
+                        </th>
+                        <th>{t.regNum}</th><Th k="memberName">{t.memberName}</Th><Th k="role">{t.cargo}</Th><Th k="category">{t.cat}</Th><Th k="church">{t.churchH}</Th><Th k="team">{t.teamH}</Th><Th k="fee">{t.feeH}</Th><Th k="registeredAt">{t.regDate}</Th><Th k="statusSort">{t.statusH}</Th><th>Presença</th><th>{t.actions}</th></tr></thead>
                       <tbody>
-                        {viewRegs.length === 0 && <tr><td colSpan={11} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
+                        {viewRegs.length === 0 && <tr><td colSpan={12} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
                         {viewRegs.map((r) => (
                           <tr key={r.id}>
+                            <td><input type="checkbox" checked={bulkSel.includes(r.id)} onChange={() => toggleBulk(r.id)} /></td>
                             <td style={{ fontFamily: "monospace", fontSize: 11, color: "#1a3a6b", fontWeight: 600, whiteSpace: "nowrap" }}>{r.regNumber || "—"}</td>
                             <td><div style={{ fontWeight: 600 }}>{r.memberName || "—"}</div></td>
                             <td>{r.role ? <span className={`badge ${ROLE_BADGE[r.role] || "badge-gray"}`}>{r.role}</span> : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}</td>
@@ -314,6 +337,29 @@ function ClerkView(props) {
         notify={notify}
         setRegs={setRegs}
       />
+
+      {confirmBulkCancel && (
+        <Modal onClose={() => setConfirmBulkCancel(false)} maxWidth={360}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🚫</div>
+            <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 8 }}>{t.bulkCancelConfirmTitle}</h3>
+            <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 20 }}>
+              {t.bulkCancelBtn} <strong>{bulkSel.length}</strong> {t.bulkCancelConfirmBody}
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setConfirmBulkCancel(false)}>{t.keep}</button>
+              <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => {
+                bulkSel.forEach((id) => {
+                  updateReg(id, { cancelled: true }, { status: "Cancelado", note: "Cancelado em lote — pagamento em atraso" }, { silent: true });
+                });
+                notify(`${bulkSel.length} ${t.bulkCancelDone}`);
+                setBulkSel([]);
+                setConfirmBulkCancel(false);
+              }}>{t.bulkCancelBtn}</button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {confirmDeleteMember && (
         <Modal onClose={() => !deletingMember && setConfirmDeleteMember(null)} maxWidth={360}>
