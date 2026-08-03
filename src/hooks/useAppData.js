@@ -265,6 +265,21 @@ export function useAppData({ getUserRef, notify }) {
   // ── Mutations ─────────────────────────────────────────────────────────────
   const addReg = function (data, forceExcedente) {
     forceExcedente = forceExcedente || false;
+    // Every call site (RegModal, PublicPortal, RegistrationLookup, TeamsTab's bulk-assign
+    // loop) previously relied on its own UI filtering to avoid double-registering a member —
+    // easy to miss (e.g. TeamsTab's filter didn't exclude waitlisted regs). This is the one
+    // place all of them funnel through, so it's the one place worth guarding centrally. The
+    // DB also enforces this (registrations_active_member_event_uidx) as the final backstop
+    // against races between two clients with stale local state.
+    if (data.memberId && data.memberId !== "GUEST") {
+      var dupe = regs.find(
+        (r) => r.memberId === data.memberId && r.eventId === event.id && !r.cancelled
+      );
+      if (dupe) {
+        notify(data.memberName + " já possui inscrição ativa neste evento.");
+        return dupe;
+      }
+    }
     var fees = event.fees || {};
     var fee = fees[data.category] != null ? fees[data.category] : 0;
     var n = seqRef.current + 1;
@@ -323,7 +338,14 @@ export function useAppData({ getUserRef, notify }) {
       .then(function (res) {
         if (res.error) {
           console.error("addReg DB error:", res.error);
-          notify("Erro ao salvar inscrição. Verifique sua conexão e tente novamente.");
+          setRegs(function (p) {
+            return p.filter(function (x) { return x.regNumber !== regNumber; });
+          });
+          if (res.error.code === "23505") {
+            notify(data.memberName + " já possui inscrição ativa neste evento.");
+          } else {
+            notify("Erro ao salvar inscrição. Verifique sua conexão e tente novamente.");
+          }
           return;
         }
         if (!res.data) return;

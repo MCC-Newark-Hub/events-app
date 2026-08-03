@@ -16,11 +16,12 @@ Run these files **in order** using the Supabase SQL editor or `psql`. Each migra
 | `010_families_member_ids.sql` | Adds `member_ids text[]` to `families`; adds ID defaults for both `families` and `assistance_groups`. |
 | `011_hub_and_guests.sql` | Adds `is_hub` boolean to `churches` (flags Newark/Philadelphia/New York/Toms River); adds `invited_by_member_id` (FK → members) to `registrations` for guest tracking. |
 | `012_registration_deadline.sql` | Adds `registration_deadline` (date) to `events`; adds `category`/`church`/`badge_name`/`team`/`note`/`pastor_note` to `approvals` so late-registration requests can be approved into real registrations. |
+| `013_unique_active_registration.sql` | Adds a partial unique index on `registrations (member_id, event_id) WHERE cancelled = false AND member_id <> 'GUEST'`, so a member can't end up with two active registrations for the same event. Cancel-then-re-register still works since cancelled rows are excluded. |
 
 ## How to run
 
 1. Open your Supabase project → **SQL Editor**
-2. Run each file in numerical order (001 → 012)
+2. Run each file in numerical order (001 → 013)
 
 ## Notes
 

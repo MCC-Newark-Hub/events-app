@@ -25,7 +25,9 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
   const [registering, setRegistering] = useState(null); // team name currently registering
 
   const eventRosters = rosters.filter((r) => r.eventId === event?.id);
-  const eventRegs = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
+  // Waitlisted regs used to be excluded here, so a waitlisted member's checkbox stayed
+  // enabled and bulk-registering them again slipped past this tab's only duplicate guard.
+  const eventRegs = regs.filter((r) => r.eventId === event?.id && !r.cancelled);
   const customTeamNames = customTeams.map((t) => (typeof t === "string" ? t : t.name));
   const allTeams = [...SERVICE_TEAMS, ...customTeamNames];
 
