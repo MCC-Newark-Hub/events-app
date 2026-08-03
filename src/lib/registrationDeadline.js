@@ -12,3 +12,21 @@ export function getDeadlineStatus(registrationDeadline, now = new Date()) {
   if (daysUntil <= 7) return "week";
   return null;
 }
+
+// "YYYY-MM-DD" -> "DD/MM/YYYY"
+export function formatDeadlineDate(dateStr) {
+  if (!dateStr) return "";
+  const [y, m, d] = dateStr.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+export function deadlineLabel(lang) {
+  return lang === "en" ? "Registration deadline" : "Prazo para inscrições";
+}
+
+// Event title with the registration deadline appended, for Topbar `sub` lines.
+export function eventSubtitle(event, lang) {
+  const name = event?.name || "";
+  if (!event?.registration_deadline) return name;
+  return `${name} (${deadlineLabel(lang)}: ${formatDeadlineDate(event.registration_deadline)})`;
+}

@@ -2,10 +2,16 @@ import { useState } from "react";
 import { useT } from "@/i18n/strings";
 import { TEAMS, ROLE_GROUPS } from "@/constants";
 
-function DetailModal({ reg, onClose, onUpdate, canEditPayment, lang, dbTeams, regs, event }) {
+function DetailModal({ reg, onClose, onUpdate, canEditPayment, lang, dbTeams, regs, event, members, gas }) {
   const teamList = dbTeams && dbTeams.length > 0 ? dbTeams.map((t) => t.name) : TEAMS;
   const t = useT();
   const [f, setF] = useState({ ...reg });
+  // Show the member's current church/group, not just the snapshot taken at
+  // registration time — registrations.church can go stale if the member record
+  // is corrected afterward.
+  const liveMember = (members || []).find((m) => m.id === reg.memberId);
+  const liveChurch = liveMember?.church || reg.church || "—";
+  const liveGA = (gas || []).find((g) => g.id === liveMember?.gaId)?.name;
   return (
     <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
@@ -52,7 +58,7 @@ function DetailModal({ reg, onClose, onUpdate, canEditPayment, lang, dbTeams, re
             </div>
           )}
           <div style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>
-            {reg.church} · {reg.category}
+            {liveChurch} · {reg.category}{liveGA ? ` · ${liveGA}` : ""}
           </div>
           <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
             {t.registeredAt} {reg.registeredAt} {t.registeredBy} {reg.registeredBy}

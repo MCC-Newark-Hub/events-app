@@ -9,11 +9,12 @@ import FamiliesPanel from "@/components/directory/FamiliesPanel";
 import MemberEditModal from "@/components/directory/MemberEditModal";
 import { newMemberForm, memberToForm } from "@/lib/memberForm";
 import { resendConfirmation } from "@/lib/resendConfirmation";
+import { eventSubtitle } from "@/lib/registrationDeadline";
 
 const cityOf = (s) => (s || "").split(",")[0].trim().toLowerCase();
 
 function GALeaderView(props) {
-  const { event, regs, setRegs, members, setMembers, gas, families, setFamilies, user, logout, lang, setLang, theme, toggleTheme, notify } = props;
+  const { event, regs, setRegs, members, setMembers, gas, families, setFamilies, churches, user, logout, lang, setLang, theme, toggleTheme, notify } = props;
   const t = useT();
   const [resendingId, setResendingId] = useState(null);
   const [managingGA, setManagingGA] = useState(null);
@@ -84,7 +85,7 @@ function GALeaderView(props) {
     <div className="app-shell">
       <Topbar
         title={t.gaTitle}
-        sub={event?.name}
+        sub={eventSubtitle(event, lang)}
         user={user}
         logout={logout}
         lang={lang}
@@ -394,6 +395,8 @@ function GALeaderView(props) {
         setFamilies={setFamilies}
         members={members}
         setMembers={setMembers}
+        gas={myChurchGAs}
+        churches={churches}
         defaultChurch={myChurch}
         notify={notify}
         setRegs={setRegs}

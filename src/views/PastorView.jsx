@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import CapBar from "@/components/CapBar";
 import ApprovalsPanel from "@/components/ApprovalsPanel";
 import ReportsTab from "./admin/ReportsTab";
+import { eventSubtitle } from "@/lib/registrationDeadline";
 
 function PastorView(props) {
   const { event, regs, approvals, resolveApproval, user, logout, activeCount, wlRegs, exRegs, pendingApprovals, lang, setLang, theme, toggleTheme, churches, members } = props;
@@ -57,7 +58,7 @@ function PastorView(props) {
   ];
   return (
     <div className="app-shell">
-      <Topbar title={t.pastorTitle} sub={event?.name} user={user} logout={logout} pendingCount={pendingApprovals.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
+      <Topbar title={t.pastorTitle} sub={eventSubtitle(event, lang)} user={user} logout={logout} pendingCount={pendingApprovals.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
       <div className="body-with-sidebar">
         <Sidebar navItems={navItems} activeId={sec} onSelect={setSec} />
         <div className="main-scroll">

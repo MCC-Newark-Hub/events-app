@@ -3,6 +3,7 @@ import { Search, ClipboardList, Users, Home, HeartHandshake } from "lucide-react
 import { useT } from "@/i18n/strings";
 import { ROLE_BADGE, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
+import { eventSubtitle } from "@/lib/registrationDeadline";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
 import CapBar from "@/components/CapBar";
@@ -111,7 +112,7 @@ function ClerkView(props) {
 
   return (
     <div className="app-shell">
-      <Topbar title={user?.name || t.clerkTitle} sub={`${t.clerkTitle} · ${event?.name || ""}`} user={user} logout={logout} pendingCount={pendingApprovalList.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
+      <Topbar title={user?.name || t.clerkTitle} sub={`${t.clerkTitle} · ${eventSubtitle(event, lang)}`} user={user} logout={logout} pendingCount={pendingApprovalList.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
       <div className="body-with-sidebar">
         <Sidebar navItems={navItems} activeId={sec} onSelect={switchSec} />
         <div className="main-scroll">
@@ -291,7 +292,7 @@ function ClerkView(props) {
         </div>
       </div>
       {showReg && <RegModal event={event} members={myMembers} setMembers={setMembers} families={families} dbTeams={dbTeams} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
-      {detail && <DetailModal reg={detail} event={event} dbTeams={dbTeams} regs={regs} canEditPayment={true} onClose={() => setDetail(null)} lang={lang} onUpdate={(u) => { updateReg(detail.id, u); setDetail(null); }} />}
+      {detail && <DetailModal reg={detail} event={event} dbTeams={dbTeams} regs={regs} members={members} gas={gas} canEditPayment={true} onClose={() => setDetail(null)} lang={lang} onUpdate={(u) => { updateReg(detail.id, u); setDetail(null); }} />}
 
       <MemberEditModal
         editingMember={editingMember}
@@ -304,6 +305,8 @@ function ClerkView(props) {
         setFamilies={setFamilies}
         members={members}
         setMembers={setMembers}
+        gas={myGas}
+        churches={churches}
         defaultChurch={myChurch}
         notify={notify}
         setRegs={setRegs}

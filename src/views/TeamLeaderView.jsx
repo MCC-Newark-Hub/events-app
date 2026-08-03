@@ -5,6 +5,7 @@ const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""
 import { STATUS_CFG, SERVICE_TEAMS } from "@/constants";
 import { sb } from "@/lib/supabase";
 import { canAssignToTeam } from "@/lib/teamAssignment";
+import { eventSubtitle } from "@/lib/registrationDeadline";
 import Topbar from "@/components/Topbar";
 
 function TeamLeaderView(props) {
@@ -109,7 +110,7 @@ function TeamLeaderView(props) {
     <div className="app-shell">
       <Topbar
         title={t.teamTitle}
-        sub={event?.name}
+        sub={eventSubtitle(event, lang)}
         user={user}
         logout={logout}
         lang={lang}

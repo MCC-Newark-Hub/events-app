@@ -14,14 +14,14 @@ export default function Topbar({
 }) {
   return (
     <div className="topbar">
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <ICMLogo height={32} />
-        <div style={{ borderLeft: "1px solid rgba(255,255,255,.2)", paddingLeft: 12 }}>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
-          <div style={{ fontSize: 11, opacity: 0.65 }}>{sub}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 auto", overflow: "hidden" }}>
+        <ICMLogo height={32} style={{ flexShrink: 0 }} />
+        <div style={{ borderLeft: "1px solid rgba(255,255,255,.2)", paddingLeft: 12, minWidth: 0, overflow: "hidden" }}>
+          <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title}</div>
+          <div style={{ fontSize: 11, opacity: 0.65, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</div>
         </div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, overflow: "visible" }}>
         {pendingCount > 0 && (
           <span
             style={{

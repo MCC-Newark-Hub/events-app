@@ -4,6 +4,7 @@ import { STRINGS } from "@/i18n/strings";
 import ICMLogo from "@/components/ICMLogo";
 import PinLogin from "@/components/PinLogin";
 import DeadlineBanner from "@/components/DeadlineBanner";
+import { formatDeadlineDate, deadlineLabel } from "@/lib/registrationDeadline";
 
 function LoginScreen({ login, lang, setLang, event, onPublicRegister, onLookup }) {
   const t = STRINGS[lang];
@@ -65,19 +66,37 @@ function LoginScreen({ login, lang, setLang, event, onPublicRegister, onLookup }
             <div
               style={{
                 display: "inline-block",
-                background: "rgba(255,255,255,.1)",
-                border: "1px solid rgba(255,255,255,.25)",
-                borderRadius: 10,
-                padding: "10px 18px",
+                background: "#fff",
+                borderRadius: 12,
+                padding: "16px 26px",
                 marginBottom: 28,
+                boxShadow: "0 10px 24px -8px rgba(0,0,0,.45)",
               }}
             >
-              <div style={{ color: "#fff", fontWeight: 700, fontSize: 15, fontFamily: "'Lora',Georgia,serif" }}>
+              <div style={{ color: "#03223f", fontWeight: 700, fontSize: 17, fontFamily: "'Lora',Georgia,serif" }}>
                 {event.name}
               </div>
-              <div style={{ color: "rgba(255,255,255,.7)", fontSize: 12, marginTop: 2 }}>
+              <div style={{ color: "#6b7280", fontSize: 13, marginTop: 4 }}>
                 {event.date}{event.location ? ` · ${event.location}` : ""}
               </div>
+              {event.registration_deadline && (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    color: "#92400e",
+                    background: "#fef3c7",
+                    borderRadius: 99,
+                    padding: "4px 12px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    marginTop: 10,
+                  }}
+                >
+                  ⏰ {deadlineLabel(lang)}: {formatDeadlineDate(event.registration_deadline)}
+                </div>
+              )}
             </div>
           )}
           {event && (

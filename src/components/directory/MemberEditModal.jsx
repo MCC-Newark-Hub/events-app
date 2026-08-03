@@ -3,6 +3,7 @@ import { sb } from "@/lib/supabase";
 import { mapMember } from "@/hooks/useAppData";
 import { genMemberId } from "@/lib/genMemberId";
 import Modal from "@/components/Modal";
+import SearchSelect from "@/components/SearchSelect";
 import { syncRegistrationNames } from "@/lib/syncMemberName";
 
 // Church-locked member editor: the acting user's church is always the value written to
@@ -19,17 +20,24 @@ export default function MemberEditModal({
   setFamilies,
   members,
   setMembers,
+  gas,
+  churches,
   defaultChurch,
   notify,
   setRegs,
 }) {
   if (!editingMember) return null;
 
+  // Hub churches (Newark, Philadelphia, New York, Toms River) must have every member
+  // in a group — outside the hub, a group may not exist yet, so it stays optional.
+  const isHubChurch = (churches || []).find((c) => c.display === defaultChurch)?.is_hub;
+
   const saveMember = async () => {
     const fn = editingMember.firstName.trim();
     const ln = editingMember.lastName.trim();
     const fullName = (fn + " " + ln).trim();
     if (!fullName) { notify("Nome é obrigatório."); return; }
+    if (isHubChurch && !editingMember.gaId) { notify("Grupo é obrigatório para igrejas do Hub."); return; }
     if (editingMember.familyId === "__new__" && !newFamilyName.trim()) { notify("Nome da família é obrigatório."); return; }
     setSavingMember(true);
     try {
@@ -44,6 +52,7 @@ export default function MemberEditModal({
         role: editingMember.role || "",
         roles: editingMember.role ? [editingMember.role] : [],
         family_id: editingMember.familyId && editingMember.familyId !== "__new__" ? editingMember.familyId : null,
+        ga_id: editingMember.gaId || null,
         allergies: editingMember.allergies || null,
         special_needs: editingMember.specialNeeds || null,
         notes: editingMember.notes || null,
@@ -130,6 +139,17 @@ export default function MemberEditModal({
         <div>
           <label>Igreja</label>
           <input value={defaultChurch} disabled style={{ background: "var(--sidebar-active-bg)", color: "var(--muted)" }} />
+        </div>
+        <div>
+          <label>Grupo (GA){isHubChurch ? " *" : " (opcional)"}</label>
+          <SearchSelect
+            value={editingMember.gaId}
+            onSelect={(v) => setEditingMember({ ...editingMember, gaId: v })}
+            items={gas || []}
+            getLabel={(g) => g?.name || ""}
+            getId={(g) => g?.id || ""}
+            placeholder="Buscar grupo…"
+          />
         </div>
         <div>
           <label>Função</label>

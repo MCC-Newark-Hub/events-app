@@ -3,6 +3,7 @@ import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Cal
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, ROLE_GROUPS, TEAMS, ROLE_BADGE, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
+import { eventSubtitle } from "@/lib/registrationDeadline";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
 import CapBar from "@/components/CapBar";
@@ -42,7 +43,7 @@ function AdminView(props) {
   ];
   return (
     <div className="app-shell">
-      <Topbar title={t.adminTitle} sub={event?.name} user={user} logout={logout} pendingCount={pendingApprovals.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
+      <Topbar title={t.adminTitle} sub={eventSubtitle(event, lang)} user={user} logout={logout} pendingCount={pendingApprovals.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
       <div className="body-with-sidebar">
         <Sidebar navItems={navItems} activeId={sec} onSelect={setSec} />
         <div className="main-scroll">
@@ -1149,7 +1150,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         )}
                       </div>
                       <div>
-                        <label>GA (Grupo de Assistência)</label>
+                        <label>GA (Grupo de Assistência){churches.find((c) => c.display === formData.church)?.is_hub ? " *" : " (opcional)"}</label>
                         <SearchSelect
                           value={formData.gaId || ""}
                           onSelect={(v) => setFormData({ ...formData, gaId: v })}
@@ -1196,6 +1197,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
                     <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
                       if (!formData.name?.trim() && !formData.firstName?.trim()) { notify("Nome obrigatório."); return; }
+                      if (churches.find((c) => c.display === formData.church)?.is_hub && !formData.gaId) { notify("Grupo é obrigatório para igrejas do Hub."); return; }
                       const fullName = formData.name?.trim() || ((formData.firstName || '') + ' ' + (formData.lastName || '')).trim();
                       const row = { name: fullName, first_name: formData.firstName || null, last_name: formData.lastName || null, badge_name: formData.badgeName || fullName, gender: formData.gender || "M", category: formData.category || "Adulto", church: formData.church || "", roles: formData.roles || [], role: (formData.roles || [])[0] || "", family_id: formData.familyId || null, ga_id: formData.gaId || null, allergies: formData.allergies || null, special_needs: formData.specialNeeds || null, notes: formData.notes || null };
                       if (!isNew) row.id = editing.id;

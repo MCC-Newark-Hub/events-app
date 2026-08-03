@@ -22,6 +22,7 @@ export default function RegistrationsTab(props) {
     members,
     setMembers,
     families,
+    gas,
     dbTeams,
     addReg,
     updateReg,
@@ -249,6 +250,8 @@ export default function RegistrationsTab(props) {
           event={event}
           dbTeams={dbTeams}
           regs={regs}
+          members={members}
+          gas={gas}
           canEditPayment={true}
           onClose={() => setDetail(null)}
           onUpdate={(u) => {
