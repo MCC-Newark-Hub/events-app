@@ -65,19 +65,23 @@ function AdminView(props) {
   );
 }
 
-function AdminOverview({ event, regs, activeCount, wlRegs, exRegs }) {
+function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members }) {
   const t = useT();
   const [expandedCat, setExpandedCat] = useState({});
   const [expandedCh, setExpandedCh] = useState({});
   const toggleCat = (key) => setExpandedCat((p) => ({ ...p, [key]: !p[key] }));
   const toggleCh = (key) => setExpandedCh((p) => ({ ...p, [key]: !p[key] }));
+  // Use the member's current church, not the text snapshotted on the registration at
+  // signup time — that snapshot goes stale if the member record is corrected afterward,
+  // which used to split one church into two buckets here (e.g. "Newark" vs "Newark, NJ").
+  const liveChurchOf = (r) => (members || []).find((m) => m.id === r.memberId)?.church || r.church || "—";
   const er = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const paid = er.filter((r) => r.paid && !r.exempt);
   const pend = er.filter((r) => !r.paid && !r.exempt);
   const coll = paid.reduce((s, r) => s + r.fee, 0);
   const pendA = pend.reduce((s, r) => s + r.fee, 0);
   const byCatOf = (rows) => CATEGORIES.map((c) => ({ c, n: rows.filter((r) => r.category === c).length })).filter((x) => x.n > 0);
-  const byChOf = (rows) => [...new Set(rows.map((r) => r.church))].map((ch) => ({ ch, total: rows.filter((r) => r.church === ch).length, paid: rows.filter((r) => r.church === ch && r.paid).length })).sort((a, b) => b.total - a.total);
+  const byChOf = (rows) => [...new Set(rows.map(liveChurchOf))].map((ch) => ({ ch, total: rows.filter((r) => liveChurchOf(r) === ch).length, paid: rows.filter((r) => liveChurchOf(r) === ch && r.paid).length })).sort((a, b) => b.total - a.total);
   const byCat = byCatOf(er);
   const byCh = byChOf(er);
   return (
@@ -128,7 +132,7 @@ function AdminOverview({ event, regs, activeCount, wlRegs, exRegs }) {
           <h4 style={{ fontWeight: 700, marginBottom: 12 }}>{t.church}</h4>
           {byCh.map((x) => {
             const isOpen = !!expandedCh[x.ch];
-            const subRows = isOpen ? byCatOf(er.filter((r) => r.church === x.ch)) : [];
+            const subRows = isOpen ? byCatOf(er.filter((r) => liveChurchOf(r) === x.ch)) : [];
             return (
               <Fragment key={x.ch}>
                 <div onClick={() => toggleCh(x.ch)} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)", cursor: "pointer" }}>
