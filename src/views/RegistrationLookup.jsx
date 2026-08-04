@@ -136,16 +136,24 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
       : [];
 
   const resolveRelated = (reg) => {
+    // Batch token: a real shared-submission id from the public portal's family flow.
     const batchId = extractBatchId(reg.note);
-    return batchId
-      ? (regs || []).filter(
-          (r) => r.id !== reg.id && r.eventId === reg.eventId && extractBatchId(r.note) === batchId && !r.cancelled
-        )
-      : reg.note
-      ? (regs || []).filter(
-          (r) => r.id !== reg.id && r.eventId === reg.eventId && r.note === reg.note && !r.cancelled
-        )
-      : [];
+    if (batchId) {
+      return (regs || []).filter(
+        (r) => r.id !== reg.id && r.eventId === reg.eventId && extractBatchId(r.note) === batchId && !r.cancelled
+      );
+    }
+    // family_id: a real staff-assigned directory family (RegModal's family mode).
+    // Previously fell back to matching on identical raw note text instead, which
+    // wrongly grouped anyone who happened to share a generic bulk-action note (e.g.
+    // "Registrado em lote (Equipes)") as "family" — exposing unrelated people's
+    // registration details to each other on this public lookup page.
+    if (reg.familyId) {
+      return (regs || []).filter(
+        (r) => r.id !== reg.id && r.eventId === reg.eventId && r.familyId === reg.familyId && !r.cancelled
+      );
+    }
+    return [];
   };
 
   const selectReg = (reg) => {
