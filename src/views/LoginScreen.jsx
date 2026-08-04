@@ -4,9 +4,10 @@ import { STRINGS } from "@/i18n/strings";
 import ICMLogo from "@/components/ICMLogo";
 import PinLogin from "@/components/PinLogin";
 import DeadlineBanner from "@/components/DeadlineBanner";
+import RegistrationThermometer from "@/components/RegistrationThermometer";
 import { formatDeadlineDate, deadlineLabel } from "@/lib/registrationDeadline";
 
-function LoginScreen({ login, lang, setLang, event, onPublicRegister, onLookup }) {
+function LoginScreen({ login, lang, setLang, event, activeCount, onPublicRegister, onLookup }) {
   const t = STRINGS[lang];
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
@@ -79,6 +80,7 @@ function LoginScreen({ login, lang, setLang, event, onPublicRegister, onLookup }
               <div style={{ color: "#6b7280", fontSize: 13, marginTop: 4 }}>
                 {event.date}{event.location ? ` · ${event.location}` : ""}
               </div>
+              <RegistrationThermometer event={event} activeCount={activeCount} lang={lang} />
               {event.registration_deadline && (
                 <div
                   style={{
