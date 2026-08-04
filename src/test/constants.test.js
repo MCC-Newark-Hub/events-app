@@ -6,6 +6,7 @@ import {
   addDays,
   isDeadlineExempt,
   deadlineStatus,
+  remainingDeadlineDays,
   churchDisplay,
   churchCode,
   OBREIRO_ROLES,
@@ -115,6 +116,12 @@ describe("deadlineStatus", () => {
   it("deadlineExtendedTo in the past overrides a recent registeredAt", () => {
     const reg = { ...base, registeredAt: daysAgo(0), deadlineExtendedTo: daysAgo(1) };
     expect(deadlineStatus(reg, event, [reg])?.overdue).toBe(true);
+  });
+
+  it("remainingDeadlineDays exposes the real unclipped value deadlineStatus clips to 0", () => {
+    const reg = { ...base, registeredAt: daysAgo(20) }; // 13 days past a 7-day deadline
+    expect(remainingDeadlineDays(reg, event, [reg])).toBe(-13);
+    expect(deadlineStatus(reg, event, [reg])?.remaining).toBe(0);
   });
 });
 

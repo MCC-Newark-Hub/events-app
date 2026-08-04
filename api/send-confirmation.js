@@ -3,9 +3,7 @@
 // email or message body — so this can only ever email an address already on
 // file for a real registration, not act as an open mail relay.
 
-function fmt(n) {
-  return "$" + Number(n || 0).toFixed(2);
-}
+import { fmt, extractEmail, sendEmail } from "./_lib/email.js";
 
 function buildEmailHtml(reg, event) {
   const statusLabel = reg.cancelled
@@ -75,12 +73,11 @@ export default async function handler(req, res) {
     const regRows = await regRes.json();
     const reg = Array.isArray(regRows) ? regRows[0] : null;
     if (!reg) {
-      res.status(404).json({ error: "registration_not_found", _debugUrl: SUPABASE_URL, _debugStatus: regRes.status, _debugBody: regRows });
+      res.status(404).json({ error: "registration_not_found" });
       return;
     }
 
-    const emailMatch = (reg.note || "").match(/Email:\s*([^\s|]+)/i);
-    const toEmail = emailMatch ? emailMatch[1].trim() : null;
+    const toEmail = extractEmail(reg.note);
     if (!toEmail) {
       res.status(422).json({ error: "no_email" });
       return;
@@ -93,15 +90,12 @@ export default async function handler(req, res) {
     const evRows = await evRes.json();
     const event = Array.isArray(evRows) ? evRows[0] : null;
 
-    const sendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: [toEmail],
-        subject: `Confirmação de Inscrição - ${event?.name || reg.reg_number}`,
-        html: buildEmailHtml(reg, event),
-      }),
+    const sendRes = await sendEmail({
+      apiKey: RESEND_API_KEY,
+      fromEmail: FROM_EMAIL,
+      to: toEmail,
+      subject: `Confirmação de Inscrição - ${event?.name || reg.reg_number}`,
+      html: buildEmailHtml(reg, event),
     });
 
     if (!sendRes.ok) {

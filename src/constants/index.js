@@ -177,7 +177,12 @@ const statusFromRemaining = (remaining) => {
   return { overdue: false, urgent: false, remaining, label: `${remaining}d restante${remaining === 1 ? "" : "s"}` };
 };
 
-export const deadlineStatus = (reg, event, allEventRegs = []) => {
+// Unclipped days remaining until the payment deadline (negative once overdue) — null
+// if there's no deadline to speak of (exempt, or the event has none configured).
+// deadlineStatus() below clips this to 0 once overdue for display ("Prazo expirado"
+// rather than "-15d"); the auto-cancellation grace-period check needs the real,
+// unclipped value to know *how* overdue something is, not just that it is.
+export const remainingDeadlineDays = (reg, event, allEventRegs = []) => {
   // Events loaded from Supabase are never passed through a camelCase mapper (unlike
   // registrations/members), so a real event only has payment_deadline_days — without
   // this fallback this function silently returns null for every real registration.
@@ -186,7 +191,7 @@ export const deadlineStatus = (reg, event, allEventRegs = []) => {
   // An explicit staff-set deadline (from extending or reactivating) is authoritative —
   // it fully replaces the earliest-attempt calculation below, not additive on top of
   // it, so "your deadline is Aug 15" stays simple to reason about.
-  if (reg.deadlineExtendedTo) return statusFromRemaining(daysUntil(reg.deadlineExtendedTo));
+  if (reg.deadlineExtendedTo) return daysUntil(reg.deadlineExtendedTo);
   // Count from this member's earliest attempt at this event, including cancelled ones —
   // otherwise cancelling an overdue registration and signing up again resets the clock,
   // since a fresh row always starts with today's registeredAt.
@@ -198,7 +203,12 @@ export const deadlineStatus = (reg, event, allEventRegs = []) => {
     (earliest, r) => (r.registeredAt && r.registeredAt < earliest ? r.registeredAt : earliest),
     reg.registeredAt
   );
-  return statusFromRemaining(paymentDeadlineDays - daysSince(earliestRegisteredAt));
+  return paymentDeadlineDays - daysSince(earliestRegisteredAt);
+};
+
+export const deadlineStatus = (reg, event, allEventRegs = []) => {
+  const remaining = remainingDeadlineDays(reg, event, allEventRegs);
+  return remaining === null ? null : statusFromRemaining(remaining);
 };
 
 export const ROLE_BADGE = {
