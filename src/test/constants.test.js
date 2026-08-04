@@ -64,8 +64,23 @@ describe("isDeadlineExempt", () => {
       cancelled: false,
       waitlisted: false,
       category: "Adulto",
+      fee: 25,
     };
     expect(isDeadlineExempt(reg)).toBe(false);
+  });
+
+  it("returns true for a $0 fee even when the exempt flag wasn't persisted correctly", () => {
+    const reg = {
+      role: "",
+      team: "Participante",
+      paid: false,
+      exempt: false,
+      cancelled: false,
+      waitlisted: false,
+      category: "Criança",
+      fee: 0,
+    };
+    expect(isDeadlineExempt(reg)).toBe(true);
   });
 });
 

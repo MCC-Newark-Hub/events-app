@@ -160,6 +160,11 @@ export const OBREIRO_ROLES = ["Pastor", "Ungido", "Diácono", "Obreiro"];
 
 export const isDeadlineExempt = (reg, allEventRegs = []) => {
   if (reg.paid || reg.exempt || reg.cancelled || reg.waitlisted) return true;
+  // A $0 registration has nothing to pay, so no payment deadline applies — check
+  // this directly rather than relying solely on the exempt flag having been
+  // persisted correctly (found production data where it wasn't: zero-fee categories
+  // like Criança/Intermediário with exempt still false).
+  if (reg.fee === 0) return true;
   if (OBREIRO_ROLES.includes(reg.role)) return true;
   if (reg.team && reg.team !== "Participante") return true;
   if (reg.familyId && allEventRegs.length > 0) {
