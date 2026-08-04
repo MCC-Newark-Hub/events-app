@@ -49,7 +49,7 @@ export default function MemberEditModal({
         badge_name: editingMember.badgeName || fullName,
         gender: editingMember.gender,
         category: editingMember.category,
-        church: (defaultChurch || "").split(",")[0].trim(),
+        church: (defaultChurch || "").trim(),
         role: (editingMember.roles || [])[0] || "",
         roles: editingMember.roles || [],
         family_id: editingMember.familyId && editingMember.familyId !== "__new__" ? editingMember.familyId : null,
