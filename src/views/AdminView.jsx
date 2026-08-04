@@ -58,7 +58,7 @@ function AdminView(props) {
             {sec === "reports" && <ReportsTab {...props} />}
             {sec === "events" && <EventsTab events={props.events} setEvents={props.setEvents} event={props.event} setEvent={props.setEvent} lang={props.lang} notify={props.notify} rosters={props.rosters} setRosters={props.setRosters} />}
             {sec === "import" && <AdminImport members={props.members} setMembers={props.setMembers} families={props.families} setFamilies={props.setFamilies} gas={props.gas} setGas={props.setGas} rosters={props.rosters} setRosters={props.setRosters} churches={props.churches} setChurches={props.setChurches} notify={props.notify} />}
-            {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} notify={props.notify} />}
+            {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} notify={props.notify} settings={props.settings} updateSessionTtlHours={props.updateSessionTtlHours} />}
             {sec === "directory" && <AdminDirectory {...props} dbTeams={props.dbTeams} setDbTeams={props.setDbTeams} />}
           </div>
         </div>
@@ -639,7 +639,45 @@ const ROLE_LABELS = {
   team_leader: "Líder de Equipe",
 };
 
-function AdminUsers({ dbUsers, setDbUsers, churches, notify }) {
+// Keyed by settings.sessionTtlHours in the parent so a freshly-loaded value
+// (settings fetch resolving after this tab is already open) remounts this with
+// a correct initial draft, instead of needing an effect to resync it.
+function SessionTtlCard({ settings, updateSessionTtlHours }) {
+  const [ttlHours, setTtlHours] = useState(settings?.sessionTtlHours ?? 2);
+  const [savingTtl, setSavingTtl] = useState(false);
+  return (
+    <div className="card" style={{ padding: "14px 16px", marginBottom: 18, maxWidth: 420 }}>
+      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>🔒 Duração da Sessão</div>
+      <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>
+        Depois de fazer login com o PIN, por quanto tempo o usuário continua conectado sem precisar digitar o PIN de novo (ex: se deixar o dispositivo aberto).
+      </p>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input
+          type="number"
+          min={0.25}
+          step={0.25}
+          value={ttlHours}
+          onChange={(e) => setTtlHours(e.target.value)}
+          style={{ width: 90 }}
+        />
+        <span style={{ fontSize: 13, color: "var(--muted)" }}>horas</span>
+        <button
+          className="btn btn-primary btn-sm"
+          disabled={savingTtl || !ttlHours || Number(ttlHours) <= 0 || Number(ttlHours) === settings?.sessionTtlHours}
+          onClick={async () => {
+            setSavingTtl(true);
+            await updateSessionTtlHours(Number(ttlHours));
+            setSavingTtl(false);
+          }}
+        >
+          {savingTtl ? "Salvando…" : "Salvar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AdminUsers({ dbUsers, setDbUsers, churches, notify, settings, updateSessionTtlHours }) {
   const [editing, setEditing] = useState(null); // { id, name, pin, sysRole, initials, church }
   const [showPin, setShowPin] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -703,6 +741,8 @@ function AdminUsers({ dbUsers, setDbUsers, churches, notify }) {
       <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 18 }}>
         Gerencie quem pode acessar o sistema e redefina PINs individualmente.
       </p>
+
+      <SessionTtlCard key={settings?.sessionTtlHours} settings={settings} updateSessionTtlHours={updateSessionTtlHours} />
 
       {editing && (
         <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && cancel()}>

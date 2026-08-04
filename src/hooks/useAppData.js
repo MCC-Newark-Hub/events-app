@@ -140,6 +140,7 @@ export function useAppData({ getUserRef, notify }) {
   const [dbFunctions, setDbFunctions] = useState([]);
   const [dbUsers, setDbUsers] = useState([]);
   const [dbTeams, setDbTeams] = useState([]);
+  const [settings, setSettings] = useState({ sessionTtlHours: 2 });
   const seqRef = useRef(0);
 
   // ── Load all data from Supabase on mount ─────────────────────────────────
@@ -148,7 +149,7 @@ export function useAppData({ getUserRef, notify }) {
     async function loadAll() {
       setLoading(true);
       try {
-        var [evRes, memRes, famRes, gaRes, regRes, aprRes, rosRes, chrRes, usrRes, catRes, fnRes, teamsRes] =
+        var [evRes, memRes, famRes, gaRes, regRes, aprRes, rosRes, chrRes, usrRes, catRes, fnRes, teamsRes, setRes] =
           await Promise.all([
             sb.from("events").select("*").order("date"),
             sb.from("members").select("*").order("name"),
@@ -162,6 +163,7 @@ export function useAppData({ getUserRef, notify }) {
             sb.from("categories").select("*").order("sort_order"),
             sb.from("functions").select("*").order("sort_order"),
             sb.from("teams").select("*").order("sort_order"),
+            sb.from("app_settings").select("*").eq("id", 1).maybeSingle(),
           ]);
         if (cancelled) return;
         if (evRes.error) {
@@ -189,6 +191,7 @@ export function useAppData({ getUserRef, notify }) {
         if (catRes.data && catRes.data.length > 0) setDbCategories(catRes.data);
         if (fnRes.data && fnRes.data.length > 0) setDbFunctions(fnRes.data);
         setDbTeams((teamsRes.data || []).map(mapTeam));
+        if (setRes.data) setSettings({ sessionTtlHours: Number(setRes.data.session_ttl_hours) || 2 });
         var maxSeq = (regRes.data || []).reduce(function (m, r) {
           var n = parseInt((r.reg_number || "").split("-")[2] || "0");
           return n > m ? n : m;
@@ -656,6 +659,13 @@ export function useAppData({ getUserRef, notify }) {
       .then(({ error }) => { if (error) console.error("promoteFromWaitlist DB error:", error); });
   };
 
+  const updateSessionTtlHours = async (hours) => {
+    const { error } = await sb.from("app_settings").update({ session_ttl_hours: hours, updated_at: new Date().toISOString() }).eq("id", 1);
+    if (error) { notify("Erro ao salvar: " + error.message); return; }
+    setSettings({ sessionTtlHours: hours });
+    notify("Duração da sessão atualizada!");
+  };
+
   return {
     loading,
     dbError,
@@ -685,6 +695,8 @@ export function useAppData({ getUserRef, notify }) {
     setDbUsers,
     dbTeams,
     setDbTeams,
+    settings,
+    updateSessionTtlHours,
     activeRegs,
     activeCount,
     isFull,

@@ -18,6 +18,7 @@ Run these files **in order** using the Supabase SQL editor or `psql`. Each migra
 | `012_registration_deadline.sql` | Adds `registration_deadline` (date) to `events`; adds `category`/`church`/`badge_name`/`team`/`note`/`pastor_note` to `approvals` so late-registration requests can be approved into real registrations. |
 | `013_unique_active_registration.sql` | Adds a partial unique index on `registrations (member_id, event_id) WHERE cancelled = false AND member_id <> 'GUEST'`, so a member can't end up with two active registrations for the same event. Cancel-then-re-register still works since cancelled rows are excluded. |
 | `014_payment_extension_and_reactivation.sql` | Adds `registrations.deadline_extended_to` (date) and `registrations.cancel_reason` (text) for the reactivation/extension flow; adds `events.payment_extension_days` (int, default 5) for the shorter deadline reactivated registrations get. |
+| `015_app_settings.sql` | Creates single-row `app_settings` table (`session_ttl_hours`, default 2) for global config previously hardcoded in the client — admin-configurable from Usuários & PINs. |
 
 ## How to run
 

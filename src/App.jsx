@@ -15,10 +15,20 @@ import GALeaderView from "@/views/GALeaderView";
 import TeamLeaderView from "@/views/TeamLeaderView";
 import RegistrationLookup from "@/views/RegistrationLookup";
 
-const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+// Admin-configurable in Usuários & PINs (app_settings.session_ttl_hours). The
+// synchronous checks below (session restore on mount) run before that setting
+// has loaded from Supabase, so they use the last-known value cached in
+// localStorage — refreshed once useAppData's fetch resolves, see the effect
+// below. DEFAULT_SESSION_TTL_HOURS only applies on a device's very first load,
+// before any value has ever been cached.
+const DEFAULT_SESSION_TTL_HOURS = 2;
+const getCachedSessionTtlMs = () => {
+  const cached = Number(localStorage.getItem("mcc_session_ttl_hours"));
+  return (cached > 0 ? cached : DEFAULT_SESSION_TTL_HOURS) * 60 * 60 * 1000;
+};
 const isSessionValid = () => {
   const ts = localStorage.getItem("mcc_pin_ts");
-  return !!ts && Date.now() - Number(ts) < SESSION_TTL_MS;
+  return !!ts && Date.now() - Number(ts) < getCachedSessionTtlMs();
 };
 const clearSession = () => {
   localStorage.removeItem("mcc_pin");
@@ -57,6 +67,15 @@ export default function App() {
   useEffect(() => {
     if (!savedPin && localStorage.getItem("mcc_pin")) clearSession();
   }, []);
+
+  // Keep the locally-cached TTL fresh so the next app load's synchronous
+  // session check (isSessionValid, above) reflects the admin-configured value
+  // rather than whatever was cached on this device before.
+  useEffect(() => {
+    if (appData.settings?.sessionTtlHours) {
+      localStorage.setItem("mcc_session_ttl_hours", String(appData.settings.sessionTtlHours));
+    }
+  }, [appData.settings?.sessionTtlHours]);
 
   // Re-login from saved PIN once DB users have loaded
   useEffect(() => {
