@@ -19,6 +19,7 @@ import ReportsTab from "./admin/ReportsTab";
 import { newMemberForm, memberToForm } from "@/lib/memberForm";
 import { resendConfirmation } from "@/lib/resendConfirmation";
 import { useSortable } from "@/hooks/useSortable";
+import { groupByFamily, familyIdOf } from "@/lib/family";
 
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const statusSortOf = (r) => r.cancelled ? "cancelado" : r.waitlisted ? "lista de espera" : r.excedente ? "excedente" : r.exempt ? "isento" : r.paid ? "pago" : "pendente";
@@ -28,6 +29,7 @@ function ClerkView(props) {
   const t = useT();
   const [sec, setSec] = useState("regs");
   const [search, setSearch] = useState("");
+  const [groupByFam, setGroupByFam] = useState(false);
   const [tab, setTab] = useState("active");
   const [showReg, setShowReg] = useState(false);
   const [detail, setDetail] = useState(null);
@@ -275,11 +277,12 @@ function ClerkView(props) {
             <ReportsTab regs={allForCity} event={event} wlRegs={myWlRegs} exRegs={myExRegs} lang={lang} />
           ) : sec === "members" ? (
             <>
-              <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+              <div style={{ display: "flex", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
                 <div className="sb" style={{ flex: 1 }}>
                   <span className="si-icon"><Search size={16} /></span>
                   <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar membro..." />
                 </div>
+                <button className={`btn btn-sm ${groupByFam ? "btn-primary" : "btn-ghost"}`} onClick={() => setGroupByFam((p) => !p)}>👪 Agrupar por Família</button>
                 <button className="btn btn-primary" onClick={openNewMember}>+ Novo Membro</button>
               </div>
 
@@ -293,23 +296,34 @@ function ClerkView(props) {
                     <thead><tr><th>{t.memberName}</th><th>{t.cargo}</th><th>{t.cat}</th><th>Família</th><th>{t.actions}</th></tr></thead>
                     <tbody>
                       {memberList.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
-                      {memberList.map((m) => (
-                        <tr key={m.id}>
-                          <td>
-                            <div style={{ fontWeight: 600 }}>{m.name}</div>
-                            {m.badgeName && m.badgeName !== m.name && <div style={{ fontSize: 11, color: "#6b7280" }}>🏷 {m.badgeName}</div>}
-                          </td>
-                          <td><RoleBadges member={m} /></td>
-                          <td><span className="badge badge-blue">{m.category}</span></td>
-                          <td style={{ fontSize: 12 }}>{families.find((f) => f.id === m.familyId)?.name || <span style={{ color: "#9ca3af" }}>—</span>}</td>
-                          <td>
-                            <div style={{ display: "flex", gap: 4 }}>
-                              <button className="btn btn-ghost btn-sm" onClick={() => openEditMember(m)}>{t.edit}</button>
-                              <button className="btn btn-danger btn-sm" onClick={() => requestDeleteMember(m)}>🗑</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {(() => {
+                        const renderMemberRow = (m) => (
+                          <tr key={m.id}>
+                            <td>
+                              <div style={{ fontWeight: 600 }}>{m.name}</div>
+                              {m.badgeName && m.badgeName !== m.name && <div style={{ fontSize: 11, color: "#6b7280" }}>🏷 {m.badgeName}</div>}
+                            </td>
+                            <td><RoleBadges member={m} /></td>
+                            <td><span className="badge badge-blue">{m.category}</span></td>
+                            <td style={{ fontSize: 12 }}>{families.find((f) => f.id === familyIdOf(m, families))?.name || <span style={{ color: "#9ca3af" }}>—</span>}</td>
+                            <td>
+                              <div style={{ display: "flex", gap: 4 }}>
+                                <button className="btn btn-ghost btn-sm" onClick={() => openEditMember(m)}>{t.edit}</button>
+                                <button className="btn btn-danger btn-sm" onClick={() => requestDeleteMember(m)}>🗑</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                        if (!groupByFam) return memberList.map(renderMemberRow);
+                        return groupByFamily(memberList, families).flatMap((g) => [
+                          <tr key={`fg-${g.familyId ?? "none"}`} style={{ background: "var(--bg2)" }}>
+                            <td colSpan={5} style={{ fontWeight: 700, fontSize: 12, padding: "6px 10px" }}>
+                              👪 {g.familyName} <span style={{ opacity: .65, fontWeight: 400 }}>({g.members.length})</span>
+                            </td>
+                          </tr>,
+                          ...g.members.map(renderMemberRow),
+                        ]);
+                      })()}
                     </tbody>
                   </table>
                 </div>

@@ -22,6 +22,7 @@ import TeamsTab from "./admin/TeamsTab";
 import EventsTab from "./admin/EventsTab";
 import ReportsTab from "./admin/ReportsTab";
 import { syncRegistrationNames } from "@/lib/syncMemberName";
+import { groupByFamily } from "@/lib/family";
 
 // Accent-insensitive search: "joao" matches "João"
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -854,6 +855,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   ];
   const [tab, setTab]         = useState("churches");
   const [search, setSearch]   = useState("");
+  const [groupByFam, setGroupByFam] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({});
   const [deleting, setDeleting] = useState(null); // { ids:[], label:"" }
@@ -939,10 +941,17 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
         ))}
       </div>
 
-      <div className="sb" style={{ marginBottom: 14, maxWidth: 340 }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
+      <div className="sb" style={{ maxWidth: 340 }}>
         <span className="si-icon" style={{ fontSize: 14 }}>🔍</span>
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar…" />
         {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}><X size={14} /></button>}
+      </div>
+      {tab === "members" && (
+        <button className={`btn btn-sm ${groupByFam ? "btn-primary" : "btn-ghost"}`} onClick={() => setGroupByFam((p) => !p)}>
+          👪 Agrupar por Família
+        </button>
+      )}
       </div>
 
       {/* ── Churches ─────────────────────────────────────────────────────── */}
@@ -1096,6 +1105,35 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
           .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const list = sortData(rawList, mbSk, mbSd);
         const allIds = list.map((m) => m.id).filter(Boolean);
+        const familyGroups = groupByFam ? groupByFamily(list, families) : null;
+        const renderMemberRow = (m) => (
+          <tr key={m.id} style={{ background: selected.includes(m.id) ? "var(--sidebar-active-bg)" : "" }}>
+            <td><input type="checkbox" checked={selected.includes(m.id)} onChange={() => toggleSel(m.id)} /></td>
+            <td style={{ fontWeight: 500 }}>{(m.firstName && m.lastName) ? `${m.firstName} ${m.lastName}` : m.name}</td>
+            <td style={{ color: "var(--muted)", fontSize: 12 }}>{m.badgeName}</td>
+            <td><span className="badge badge-gray">{m.gender}</span></td>
+            <td><span className="badge badge-blue">{m.category}</span></td>
+            <td style={{ fontSize: 12 }}>{m.church}</td>
+            <td style={{ fontSize: 12 }}>{m.gaName ? <span className="badge badge-gray" style={{ fontSize: 10 }}>{m.gaName}</span> : <span style={{ color: "var(--muted)" }}>—</span>}</td>
+            <td style={{ fontSize: 12 }}>
+              {(() => {
+                const roles = m.roles && m.roles.length > 0 ? m.roles : (m.role ? [m.role] : []);
+                if (roles.length === 0) return <span style={{ color: "var(--muted)" }}>—</span>;
+                return <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+                  {roles.slice(0, 2).map((r) => <span key={r} className="badge badge-blue" style={{ fontSize: 10 }}>{r}</span>)}
+                  {roles.length > 2 && <span className="badge badge-gray" style={{ fontSize: 10 }}>+{roles.length - 2}</span>}
+                </div>;
+              })()}
+            </td>
+            <td style={{ fontSize: 11, color: "var(--muted)", maxWidth: 160 }}>{m.notes ? m.notes.slice(0, 40) + (m.notes.length > 40 ? '…' : '') : '—'}</td>
+            <td>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button className="btn btn-ghost btn-xs" onClick={() => openEdit(m, { firstName: m.firstName || '', lastName: m.lastName || '', name: m.name, badgeName: m.badgeName || "", gender: m.gender || "M", category: m.category, church: m.church || "", roles: m.roles || (m.role ? [m.role] : []), role: m.role || "", familyId: m.familyId || "", gaId: m.gaId || "", allergies: m.allergies || '', specialNeeds: m.specialNeeds || '', notes: m.notes || '' })}><Pencil size={12} /></button>
+                <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [m.id], label: m.name })}><Trash2 size={12} /></button>
+              </div>
+            </td>
+          </tr>
+        );
         return (
           <>
             {editing !== null && (
@@ -1310,34 +1348,16 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     </tr>
                   </thead>
                   <tbody>
-                    {list.map((m) => (
-                      <tr key={m.id} style={{ background: selected.includes(m.id) ? "var(--sidebar-active-bg)" : "" }}>
-                        <td><input type="checkbox" checked={selected.includes(m.id)} onChange={() => toggleSel(m.id)} /></td>
-                        <td style={{ fontWeight: 500 }}>{(m.firstName && m.lastName) ? `${m.firstName} ${m.lastName}` : m.name}</td>
-                        <td style={{ color: "var(--muted)", fontSize: 12 }}>{m.badgeName}</td>
-                        <td><span className="badge badge-gray">{m.gender}</span></td>
-                        <td><span className="badge badge-blue">{m.category}</span></td>
-                        <td style={{ fontSize: 12 }}>{m.church}</td>
-                        <td style={{ fontSize: 12 }}>{m.gaName ? <span className="badge badge-gray" style={{ fontSize: 10 }}>{m.gaName}</span> : <span style={{ color: "var(--muted)" }}>—</span>}</td>
-                        <td style={{ fontSize: 12 }}>
-                          {(() => {
-                            const roles = m.roles && m.roles.length > 0 ? m.roles : (m.role ? [m.role] : []);
-                            if (roles.length === 0) return <span style={{ color: "var(--muted)" }}>—</span>;
-                            return <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
-                              {roles.slice(0, 2).map((r) => <span key={r} className="badge badge-blue" style={{ fontSize: 10 }}>{r}</span>)}
-                              {roles.length > 2 && <span className="badge badge-gray" style={{ fontSize: 10 }}>+{roles.length - 2}</span>}
-                            </div>;
-                          })()}
-                        </td>
-                        <td style={{ fontSize: 11, color: "var(--muted)", maxWidth: 160 }}>{m.notes ? m.notes.slice(0, 40) + (m.notes.length > 40 ? '…' : '') : '—'}</td>
-                        <td>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <button className="btn btn-ghost btn-xs" onClick={() => openEdit(m, { firstName: m.firstName || '', lastName: m.lastName || '', name: m.name, badgeName: m.badgeName || "", gender: m.gender || "M", category: m.category, church: m.church || "", roles: m.roles || (m.role ? [m.role] : []), role: m.role || "", familyId: m.familyId || "", gaId: m.gaId || "", allergies: m.allergies || '', specialNeeds: m.specialNeeds || '', notes: m.notes || '' })}><Pencil size={12} /></button>
-                            <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [m.id], label: m.name })}><Trash2 size={12} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {familyGroups
+                      ? familyGroups.flatMap((g) => [
+                          <tr key={`fg-${g.familyId ?? "none"}`} style={{ background: "var(--bg2)" }}>
+                            <td colSpan={10} style={{ fontWeight: 700, fontSize: 12, padding: "6px 10px" }}>
+                              👪 {g.familyName} <span style={{ opacity: .65, fontWeight: 400 }}>({g.members.length})</span>
+                            </td>
+                          </tr>,
+                          ...g.members.map(renderMemberRow),
+                        ])
+                      : list.map(renderMemberRow)}
                     {list.length === 0 && <tr><td colSpan={10} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
                   </tbody>
                 </table>

@@ -12,6 +12,7 @@ import ReportsTab from "./admin/ReportsTab";
 import { newMemberForm, memberToForm } from "@/lib/memberForm";
 import { resendConfirmation } from "@/lib/resendConfirmation";
 import { eventSubtitle } from "@/lib/registrationDeadline";
+import { groupByFamily } from "@/lib/family";
 
 const cityOf = (s) => (s || "").split(",")[0].trim().toLowerCase();
 
@@ -26,6 +27,7 @@ function GALeaderView(props) {
   const [newFamilyName, setNewFamilyName] = useState("");
   const [showFamilies, setShowFamilies] = useState(false);
   const [showReports, setShowReports] = useState(false);
+  const [groupByFam, setGroupByFam] = useState(false);
   const [transferMemberId, setTransferMemberId] = useState("");
   const [transferTargetGaId, setTransferTargetGaId] = useState("");
   const [requestTarget, setRequestTarget] = useState(null); // { reg, type: "reactivation" | "deadline_extension" }
@@ -138,6 +140,9 @@ function GALeaderView(props) {
               <button className="btn btn-ghost btn-sm" onClick={() => setShowFamilies((v) => !v)}>
                 {showFamilies ? "Ocultar Famílias" : `👪 Famílias (${myGaFamilies.length})`}
               </button>
+              <button className={`btn btn-sm ${groupByFam ? "btn-primary" : "btn-ghost"}`} onClick={() => setGroupByFam((v) => !v)}>
+                Agrupar por Família
+              </button>
               <button className="btn btn-primary btn-sm" onClick={() => { setEditingMember(newMemberForm()); setNewFamilyName(""); }}>
                 + Novo Membro
               </button>
@@ -236,6 +241,78 @@ function GALeaderView(props) {
             const notR = gam.filter((m) => getStatus(m.id) === "not_registered");
             const pendG = gam.filter((m) => getStatus(m.id) === "pending");
             const conf = gam.filter((m) => getStatus(m.id) === "confirmed");
+            const renderMemberRow = (m) => {
+              const s = getStatus(m.id);
+              const reg = getReg(m.id);
+              const cancelledReg = !reg ? getCancelledReg(m.id) : null;
+              const overdueStatus = reg ? deadlineStatus(reg, event, allEventRegs) : null;
+              return (
+                <tr key={m.id}>
+                  <td style={{ fontWeight: 600 }}>{m.name}</td>
+                  <td>
+                    <span className="badge badge-blue">{m.category}</span>
+                  </td>
+                  <td>
+                    <RoleBadges member={m} />
+                  </td>
+                  <td>
+                    {s === "not_registered" ? (
+                      <span className="badge badge-gray">○</span>
+                    ) : s === "pending" ? (
+                      <span className="badge badge-yellow">⏳</span>
+                    ) : (
+                      <span className="badge badge-green">✓</span>
+                    )}
+                  </td>
+                  <td style={{ fontSize: 12, color: "#6b7280" }}>
+                    {s === "not_registered"
+                      ? "—"
+                      : s === "pending"
+                        ? t.payAtDesk
+                        : `✓ ${t.confirmed}`}
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button
+                        className="btn btn-ghost btn-xs"
+                        onClick={() => { setEditingMember(memberToForm(m)); setNewFamilyName(""); }}
+                        title="Editar membro"
+                      >
+                        ✏️
+                      </button>
+                      {reg && (
+                        <button
+                          className="btn btn-ghost btn-xs"
+                          disabled={resendingId === reg.id}
+                          onClick={() => handleResend(reg)}
+                          title={t.resendConfirmation}
+                        >
+                          {resendingId === reg.id ? "…" : "📧"}
+                        </button>
+                      )}
+                      {cancelledReg && (
+                        <button
+                          className="btn btn-ghost btn-xs"
+                          onClick={() => setRequestTarget({ reg: cancelledReg, type: "reactivation" })}
+                          title={t.requestReactivation}
+                        >
+                          ♻️
+                        </button>
+                      )}
+                      {reg && overdueStatus && (overdueStatus.overdue || overdueStatus.urgent) && (
+                        <button
+                          className="btn btn-ghost btn-xs"
+                          onClick={() => setRequestTarget({ reg, type: "deadline_extension" })}
+                          title={t.requestExtension}
+                        >
+                          ⏰
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            };
             return (
               <div key={ga.id} style={{ marginBottom: 22 }}>
                 <div
@@ -273,78 +350,16 @@ function GALeaderView(props) {
                         </tr>
                       </thead>
                       <tbody>
-                        {gam.map((m) => {
-                          const s = getStatus(m.id);
-                          const reg = getReg(m.id);
-                          const cancelledReg = !reg ? getCancelledReg(m.id) : null;
-                          const overdueStatus = reg ? deadlineStatus(reg, event, allEventRegs) : null;
-                          return (
-                            <tr key={m.id}>
-                              <td style={{ fontWeight: 600 }}>{m.name}</td>
-                              <td>
-                                <span className="badge badge-blue">{m.category}</span>
-                              </td>
-                              <td>
-                                <RoleBadges member={m} />
-                              </td>
-                              <td>
-                                {s === "not_registered" ? (
-                                  <span className="badge badge-gray">○</span>
-                                ) : s === "pending" ? (
-                                  <span className="badge badge-yellow">⏳</span>
-                                ) : (
-                                  <span className="badge badge-green">✓</span>
-                                )}
-                              </td>
-                              <td style={{ fontSize: 12, color: "#6b7280" }}>
-                                {s === "not_registered"
-                                  ? "—"
-                                  : s === "pending"
-                                    ? t.payAtDesk
-                                    : `✓ ${t.confirmed}`}
-                              </td>
-                              <td>
-                                <div style={{ display: "flex", gap: 4 }}>
-                                  <button
-                                    className="btn btn-ghost btn-xs"
-                                    onClick={() => { setEditingMember(memberToForm(m)); setNewFamilyName(""); }}
-                                    title="Editar membro"
-                                  >
-                                    ✏️
-                                  </button>
-                                  {reg && (
-                                    <button
-                                      className="btn btn-ghost btn-xs"
-                                      disabled={resendingId === reg.id}
-                                      onClick={() => handleResend(reg)}
-                                      title={t.resendConfirmation}
-                                    >
-                                      {resendingId === reg.id ? "…" : "📧"}
-                                    </button>
-                                  )}
-                                  {cancelledReg && (
-                                    <button
-                                      className="btn btn-ghost btn-xs"
-                                      onClick={() => setRequestTarget({ reg: cancelledReg, type: "reactivation" })}
-                                      title={t.requestReactivation}
-                                    >
-                                      ♻️
-                                    </button>
-                                  )}
-                                  {reg && overdueStatus && (overdueStatus.overdue || overdueStatus.urgent) && (
-                                    <button
-                                      className="btn btn-ghost btn-xs"
-                                      onClick={() => setRequestTarget({ reg, type: "deadline_extension" })}
-                                      title={t.requestExtension}
-                                    >
-                                      ⏰
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {groupByFam
+                          ? groupByFamily(gam, families).flatMap((g) => [
+                              <tr key={`fg-${g.familyId ?? "none"}`} style={{ background: "var(--bg2)" }}>
+                                <td colSpan={6} style={{ fontWeight: 700, fontSize: 12, padding: "6px 10px" }}>
+                                  👪 {g.familyName} <span style={{ opacity: .65, fontWeight: 400 }}>({g.members.length})</span>
+                                </td>
+                              </tr>,
+                              ...g.members.map(renderMemberRow),
+                            ])
+                          : gam.map(renderMemberRow)}
                       </tbody>
                     </table>
                   </div>
