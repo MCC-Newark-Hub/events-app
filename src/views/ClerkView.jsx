@@ -14,6 +14,7 @@ import Modal from "@/components/Modal";
 import FamiliesPanel from "@/components/directory/FamiliesPanel";
 import GroupsPanel from "@/components/directory/GroupsPanel";
 import MemberEditModal from "@/components/directory/MemberEditModal";
+import RoleBadges from "@/components/directory/RoleBadges";
 import { newMemberForm, memberToForm } from "@/lib/memberForm";
 import { resendConfirmation } from "@/lib/resendConfirmation";
 import { useSortable } from "@/hooks/useSortable";
@@ -176,7 +177,7 @@ function ClerkView(props) {
                   {suggestions.map((m) => (
                     <div key={m.id} onClick={() => { setPrefill(m); setShowReg(true); }} style={{ padding: "9px 14px", borderTop: "1px solid var(--border)", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}>
                       <div><span style={{ fontWeight: 600, fontSize: 14 }}>{m.name}</span><span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>{m.church}</span></div>
-                      <div style={{ display: "flex", gap: 5 }}><span className="badge badge-blue">{m.category}</span>{m.role && <span className={`badge ${ROLE_BADGE[m.role]}`}>{m.role}</span>}</div>
+                      <div style={{ display: "flex", gap: 5 }}><span className="badge badge-blue">{m.category}</span><RoleBadges member={m} /></div>
                     </div>
                   ))}
                 </div>
@@ -293,7 +294,7 @@ function ClerkView(props) {
                             <div style={{ fontWeight: 600 }}>{m.name}</div>
                             {m.badgeName && m.badgeName !== m.name && <div style={{ fontSize: 11, color: "#6b7280" }}>🏷 {m.badgeName}</div>}
                           </td>
-                          <td>{m.role ? <span className={`badge ${ROLE_BADGE[m.role] || "badge-gray"}`}>{m.role}</span> : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}</td>
+                          <td><RoleBadges member={m} /></td>
                           <td><span className="badge badge-blue">{m.category}</span></td>
                           <td style={{ fontSize: 12 }}>{families.find((f) => f.id === m.familyId)?.name || <span style={{ color: "#9ca3af" }}>—</span>}</td>
                           <td>

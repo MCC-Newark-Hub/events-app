@@ -519,7 +519,7 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
                           <button
                             className="btn btn-ok btn-xs"
                             onClick={() => {
-                              const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: m.id, targetTeam: team, memberRole: m.role });
+                              const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: m.id, targetTeam: team, memberRoles: m.roles });
                               if (!check.allowed) {
                                 notify(`Não é possível adicionar ${m.name}: já está na equipe ${check.conflictTeam}.`);
                                 return;

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
-import { ROLE_BADGE, deadlineStatus } from "@/constants";
+import { deadlineStatus } from "@/constants";
 import { sb } from "@/lib/supabase";
 import Topbar from "@/components/Topbar";
 import Modal from "@/components/Modal";
 import SearchSelect from "@/components/SearchSelect";
 import FamiliesPanel from "@/components/directory/FamiliesPanel";
 import MemberEditModal from "@/components/directory/MemberEditModal";
+import RoleBadges from "@/components/directory/RoleBadges";
 import { newMemberForm, memberToForm } from "@/lib/memberForm";
 import { resendConfirmation } from "@/lib/resendConfirmation";
 import { eventSubtitle } from "@/lib/registrationDeadline";
@@ -270,11 +271,7 @@ function GALeaderView(props) {
                                 <span className="badge badge-blue">{m.category}</span>
                               </td>
                               <td>
-                                {m.role ? (
-                                  <span className={`badge ${ROLE_BADGE[m.role]}`}>{m.role}</span>
-                                ) : (
-                                  <span style={{ color: "#9ca3af" }}>—</span>
-                                )}
+                                <RoleBadges member={m} />
                               </td>
                               <td>
                                 {s === "not_registered" ? (

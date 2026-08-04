@@ -114,7 +114,7 @@ function TeamLeaderView(props) {
     if (!silent) notify("Removed.");
   };
   const transferMember = (fromTeam, member, toTeam) => {
-    const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: member.id, targetTeam: toTeam, memberRole: member.role, ignoreTeam: fromTeam });
+    const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: member.id, targetTeam: toTeam, memberRoles: member.roles, ignoreTeam: fromTeam });
     if (!check.allowed) {
       notify(`Não é possível transferir ${member.name}: já está na equipe ${check.conflictTeam}.`);
       return;
@@ -254,7 +254,7 @@ function TeamLeaderView(props) {
                               <button
                                 className="btn btn-ok btn-xs"
                                 onClick={() => {
-                                  const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: m.id, targetTeam: team, memberRole: m.role });
+                                  const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: m.id, targetTeam: team, memberRoles: m.roles });
                                   if (!check.allowed) {
                                     notify(`Não é possível adicionar ${m.name} à sua equipe porque ele(a) já está na equipe ${check.conflictTeam}.`);
                                     return;

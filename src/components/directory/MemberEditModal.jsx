@@ -1,9 +1,10 @@
-import { CATEGORIES, ROLE_GROUPS } from "@/constants";
+import { CATEGORIES } from "@/constants";
 import { sb } from "@/lib/supabase";
 import { mapMember } from "@/hooks/useAppData";
 import { genMemberId } from "@/lib/genMemberId";
 import Modal from "@/components/Modal";
 import SearchSelect from "@/components/SearchSelect";
+import RolesMultiSelect from "@/components/directory/RolesMultiSelect";
 import { syncRegistrationNames } from "@/lib/syncMemberName";
 
 // Church-locked member editor: the acting user's church is always the value written to
@@ -37,7 +38,7 @@ export default function MemberEditModal({
     const ln = editingMember.lastName.trim();
     const fullName = (fn + " " + ln).trim();
     if (!fullName) { notify("Nome é obrigatório."); return; }
-    if (isHubChurch && !editingMember.gaId) { notify("Grupo é obrigatório para igrejas do Hub."); return; }
+    if (isHubChurch && !editingMember.gaId) { notify("Grupo é obrigatório para igrejas do Pólo."); return; }
     if (editingMember.familyId === "__new__" && !newFamilyName.trim()) { notify("Nome da família é obrigatório."); return; }
     setSavingMember(true);
     try {
@@ -49,8 +50,8 @@ export default function MemberEditModal({
         gender: editingMember.gender,
         category: editingMember.category,
         church: (defaultChurch || "").split(",")[0].trim(),
-        role: editingMember.role || "",
-        roles: editingMember.role ? [editingMember.role] : [],
+        role: (editingMember.roles || [])[0] || "",
+        roles: editingMember.roles || [],
         family_id: editingMember.familyId && editingMember.familyId !== "__new__" ? editingMember.familyId : null,
         ga_id: editingMember.gaId || null,
         allergies: editingMember.allergies || null,
@@ -151,17 +152,10 @@ export default function MemberEditModal({
             placeholder="Buscar grupo…"
           />
         </div>
-        <div>
-          <label>Função</label>
-          <select value={editingMember.role} onChange={(e) => setEditingMember({ ...editingMember, role: e.target.value })}>
-            <option value="">Nenhuma</option>
-            {ROLE_GROUPS.map((g) => (
-              <optgroup key={g.group} label={g.group}>
-                {g.roles.map((r) => <option key={r} value={r}>{r}</option>)}
-              </optgroup>
-            ))}
-          </select>
-        </div>
+        <RolesMultiSelect
+          roles={editingMember.roles}
+          onChange={(roles) => setEditingMember({ ...editingMember, roles })}
+        />
         <div>
           <label>Família</label>
           <select value={editingMember.familyId} onChange={(e) => setEditingMember({ ...editingMember, familyId: e.target.value })}>

@@ -86,7 +86,10 @@ function RegModal({
       badgeName: "", // clear manual fields when switching to member mode
     }));
   };
-  const isAutoExempt = sel ? ["Pastor", "Ungido"].includes(sel.role) : false;
+  // Derived from f.role (the role actually being submitted for this registration),
+  // not sel.role (the member's legacy first role) — matters once a member has
+  // several roles and staff pick a different one via the selector below.
+  const isAutoExempt = ["Pastor", "Ungido"].includes(f.role);
   const selFee = isAutoExempt ? 0 : (sel ? (event?.fees?.[sel.category] ?? 0) : 0);
   const manFee = ["Pastor", "Ungido"].includes(f.role) ? 0 : (event?.fees?.[f.category] ?? 0);
 
@@ -337,7 +340,7 @@ function RegModal({
                     {" "}
                     · {sel.category} · {sel.church}
                   </span>
-                  {sel.role && (
+                  {sel.roles && sel.roles.length > 1 ? null : sel.role && (
                     <span className={`badge ${ROLE_BADGE[sel.role]}`} style={{ marginLeft: 8 }}>
                       {sel.role}
                     </span>
@@ -350,6 +353,24 @@ function RegModal({
                     </span>
                   )}
                 </div>
+                {sel.roles && sel.roles.length > 1 && (
+                  <div>
+                    <label>{t.role}</label>
+                    <select
+                      value={f.role}
+                      onChange={(e) => {
+                        const role = e.target.value;
+                        setF((p) => ({
+                          ...p,
+                          role,
+                          team: role === "Pastor" ? "Pastores" : role === "Diácono" ? "Diáconos" : role === "Ungido" ? "Ungidos" : p.team,
+                        }));
+                      }}
+                    >
+                      {sel.roles.map((r) => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                )}
                 <div className="fr">
                   <div>
                     <label>{t.team}</label>

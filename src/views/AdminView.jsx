@@ -1,7 +1,7 @@
 import { useState, useRef, Fragment } from "react";
 import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X } from "lucide-react";
 import { useT } from "@/i18n/strings";
-import { CATEGORIES, ROLE_GROUPS, TEAMS, ROLE_BADGE, fmt } from "@/constants";
+import { CATEGORIES, TEAMS, ROLE_BADGE, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
 import { eventSubtitle } from "@/lib/registrationDeadline";
 import Topbar from "@/components/Topbar";
@@ -16,6 +16,7 @@ import ConfirmDelete from "@/components/ConfirmDelete";
 import BulkBar from "@/components/BulkBar";
 import FamiliesPanel from "@/components/directory/FamiliesPanel";
 import GroupsPanel from "@/components/directory/GroupsPanel";
+import RolesMultiSelect from "@/components/directory/RolesMultiSelect";
 import RegistrationsTab from "./admin/RegistrationsTab";
 import TeamsTab from "./admin/TeamsTab";
 import EventsTab from "./admin/EventsTab";
@@ -914,7 +915,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
     clearSel();
   };
 
-  const mapMember  = (m) => ({ id: m.id, name: m.name, firstName: m.first_name || m.firstName || '', lastName: m.last_name || m.lastName || '', badgeName: m.badge_name || m.badgeName, gender: m.gender, category: m.category, church: m.church, role: m.role || "", familyId: m.family_id || m.familyId, gaId: m.ga_id || m.gaId, allergies: m.allergies || '', specialNeeds: m.special_needs || m.specialNeeds || '', notes: m.notes || '' });
+  const mapMember  = (m) => ({ id: m.id, name: m.name, firstName: m.first_name || m.firstName || '', lastName: m.last_name || m.lastName || '', badgeName: m.badge_name || m.badgeName, gender: m.gender, category: m.category, church: m.church, role: m.role || "", roles: m.roles || (m.role ? [m.role] : []), familyId: m.family_id || m.familyId, gaId: m.ga_id || m.gaId, allergies: m.allergies || '', specialNeeds: m.special_needs || m.specialNeeds || '', notes: m.notes || '' });
   const mapFamily  = (f) => ({ id: f.id, name: f.name, memberIds: f.member_ids || f.memberIds || [] });
   const mapGA      = (g) => ({ id: g.id, name: g.name, church: g.church, leaderId: g.leader_id || g.leaderId, description: g.description || "" });
   const mapRoster  = (r) => ({ id: r.id, eventId: r.event_id || r.eventId, team: r.team, leaderId: r.leader_id || r.leaderId, memberIds: r.member_ids || r.memberIds || [] });
@@ -1134,33 +1135,10 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       />
                     </div>
                     <div className="fr">
-                      <div>
-                        <label>Funções</label>
-                        {/* Search-and-chip: same UX as family members */}
-                        <SearchSelect
-                          value=""
-                          onSelect={(r) => {
-                            if (!r) return;
-                            const cur = formData.roles || [];
-                            if (cur.includes(r)) return;
-                            setFormData({ ...formData, roles: [...cur, r] });
-                          }}
-                          items={ROLE_GROUPS.flatMap((g) => g.roles.map((r) => ({ id: r, name: r, group: g.group }))).filter((r) => !(formData.roles || []).includes(r.id)).sort((a, b) => a.name.localeCompare(b.name))}
-                          getLabel={(r) => r.name}
-                          getId={(r) => r.id}
-                          placeholder="Buscar função…"
-                        />
-                        {(formData.roles || []).length > 0 && (
-                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
-                            {(formData.roles || []).map((r) => (
-                              <span key={r} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "var(--sidebar-active-bg)", border: "1px solid var(--primary)", borderRadius: 12, padding: "2px 8px", fontSize: 12 }}>
-                                {r}
-                                <button onClick={() => setFormData({ ...formData, roles: (formData.roles || []).filter((x) => x !== r) })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      <RolesMultiSelect
+                        roles={formData.roles}
+                        onChange={(roles) => setFormData({ ...formData, roles })}
+                      />
                       <div>
                         <label>GA (Grupo de Assistência){churches.find((c) => c.display === formData.church)?.is_hub ? " *" : " (opcional)"}</label>
                         <SearchSelect
