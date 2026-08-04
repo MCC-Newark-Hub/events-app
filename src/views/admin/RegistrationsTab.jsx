@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
 
-import { ROLE_BADGE, fmt, deadlineStatus } from "@/constants";
+import { ROLE_BADGE, fmt, deadlineStatus, addDays } from "@/constants";
 import { sb } from "@/lib/supabase";
 import StatusBadge from "@/components/StatusBadge";
 import RegModal from "@/components/RegModal";
@@ -26,6 +26,7 @@ export default function RegistrationsTab(props) {
     dbTeams,
     addReg,
     updateReg,
+    reactivateReg,
     submitApproval,
     promoteFromWaitlist,
     event,
@@ -263,9 +264,27 @@ export default function RegistrationsTab(props) {
           members={members}
           gas={gas}
           canEditPayment={true}
+          canDirectGrant={true}
+          allEventRegs={all}
+          onReactivate={(customDate) => reactivateReg(detail.id, { customDate })}
+          onExtend={(customDate) => {
+            const extensionDays = event?.paymentExtensionDays ?? event?.payment_extension_days ?? 5;
+            const newDeadline = customDate || addDays(new Date().toISOString().slice(0, 10), extensionDays);
+            updateReg(detail.id, { deadlineExtendedTo: newDeadline }, { status: "Prazo Estendido", note: "Prazo estendido até " + newDeadline });
+          }}
           onClose={() => setDetail(null)}
           onUpdate={(u) => {
-            updateReg(detail.id, u);
+            // A plain checkbox-uncheck on "Cancelado" would otherwise bypass the
+            // capacity check, duplicate-active-reg guard, and fresh-deadline
+            // assignment reactivateReg does — route that specific transition there.
+            if (detail.cancelled && u.cancelled === false) {
+              const rest = { ...u };
+              delete rest.cancelled;
+              reactivateReg(detail.id, {});
+              if (Object.keys(rest).length) updateReg(detail.id, rest);
+            } else {
+              updateReg(detail.id, u);
+            }
             setDetail(null);
           }}
         />
@@ -327,7 +346,7 @@ export default function RegistrationsTab(props) {
               <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setConfirmBulkCancel(false)}>Manter</button>
               <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => {
                 bulkSel.forEach((id) => {
-                  updateReg(id, { cancelled: true }, { status: "Cancelado", note: "Cancelado em lote — pagamento em atraso" }, { silent: true });
+                  updateReg(id, { cancelled: true, cancelReason: "nonpayment_manual" }, { status: "Cancelado", note: "Cancelado em lote — pagamento em atraso" }, { silent: true });
                 });
                 notify && notify(`${bulkSel.length} inscrição(ões) cancelada(s) por atraso no pagamento.`);
                 setBulkSel([]);

@@ -1,17 +1,24 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
-import { TEAMS, ROLE_GROUPS } from "@/constants";
+import { TEAMS, ROLE_GROUPS, deadlineStatus } from "@/constants";
 
-function DetailModal({ reg, onClose, onUpdate, canEditPayment, lang, dbTeams, regs, event, members, gas }) {
+function DetailModal({
+  reg, onClose, onUpdate, canEditPayment, lang, dbTeams, regs, event, members, gas,
+  canDirectGrant, allEventRegs, onRequestReactivation, onRequestExtension, onReactivate, onExtend,
+}) {
   const teamList = dbTeams && dbTeams.length > 0 ? dbTeams.map((t) => t.name) : TEAMS;
   const t = useT();
   const [f, setF] = useState({ ...reg });
+  const [customDate, setCustomDate] = useState("");
   // Show the member's current church/group, not just the snapshot taken at
   // registration time — registrations.church can go stale if the member record
   // is corrected afterward.
   const liveMember = (members || []).find((m) => m.id === reg.memberId);
   const liveChurch = liveMember?.church || reg.church || "—";
   const liveGA = (gas || []).find((g) => g.id === liveMember?.gaId)?.name;
+  const overdueStatus = allEventRegs ? deadlineStatus(reg, event, allEventRegs) : null;
+  const showReactivation = reg.cancelled;
+  const showExtension = !reg.cancelled && overdueStatus && (overdueStatus.overdue || overdueStatus.urgent);
   return (
     <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
@@ -224,6 +231,41 @@ function DetailModal({ reg, onClose, onUpdate, canEditPayment, lang, dbTeams, re
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {(showReactivation || showExtension) && (
+            <div style={{ padding: "10px 14px", background: "var(--bg2)", borderRadius: 8 }}>
+              {canDirectGrant && (
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ fontSize: 11, color: "#6b7280" }}>{t.customDeadlineOptional}</label>
+                  <input type="date" value={customDate} onChange={(e) => setCustomDate(e.target.value)} />
+                </div>
+              )}
+              <div className="fr">
+                {showReactivation && (
+                  canDirectGrant ? (
+                    <button className="btn btn-ok" onClick={() => { onReactivate(customDate || null); onClose(); }}>
+                      ♻️ {t.reactivate}
+                    </button>
+                  ) : (
+                    <button className="btn btn-ghost" onClick={() => { onRequestReactivation(); onClose(); }}>
+                      ♻️ {t.requestReactivation}
+                    </button>
+                  )
+                )}
+                {showExtension && (
+                  canDirectGrant ? (
+                    <button className="btn btn-primary" onClick={() => { onExtend(customDate || null); onClose(); }}>
+                      ⏰ {t.extendDeadline}
+                    </button>
+                  ) : (
+                    <button className="btn btn-ghost" onClick={() => { onRequestExtension(); onClose(); }}>
+                      ⏰ {t.requestExtension}
+                    </button>
+                  )
+                )}
               </div>
             </div>
           )}

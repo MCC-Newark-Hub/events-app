@@ -1,11 +1,12 @@
 import { useState, Fragment } from "react";
-import { LayoutDashboard, Clock, BarChart2 } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Clock, BarChart2 } from "lucide-react";
 import { useT } from "@/i18n/strings";
-import { CATEGORIES, fmt } from "@/constants";
+import { CATEGORIES, fmt, deadlineStatus } from "@/constants";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
 import CapBar from "@/components/CapBar";
 import ApprovalsPanel from "@/components/ApprovalsPanel";
+import RegistrationsTab from "./admin/RegistrationsTab";
 import ReportsTab from "./admin/ReportsTab";
 import { eventSubtitle } from "@/lib/registrationDeadline";
 
@@ -28,6 +29,14 @@ function PastorView(props) {
   const pendA = pend.reduce((s, r) => s + r.fee, 0);
   const pct = Math.round((coll / (coll + pendA)) * 100 || 0);
   const workers = er.filter((r) => r.team && r.team !== "Participante");
+  // Includes cancelled rows too, unlike er — deadlineStatus needs a member's full
+  // history to anchor the payment countdown to their earliest attempt.
+  const allEventRegs = regs.filter((r) => r.eventId === event?.id);
+  const nearCancellation = er.filter((r) => {
+    const s = deadlineStatus(r, event, allEventRegs);
+    return s && !s.overdue && s.remaining <= 3;
+  });
+  const cancelledNonpayment = allEventRegs.filter((r) => r.cancelled && (r.cancelReason === "nonpayment_auto" || r.cancelReason === "nonpayment_manual"));
   const byCatOf = (rows) => CATEGORIES.map((c) => ({ c, n: rows.filter((r) => r.category === c).length })).filter((x) => x.n > 0);
   const byChOf = (rows) => [...new Set(rows.map((r) => r.church))].map((ch) => ({ ch, total: rows.filter((r) => r.church === ch).length, paid: rows.filter((r) => r.church === ch && r.paid).length })).sort((a, b) => b.total - a.total);
   const byCat = byCatOf(er);
@@ -53,6 +62,7 @@ function PastorView(props) {
     .sort((a, b) => b.guests.length - a.guests.length);
   const navItems = [
     { id: "dashboard", icon: <LayoutDashboard size={16} />, label: t.dashboard },
+    { id: "regs", icon: <ClipboardList size={16} />, label: t.registrations },
     { id: "approvals", icon: <Clock size={16} />, label: `${t.approvals}${pendingApprovals.length > 0 ? ` (${pendingApprovals.length})` : ""}` },
     { id: "reports", icon: <BarChart2 size={16} />, label: t.reports },
   ];
@@ -76,6 +86,18 @@ function PastorView(props) {
                     { label: t.workers, value: workers.length, color: "#5b21b6", detail: `${er.length > 0 ? Math.round((workers.length / er.length) * 100) : 0}% ${t.ofTotal}` },
                     { label: t.collected, value: fmt(coll), color: "#2d8a4e", detail: `${paid.length} ${t.payers}` },
                     { label: t.pendingAmt, value: fmt(pendA), color: "#d4820a", detail: `${pend.length} ${t.people}` },
+                  ].map((s) => (
+                    <div className="stat-card" key={s.label} style={{ borderTop: `4px solid ${s.color}`, textAlign: "center", padding: "20px 14px" }}>
+                      <div style={{ fontSize: 26, fontWeight: 700, color: s.color }}>{s.value}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, marginTop: 4 }}>{s.label}</div>
+                      <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>{s.detail}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="stat-grid-4" style={{ marginBottom: 18 }}>
+                  {[
+                    { label: lang === "en" ? "Near cancellation" : "Perto do cancelamento", value: nearCancellation.length, color: "#d4820a", detail: lang === "en" ? "Deadline within 3 days" : "Vencendo em até 3 dias" },
+                    { label: lang === "en" ? "Cancelled for non-payment" : "Cancelados por atraso", value: cancelledNonpayment.length, color: "#c0392b", detail: `${cancelledNonpayment.filter((r) => r.cancelReason === "nonpayment_auto").length} ${lang === "en" ? "auto" : "auto"} · ${cancelledNonpayment.filter((r) => r.cancelReason === "nonpayment_manual").length} ${lang === "en" ? "manual" : "manual"}` },
                   ].map((s) => (
                     <div className="stat-card" key={s.label} style={{ borderTop: `4px solid ${s.color}`, textAlign: "center", padding: "20px 14px" }}>
                       <div style={{ fontSize: 26, fontWeight: 700, color: s.color }}>{s.value}</div>
@@ -204,8 +226,9 @@ function PastorView(props) {
                 </div>
               </div>
             )}
+            {sec === "regs" && <RegistrationsTab {...props} />}
             {sec === "approvals" && <ApprovalsPanel approvals={approvals} resolveApproval={resolveApproval} event={event} activeCount={activeCount} />}
-            {sec === "reports" && <ReportsTab regs={regs} event={event} wlRegs={wlRegs} exRegs={exRegs} />}
+            {sec === "reports" && <ReportsTab regs={regs} event={event} wlRegs={wlRegs} exRegs={exRegs} lang={lang} />}
           </div>
         </div>
       </div>

@@ -143,8 +143,18 @@ export const ROLES_SYS = {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 export const fmt = (n) => `$${Number(n).toFixed(2)}`;
+// A date-only ISO string ("YYYY-MM-DD") parses as UTC midnight per spec — every
+// helper here relies on that consistently (via getUTC*/setUTC*) so date math never
+// silently drifts a day depending on the caller's local timezone offset.
 export const daysSince = (dateStr) =>
   Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+export const daysUntil = (dateStr) =>
+  Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
+export const addDays = (dateStr, n) => {
+  const d = new Date(dateStr);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
 
 export const OBREIRO_ROLES = ["Pastor", "Ungido", "Diácono", "Obreiro"];
 
@@ -160,12 +170,23 @@ export const isDeadlineExempt = (reg, allEventRegs = []) => {
   return false;
 };
 
+const statusFromRemaining = (remaining) => {
+  if (remaining <= 0) return { overdue: true, remaining: 0, label: "Prazo expirado" };
+  if (remaining <= 2)
+    return { overdue: false, urgent: true, remaining, label: `${remaining}d restante${remaining === 1 ? "" : "s"}` };
+  return { overdue: false, urgent: false, remaining, label: `${remaining}d restante${remaining === 1 ? "" : "s"}` };
+};
+
 export const deadlineStatus = (reg, event, allEventRegs = []) => {
   // Events loaded from Supabase are never passed through a camelCase mapper (unlike
   // registrations/members), so a real event only has payment_deadline_days — without
   // this fallback this function silently returns null for every real registration.
   const paymentDeadlineDays = event?.paymentDeadlineDays ?? event?.payment_deadline_days;
   if (!paymentDeadlineDays || isDeadlineExempt(reg, allEventRegs)) return null;
+  // An explicit staff-set deadline (from extending or reactivating) is authoritative —
+  // it fully replaces the earliest-attempt calculation below, not additive on top of
+  // it, so "your deadline is Aug 15" stays simple to reason about.
+  if (reg.deadlineExtendedTo) return statusFromRemaining(daysUntil(reg.deadlineExtendedTo));
   // Count from this member's earliest attempt at this event, including cancelled ones —
   // otherwise cancelling an overdue registration and signing up again resets the clock,
   // since a fresh row always starts with today's registeredAt.
@@ -177,23 +198,7 @@ export const deadlineStatus = (reg, event, allEventRegs = []) => {
     (earliest, r) => (r.registeredAt && r.registeredAt < earliest ? r.registeredAt : earliest),
     reg.registeredAt
   );
-  const days = daysSince(earliestRegisteredAt);
-  const deadline = paymentDeadlineDays;
-  const remaining = deadline - days;
-  if (remaining <= 0) return { overdue: true, remaining: 0, label: "Prazo expirado" };
-  if (remaining <= 2)
-    return {
-      overdue: false,
-      urgent: true,
-      remaining,
-      label: `${remaining}d restante${remaining === 1 ? "" : "s"}`,
-    };
-  return {
-    overdue: false,
-    urgent: false,
-    remaining,
-    label: `${remaining}d restante${remaining === 1 ? "" : "s"}`,
-  };
+  return statusFromRemaining(paymentDeadlineDays - daysSince(earliestRegisteredAt));
 };
 
 export const ROLE_BADGE = {

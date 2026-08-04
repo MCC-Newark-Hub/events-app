@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   fmt,
   daysSince,
+  daysUntil,
+  addDays,
   isDeadlineExempt,
   deadlineStatus,
   churchDisplay,
@@ -103,6 +105,36 @@ describe("deadlineStatus", () => {
     const otherGuestOldAttempt = { ...base, memberId: "GUEST", registeredAt: daysAgo(30), cancelled: true };
     const reg = { ...base, memberId: "GUEST", registeredAt: daysAgo(0) };
     expect(deadlineStatus(reg, event, [otherGuestOldAttempt, reg])?.overdue).toBe(false);
+  });
+
+  it("deadlineExtendedTo in the future overrides an ancient registeredAt", () => {
+    const reg = { ...base, registeredAt: daysAgo(365), deadlineExtendedTo: addDays(daysAgo(0), 5) };
+    expect(deadlineStatus(reg, event, [reg])?.overdue).toBe(false);
+  });
+
+  it("deadlineExtendedTo in the past overrides a recent registeredAt", () => {
+    const reg = { ...base, registeredAt: daysAgo(0), deadlineExtendedTo: daysAgo(1) };
+    expect(deadlineStatus(reg, event, [reg])?.overdue).toBe(true);
+  });
+});
+
+describe("daysUntil", () => {
+  it("returns a positive count for a future date computed via addDays", () => {
+    const today = new Date().toISOString().slice(0, 10);
+    expect(daysUntil(addDays(today, 5))).toBe(5);
+  });
+  it("returns a negative count for a past date", () => {
+    const today = new Date().toISOString().slice(0, 10);
+    expect(daysUntil(addDays(today, -5))).toBe(-5);
+  });
+});
+
+describe("addDays", () => {
+  it("adds days to a date string", () => {
+    expect(addDays("2026-01-01", 5)).toBe("2026-01-06");
+  });
+  it("handles month rollover", () => {
+    expect(addDays("2026-01-30", 5)).toBe("2026-02-04");
   });
 });
 

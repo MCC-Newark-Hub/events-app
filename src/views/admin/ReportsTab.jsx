@@ -1,11 +1,11 @@
 import { useState, Fragment } from "react";
 import { useT } from "@/i18n/strings";
-import { fmt, ROLE_BADGE, CATEGORIES } from "@/constants";
+import { fmt, ROLE_BADGE, CATEGORIES, deadlineStatus } from "@/constants";
 
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const byName = (a, b) => norm(a.memberName).localeCompare(norm(b.memberName));
 
-export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
+export default function ReportsTab({ regs, event, wlRegs, exRegs, lang }) {
   const t = useT();
   const [type, setType] = useState("summary");
   const [repSearch, setRepSearch] = useState("");
@@ -16,9 +16,19 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
   const [expandedGroups, setExpandedGroups] = useState({});
   const toggleGroup = (key) => setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   const switchSummaryDim = (dim) => { setSummaryDim(dim); setExpandedGroups({}); };
+  // Includes cancelled rows too, unlike er \u2014 deadlineStatus needs a member's full
+  // history to anchor the payment countdown to their earliest attempt.
+  const all = regs.filter((r) => r.eventId === event?.id);
   const er = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const wl = wlRegs;
   const pend = er.filter((r) => !r.paid && !r.exempt);
+  // Deliberately not reusing StatusBadge's `urgent` flag (remaining <= 2) \u2014 this
+  // report's own 3-day threshold is wider, so it's labeled by what it actually is.
+  const expiring = er.filter((r) => {
+    const s = deadlineStatus(r, event, all);
+    return s && !s.overdue && s.remaining <= 3;
+  });
+  const cancelledNonpayment = all.filter((r) => r.cancelled && (r.cancelReason === "nonpayment_auto" || r.cancelReason === "nonpayment_manual"));
 
   const applyReportFilters = (rows) => rows.filter((r) => {
     const q = norm(repSearch);
@@ -35,6 +45,8 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
   const pendView = applyReportFilters(pend).sort(byName);
   const wlView = applyReportFilters(wl.map((r, i) => ({ ...r, wlPosition: i + 1 }))).sort(byName);
   const erView = applyReportFilters(er).sort(byName);
+  const expiringView = applyReportFilters(expiring).sort(byName);
+  const cancelledNonpaymentView = applyReportFilters(cancelledNonpayment).sort(byName);
 
   const groupStats = (rows, field) => {
     const keys = field === "category"
@@ -79,6 +91,8 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
           [t.summaryTab, "summary"],
           [t.pendPayTab, "pending"],
           [t.waitlistTab, "waitlist"],
+          [t.expiringTab, "expiring"],
+          [t.cancelledNonpaymentTab, "cancelled_nonpayment"],
           [t.rosterTab, "roster"],
           [t.badgesTab, "badges"],
           ["Check-in", "checkin"],
@@ -93,7 +107,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
         ))}
       </div>
 
-      {["pending", "waitlist", "roster", "badges"].includes(type) && (
+      {["pending", "waitlist", "expiring", "cancelled_nonpayment", "roster", "badges"].includes(type) && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
           <input
             value={repSearch}
@@ -279,6 +293,97 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs }) {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {type === "expiring" && (
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          <div
+            style={{
+              padding: "11px 18px",
+              borderBottom: "1px solid var(--border)",
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <span style={{ fontWeight: 700 }}>{t.expiringTab}</span>
+            <span className="badge badge-yellow">{expiringView.length}</span>
+          </div>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t.memberName}</th>
+                  <th>{t.cat}</th>
+                  <th>{t.churchH}</th>
+                  <th>{t.feeH}</th>
+                  <th>{lang === "en" ? "Deadline in" : "Prazo em"}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expiringView.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "#6b7280", padding: 20 }}>{t.noRecords}</td></tr>}
+                {expiringView.map((r) => {
+                  const s = deadlineStatus(r, event, all);
+                  return (
+                    <tr key={r.id}>
+                      <td style={{ fontWeight: 600 }}>{r.memberName}</td>
+                      <td>
+                        <span className="badge badge-blue">{r.category}</span>
+                      </td>
+                      <td style={{ fontSize: 12, color: "#6b7280" }}>{r.church}</td>
+                      <td style={{ color: "#d4820a", fontWeight: 600 }}>{fmt(r.fee)}</td>
+                      <td style={{ fontWeight: 600, color: s?.urgent ? "#c0392b" : "#d4820a" }}>{s?.label}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {type === "cancelled_nonpayment" && (
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          <div
+            style={{
+              padding: "11px 18px",
+              borderBottom: "1px solid var(--border)",
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <span style={{ fontWeight: 700 }}>{t.cancelledNonpaymentTab}</span>
+            <span className="badge badge-gray">{cancelledNonpaymentView.length}</span>
+          </div>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t.memberName}</th>
+                  <th>{t.cat}</th>
+                  <th>{t.churchH}</th>
+                  <th>{t.feeH}</th>
+                  <th>{lang === "en" ? "Reason" : "Motivo"}</th>
+                  <th>{t.date}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cancelledNonpaymentView.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "#6b7280", padding: 20 }}>{t.noRecords}</td></tr>}
+                {cancelledNonpaymentView.map((r) => (
+                  <tr key={r.id}>
+                    <td style={{ fontWeight: 600 }}>{r.memberName}</td>
+                    <td>
+                      <span className="badge badge-blue">{r.category}</span>
+                    </td>
+                    <td style={{ fontSize: 12, color: "#6b7280" }}>{r.church}</td>
+                    <td style={{ fontWeight: 600 }}>{fmt(r.fee)}</td>
+                    <td style={{ fontSize: 12, color: "#6b7280" }}>{r.cancelReason === "nonpayment_auto" ? (lang === "en" ? "Automatic" : "Automático") : (lang === "en" ? "Manual" : "Manual")}</td>
+                    <td style={{ fontSize: 12, color: "#6b7280" }}>{r.registeredAt}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

@@ -318,7 +318,45 @@ function ClerkView(props) {
         </div>
       </div>
       {showReg && <RegModal event={event} members={myMembers} setMembers={setMembers} families={families} dbTeams={dbTeams} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
-      {detail && <DetailModal reg={detail} event={event} dbTeams={dbTeams} regs={regs} members={members} gas={gas} canEditPayment={true} onClose={() => setDetail(null)} lang={lang} onUpdate={(u) => { updateReg(detail.id, u); setDetail(null); }} />}
+      {detail && (
+        <DetailModal
+          reg={detail}
+          event={event}
+          dbTeams={dbTeams}
+          regs={regs}
+          members={members}
+          gas={gas}
+          canEditPayment={true}
+          canDirectGrant={false}
+          allEventRegs={allForCity}
+          onRequestReactivation={() => submitApproval({
+            eventId: event.id, memberId: detail.memberId, memberName: detail.memberName, regId: detail.id,
+            type: "reactivation", category: detail.category, church: detail.church, badgeName: detail.badgeName,
+            team: detail.team, role: detail.role, fee: detail.fee, requestedBy: user?.name, requestedById: user?.id,
+          })}
+          onRequestExtension={() => submitApproval({
+            eventId: event.id, memberId: detail.memberId, memberName: detail.memberName, regId: detail.id,
+            type: "deadline_extension", category: detail.category, church: detail.church, badgeName: detail.badgeName,
+            team: detail.team, role: detail.role, fee: detail.fee, requestedBy: user?.name, requestedById: user?.id,
+          })}
+          onClose={() => setDetail(null)}
+          lang={lang}
+          onUpdate={(u) => {
+            // Secretaria can only request reactivation (via the button above), not
+            // grant it directly by unchecking this box — strip that specific change
+            // rather than silently reactivating.
+            if (detail.cancelled && u.cancelled === false) {
+              const rest = { ...u };
+              delete rest.cancelled;
+              notify("Use \"Solicitar Reativação\" para reativar esta inscrição.");
+              if (Object.keys(rest).length) updateReg(detail.id, rest);
+            } else {
+              updateReg(detail.id, u);
+            }
+            setDetail(null);
+          }}
+        />
+      )}
 
       <MemberEditModal
         editingMember={editingMember}
@@ -350,7 +388,7 @@ function ClerkView(props) {
               <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setConfirmBulkCancel(false)}>{t.keep}</button>
               <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => {
                 bulkSel.forEach((id) => {
-                  updateReg(id, { cancelled: true }, { status: "Cancelado", note: "Cancelado em lote — pagamento em atraso" }, { silent: true });
+                  updateReg(id, { cancelled: true, cancelReason: "nonpayment_manual" }, { status: "Cancelado", note: "Cancelado em lote — pagamento em atraso" }, { silent: true });
                 });
                 notify(`${bulkSel.length} ${t.bulkCancelDone}`);
                 setBulkSel([]);

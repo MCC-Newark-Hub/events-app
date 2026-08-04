@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { CHURCH_LIST } from "@/constants";
+import { CHURCH_LIST, addDays } from "@/constants";
 import { sb } from "@/lib/supabase";
 
 // ── DB → app object mappers ───────────────────────────────────────────────────
@@ -64,6 +64,8 @@ export function mapReg(r) {
     registeredBy: r.registered_by,
     checkedInAt: r.checked_in_at || null,
     checkinMethod: r.checkin_method || null,
+    cancelReason: r.cancel_reason || null,
+    deadlineExtendedTo: r.deadline_extended_to || null,
   };
 }
 export function mapApproval(a) {
@@ -417,6 +419,10 @@ export function useAppData({ getUserRef, notify }) {
     if (upd.badgeName != null)  dbUpd.badge_name     = upd.badgeName;
     if (upd.memberName != null) dbUpd.member_name    = upd.memberName;
     if (upd.presence != null)   dbUpd.presence       = upd.presence;
+    // Explicitly clearing these back to null (e.g. un-setting an extension) is a
+    // valid write, unlike the `!= null` fields above — hence `!== undefined` here.
+    if (upd.deadlineExtendedTo !== undefined) dbUpd.deadline_extended_to = upd.deadlineExtendedTo;
+    if (upd.cancelReason !== undefined) dbUpd.cancel_reason = upd.cancelReason;
     if (timelineEntry && updatedReg) dbUpd.timeline = updatedReg.timeline;
     if (Object.keys(dbUpd).length > 0) {
       sb.from("registrations")
@@ -426,6 +432,50 @@ export function useAppData({ getUserRef, notify }) {
           if (res.error) { console.error("updateReg DB error:", res.error); if (!opts.silent) notify("Erro ao salvar alteração. Verifique sua conexão e tente novamente."); }
         });
     }
+  };
+
+  // Flips a cancelled registration back active — waitlisted instead if the event is
+  // now full — with a fresh, shorter deadline (reusing the original earliest-attempt
+  // date would make it instantly overdue again). Standalone rather than routed
+  // through updateReg because it needs a real-time capacity check and a duplicate-
+  // active-registration guard, neither of which updateReg does today.
+  const reactivateReg = function (id, opts) {
+    opts = opts || {};
+    var reg = regs.find(function (r) { return r.id === id; });
+    if (!reg || !reg.cancelled) return;
+    // Same race guard addReg already has — someone may have been manually
+    // re-registered under a different reg row while this one sat cancelled.
+    var dupe = regs.find(function (r) { return r.memberId === reg.memberId && r.eventId === event.id && !r.cancelled && r.id !== id; });
+    if (dupe && reg.memberId !== "GUEST") { notify(reg.memberName + " já possui inscrição ativa neste evento."); return; }
+    var today = new Date().toISOString().slice(0, 10);
+    var byName = getUser() ? getUser().name : "Sistema";
+    var extensionDays = event?.paymentExtensionDays ?? event?.payment_extension_days ?? 5;
+    var newDeadline = opts.customDate || addDays(today, extensionDays);
+    // Fresh capacity check at the moment of reactivation, not stale render-time state —
+    // same rationale as addReg's isWaitlisted computation.
+    var currentActive = regs.filter(function (r) { return r.eventId === event?.id && !r.cancelled && !r.waitlisted && r.id !== id; }).length;
+    var willBeFull = event?.capacity ? currentActive >= event.capacity : false;
+    var entry = { status: willBeFull ? "Em Espera" : "Reativado", date: today, by: byName };
+    var upd = { cancelled: false, waitlisted: willBeFull, waitlistReason: willBeFull ? "Capacidade esgotada" : null, cancelReason: null, deadlineExtendedTo: newDeadline };
+    setRegs(function (p) {
+      return p.map(function (r) {
+        return r.id !== id ? r : Object.assign({}, r, upd, { timeline: [].concat(r.timeline || [], [entry]) });
+      });
+    });
+    notify(reg.memberName + (willBeFull ? " reativado(a) — em lista de espera." : " reativado(a)!"));
+    sb.from("registrations")
+      .update({
+        cancelled: false,
+        waitlisted: willBeFull,
+        waitlist_reason: willBeFull ? "Capacidade esgotada" : null,
+        cancel_reason: null,
+        deadline_extended_to: newDeadline,
+        timeline: [].concat(reg.timeline || [], [entry]),
+      })
+      .eq("id", id)
+      .then(function (res) {
+        if (res.error) console.error("reactivateReg DB error:", res.error);
+      });
   };
 
   const submitApproval = function (data) {
@@ -471,7 +521,7 @@ export function useAppData({ getUserRef, notify }) {
     return tmp;
   };
 
-  const resolveApproval = function (id, approved, pastorNote) {
+  const resolveApproval = function (id, approved, pastorNote, customDate) {
     pastorNote = pastorNote || "";
     var apr = approvals.find(function (a) {
       return a.id === id;
@@ -550,6 +600,22 @@ export function useAppData({ getUserRef, notify }) {
           addReg({ memberId: apr.memberId, memberName: apr.memberName, badgeName: apr.memberName, category: apr.category, church: apr.church, role: apr.role, team: apr.team, fee: 0, paid: false, exempt: true, note: apr.note }, true);
         }
         notify("Isencao aprovada para " + apr.memberName + ".");
+      } else if (apr.type === "reactivation") {
+        if (apr.regId) {
+          reactivateReg(apr.regId, { customDate: customDate || null });
+          notify("Reativação aprovada para " + apr.memberName + ".");
+        } else {
+          notify("Não foi possível reativar: inscrição original não encontrada.");
+        }
+      } else if (apr.type === "deadline_extension") {
+        if (apr.regId) {
+          var extensionDays = event?.paymentExtensionDays ?? event?.payment_extension_days ?? 5;
+          var newDeadline = customDate || addDays(new Date().toISOString().slice(0, 10), extensionDays);
+          updateReg(apr.regId, { deadlineExtendedTo: newDeadline }, { status: "Prazo Estendido", note: "Prazo estendido até " + newDeadline });
+          notify("Extensão de prazo aprovada para " + apr.memberName + ".");
+        } else {
+          notify("Não foi possível estender: inscrição não encontrada.");
+        }
       }
     } else {
       notify("Solicitacao negada.");
@@ -627,6 +693,7 @@ export function useAppData({ getUserRef, notify }) {
     pendingApprovals,
     addReg,
     updateReg,
+    reactivateReg,
     updatePresence,
     submitApproval,
     resolveApproval,

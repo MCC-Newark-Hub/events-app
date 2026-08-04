@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useT } from "@/i18n/strings";
 
 const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
-import { STATUS_CFG, SERVICE_TEAMS } from "@/constants";
+import { STATUS_CFG, SERVICE_TEAMS, deadlineStatus } from "@/constants";
 import { sb } from "@/lib/supabase";
 import { canAssignToTeam } from "@/lib/teamAssignment";
 import { eventSubtitle } from "@/lib/registrationDeadline";
 import Topbar from "@/components/Topbar";
+import Modal from "@/components/Modal";
 
 function TeamLeaderView(props) {
   const {
@@ -22,6 +23,7 @@ function TeamLeaderView(props) {
     setLang,
     theme,
     toggleTheme,
+    submitApproval,
   } = props;
   const t = useT();
   const myTeams = user?.teamLeads || [];
@@ -30,14 +32,33 @@ function TeamLeaderView(props) {
     names.length === 1 ? names[0] :
     names.slice(0, -1).join(", ") + " e " + names[names.length - 1];
   const greetingName = joinNames(myTeams) || user?.name;
+  // Includes cancelled rows too, unlike eventRegs — deadlineStatus needs a member's
+  // full history, and reactivation needs to find the cancelled row itself.
+  const allEventRegs = regs.filter((r) => r.eventId === event?.id);
   const eventRegs = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const getStatus = (mid) => {
     const r = eventRegs.find((x) => x.memberId === mid);
     if (!r) return "not_registered";
     return r.paid || r.exempt ? "confirmed" : "pending";
   };
+  const getReg = (mid) => eventRegs.find((x) => x.memberId === mid);
+  const getCancelledReg = (mid) => allEventRegs.find((x) => x.memberId === mid && x.cancelled);
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
+  const [requestTarget, setRequestTarget] = useState(null); // { reg, type: "reactivation" | "deadline_extension" }
+  const [requestNote, setRequestNote] = useState("");
+  const submitRequest = () => {
+    if (!requestTarget) return;
+    const { reg, type } = requestTarget;
+    submitApproval({
+      eventId: event.id, memberId: reg.memberId, memberName: reg.memberName, regId: reg.id,
+      type, category: reg.category, church: reg.church, badgeName: reg.badgeName,
+      team: reg.team, role: reg.role, fee: reg.fee, note: requestNote,
+      requestedBy: user?.name, requestedById: user?.id,
+    });
+    setRequestTarget(null);
+    setRequestNote("");
+  };
   const addToRoster = (team, mid, silent) => {
     let updatedRoster = null;
     setRosters((prev) => {
@@ -275,6 +296,9 @@ function TeamLeaderView(props) {
                           {teamMembers.map((m) => {
                             const s = getStatus(m.id);
                             const cfg = STATUS_CFG[s];
+                            const reg = getReg(m.id);
+                            const cancelledReg = !reg ? getCancelledReg(m.id) : null;
+                            const overdueStatus = reg ? deadlineStatus(reg, event, allEventRegs) : null;
                             return (
                               <tr key={m.id}>
                                 <td style={{ fontWeight: 600 }}>
@@ -315,19 +339,39 @@ function TeamLeaderView(props) {
                                   </select>
                                 </td>
                                 <td>
-                                  <button
-                                    onClick={() => removeFromRoster(team, m.id)}
-                                    style={{
-                                      background: "none",
-                                      border: "none",
-                                      cursor: "pointer",
-                                      color: "#9ca3af",
-                                      fontSize: 18,
-                                      lineHeight: 1,
-                                    }}
-                                  >
-                                    ×
-                                  </button>
+                                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                                    {cancelledReg && (
+                                      <button
+                                        className="btn btn-ghost btn-xs"
+                                        onClick={() => setRequestTarget({ reg: cancelledReg, type: "reactivation" })}
+                                        title={t.requestReactivation}
+                                      >
+                                        ♻️
+                                      </button>
+                                    )}
+                                    {reg && overdueStatus && (overdueStatus.overdue || overdueStatus.urgent) && (
+                                      <button
+                                        className="btn btn-ghost btn-xs"
+                                        onClick={() => setRequestTarget({ reg, type: "deadline_extension" })}
+                                        title={t.requestExtension}
+                                      >
+                                        ⏰
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => removeFromRoster(team, m.id)}
+                                      style={{
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        color: "#9ca3af",
+                                        fontSize: 18,
+                                        lineHeight: 1,
+                                      }}
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -386,6 +430,30 @@ function TeamLeaderView(props) {
           </div>
         </div>
       </div>
+      {requestTarget && (
+        <Modal onClose={() => { setRequestTarget(null); setRequestNote(""); }} maxWidth={380}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 32, marginBottom: 10 }}>{requestTarget.type === "reactivation" ? "♻️" : "⏰"}</div>
+            <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, marginBottom: 10 }}>
+              {requestTarget.type === "reactivation" ? t.requestReactivation : t.requestExtension}
+            </h3>
+            <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 14 }}>
+              {requestTarget.reg.memberName}
+            </p>
+            <textarea
+              rows={2}
+              value={requestNote}
+              onChange={(e) => setRequestNote(e.target.value)}
+              placeholder={t.pastorNote}
+              style={{ marginBottom: 14, fontSize: 13, width: "100%", boxSizing: "border-box" }}
+            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setRequestTarget(null); setRequestNote(""); }}>Cancelar</button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={submitRequest}>Enviar</button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
