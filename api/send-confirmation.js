@@ -75,7 +75,7 @@ export default async function handler(req, res) {
     const regRows = await regRes.json();
     const reg = Array.isArray(regRows) ? regRows[0] : null;
     if (!reg) {
-      res.status(404).json({ error: "registration_not_found" });
+      res.status(404).json({ error: "registration_not_found", _debugUrl: SUPABASE_URL, _debugStatus: regRes.status, _debugBody: regRows });
       return;
     }
 
