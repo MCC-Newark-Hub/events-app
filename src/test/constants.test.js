@@ -81,6 +81,12 @@ describe("deadlineStatus", () => {
   const event = { paymentDeadlineDays: 7 };
   const base = { memberId: "M1", role: "", team: "Participante", paid: false, exempt: false, cancelled: false, waitlisted: false, category: "Adulto" };
 
+  it("works against a real Supabase-loaded event, which only has snake_case payment_deadline_days", () => {
+    const snakeCaseEvent = { payment_deadline_days: 7 };
+    const reg = { ...base, registeredAt: daysAgo(10) };
+    expect(deadlineStatus(reg, snakeCaseEvent, [reg])?.overdue).toBe(true);
+  });
+
   it("counts from the member's earliest attempt, including a cancelled one, not just this row", () => {
     const cancelledAttempt = { ...base, registeredAt: daysAgo(10), cancelled: true };
     const reg = { ...base, registeredAt: daysAgo(0) };

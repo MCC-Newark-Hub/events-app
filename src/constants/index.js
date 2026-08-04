@@ -161,7 +161,11 @@ export const isDeadlineExempt = (reg, allEventRegs = []) => {
 };
 
 export const deadlineStatus = (reg, event, allEventRegs = []) => {
-  if (!event?.paymentDeadlineDays || isDeadlineExempt(reg, allEventRegs)) return null;
+  // Events loaded from Supabase are never passed through a camelCase mapper (unlike
+  // registrations/members), so a real event only has payment_deadline_days — without
+  // this fallback this function silently returns null for every real registration.
+  const paymentDeadlineDays = event?.paymentDeadlineDays ?? event?.payment_deadline_days;
+  if (!paymentDeadlineDays || isDeadlineExempt(reg, allEventRegs)) return null;
   // Count from this member's earliest attempt at this event, including cancelled ones —
   // otherwise cancelling an overdue registration and signing up again resets the clock,
   // since a fresh row always starts with today's registeredAt.
@@ -174,7 +178,7 @@ export const deadlineStatus = (reg, event, allEventRegs = []) => {
     reg.registeredAt
   );
   const days = daysSince(earliestRegisteredAt);
-  const deadline = event.paymentDeadlineDays;
+  const deadline = paymentDeadlineDays;
   const remaining = deadline - days;
   if (remaining <= 0) return { overdue: true, remaining: 0, label: "Prazo expirado" };
   if (remaining <= 2)
