@@ -75,6 +75,10 @@ function GALeaderView(props) {
 
   // Summary stats across all my GAs
   const allMyMembers = myGAs.flatMap((ga) => members.filter((m) => m.gaId === ga.id));
+  // Families are scoped to the leader's own group(s), not the whole city — unlike
+  // myMembers/myFamilies above, which stay city-wide since they back the member
+  // transfer flow (a leader can pull a member into their group from anywhere in it).
+  const myGaFamilies = families.filter((f) => (f.memberIds || []).some((id) => allMyMembers.some((m) => m.id === id)));
   const totalMembers = allMyMembers.length;
   const totalReg = allMyMembers.filter((m) => getStatus(m.id) !== "not_registered").length;
   const totalNotReg = totalMembers - totalReg;
@@ -104,7 +108,7 @@ function GALeaderView(props) {
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowFamilies((v) => !v)}>
-                {showFamilies ? "Ocultar Famílias" : `👪 Famílias (${myFamilies.length})`}
+                {showFamilies ? "Ocultar Famílias" : `👪 Famílias (${myGaFamilies.length})`}
               </button>
               <button className="btn btn-primary btn-sm" onClick={() => { setEditingMember(newMemberForm()); setNewFamilyName(""); }}>
                 + Novo Membro
@@ -114,7 +118,7 @@ function GALeaderView(props) {
 
           {showFamilies && (
             <div style={{ marginBottom: 20 }}>
-              <FamiliesPanel members={myMembers} families={myFamilies} setFamilies={setFamilies} notify={notify} />
+              <FamiliesPanel members={allMyMembers} families={myGaFamilies} setFamilies={setFamilies} notify={notify} />
             </div>
           )}
 

@@ -326,6 +326,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
   const validateStep1 = () => {
     const e = {};
     if (!primary) e.primary = t.pleaseSelectName;
+    else if (!primary.church) e.primary = t.churchRequiredError;
     if (existingReg) e.primary = t.alreadyRegisteredError;
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -390,6 +391,14 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
     if (!termsAccepted) { setTermsError(true); return; }
     if (deadlineDays && !deadlineAccepted) { setDeadlineError(true); return; }
     if (!addReg || submitting) return;
+    // Last line of defense — catches a verified/directory member whose church is
+    // blank on file, which the earlier per-field checks can't see.
+    if (allParticipants.some((m) => !m.church)) {
+      setSubmitError(lang === "en"
+        ? "One of the participants is missing a church. Please go back and select one."
+        : "Um dos participantes está sem igreja selecionada. Volte e selecione uma.");
+      return;
+    }
     setSubmitError(null);
     setSubmitting(true);
     // Batch token groups all regs from this submission for family lookup, even when contact info is empty
@@ -650,8 +659,9 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
                           <button
                             className="btn btn-warn btn-sm"
                             style={{ flex: 2 }}
+                            disabled={!manualPrimary.name.trim() || !manualPrimary.church}
                             onClick={() => {
-                              if (!manualPrimary.name.trim()) return;
+                              if (!manualPrimary.name.trim() || !manualPrimary.church) return;
                               setPrimary({
                                 id: "MANUAL-" + Date.now(),
                                 name: manualPrimary.name.trim(),
@@ -834,7 +844,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
                           placeholder={t.selectChurch}
                         />
                       </div>
-                      <button className="btn btn-warn btn-sm" onClick={() => { if (!manualFam.name) return; setFamilyMembers((prev) => [...prev, { ...manualFam, id: "MANUAL-" + Date.now(), verified: false, badgeName: manualFam.name }]); setManualFam({ name: "", gender: "M", category: "Adulto", role: "", church: "" }); setShowManualFam(false); }}>
+                      <button className="btn btn-warn btn-sm" disabled={!manualFam.name || !manualFam.church} onClick={() => { if (!manualFam.name || !manualFam.church) return; setFamilyMembers((prev) => [...prev, { ...manualFam, id: "MANUAL-" + Date.now(), verified: false, badgeName: manualFam.name }]); setManualFam({ name: "", gender: "M", category: "Adulto", role: "", church: "" }); setShowManualFam(false); }}>
                         + {lang === "en" ? "Add Unverified Member" : "Adicionar Membro Não Verificado"}
                       </button>
                     </div>

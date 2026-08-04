@@ -283,6 +283,10 @@ const matchChurch = (raw, churches) => {
   return byCity ? byCity.display : null;
 };
 
+// Matches ChurchSearch's two deliberate non-canonical values — legitimate, explicit
+// choices, not bad data, so they skip the "must match a real church" check below.
+const isChurchSentinel = (raw) => raw === "Sem Igreja" || /^Outra/.test(raw || "");
+
 const CSV_TEMPLATES = {
   // ── Members ──────────────────────────────────────────────────────────────
   members: {
@@ -312,7 +316,9 @@ const CSV_TEMPLATES = {
       if (!["M","F"].includes(row.gender)) e.push("gender deve ser M ou F");
       if (!row.category) e.push("category obrigatória");
       // Non-standard categories are allowed (warn only, don't block)
-      if (row.church && !matchChurch(row.church, ctx?.churches)) {
+      if (!row.church || !row.church.trim()) {
+        e.push("church obrigatória");
+      } else if (!isChurchSentinel(row.church) && !matchChurch(row.church, ctx?.churches)) {
         e.push(`church "${row.church}" não corresponde a nenhuma igreja cadastrada (veja Diretório > Igrejas)`);
       }
       return e;
@@ -381,7 +387,9 @@ const CSV_TEMPLATES = {
       var e = [];
       if (!row.name) e.push("name obrigatório");
       if (!row.leaderId) e.push("leaderId obrigatório");
-      if (row.church && !matchChurch(row.church, ctx?.churches)) {
+      if (!row.church || !row.church.trim()) {
+        e.push("church obrigatória");
+      } else if (!isChurchSentinel(row.church) && !matchChurch(row.church, ctx?.churches)) {
         e.push(`church "${row.church}" não corresponde a nenhuma igreja cadastrada (veja Diretório > Igrejas)`);
       }
       return e;

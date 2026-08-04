@@ -405,6 +405,7 @@ function RegModal({
                 )}
                 <button
                   className="btn btn-primary"
+                  disabled={!sel?.church}
                   onClick={() => {
                     if (f.exempt && !isAutoExempt) {
                       onRequestOverride({
@@ -812,7 +813,7 @@ function RegModal({
             {manualError && <p style={{ color: "#c0392b", fontSize: 12 }}>{manualError}</p>}
             <button
               className="btn btn-primary"
-              disabled={!f.memberName || creatingMember}
+              disabled={!f.memberName || !f.church || creatingMember}
               onClick={saveManual}
             >
               {creatingMember ? "…" : t.confirmReg}

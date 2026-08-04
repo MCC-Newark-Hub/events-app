@@ -197,6 +197,12 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
 
   const handleAddFamily = async () => {
     if (!famSelected || !found || !addReg || addingFamily) return;
+    if (!famSelected.church) {
+      setAddFamilyError(lang === "en"
+        ? "This person is missing a church. Please select one before adding them."
+        : "Esta pessoa está sem igreja selecionada. Selecione uma antes de adicionar.");
+      return;
+    }
     setAddFamilyError(null);
     const isVerified = !famSelected.id?.startsWith("MANUAL-");
     let memberId = famSelected.id;
@@ -527,8 +533,9 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
                             </div>
                             <button
                               className="btn btn-warn btn-sm"
+                              disabled={!manualMember.name.trim() || !manualMember.church}
                               onClick={() => {
-                                if (!manualMember.name.trim()) return;
+                                if (!manualMember.name.trim() || !manualMember.church) return;
                                 setFamSelected({ id: "MANUAL-" + Date.now(), name: manualMember.name.trim(), category: manualMember.category, church: manualMember.church, role: manualMember.role, verified: false });
                                 setShowManual(false);
                               }}
@@ -577,7 +584,7 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
                     <button
                       className="btn btn-primary"
                       style={{ flex: 2 }}
-                      disabled={!famSelected || addingFamily}
+                      disabled={!famSelected || !famSelected.church || addingFamily}
                       onClick={handleAddFamily}
                     >
                       <UserPlus size={14} style={{ marginRight: 4 }} />
