@@ -8,6 +8,7 @@ import { canAssignToTeam } from "@/lib/teamAssignment";
 import { eventSubtitle } from "@/lib/registrationDeadline";
 import Topbar from "@/components/Topbar";
 import Modal from "@/components/Modal";
+import ReportsTab from "./admin/ReportsTab";
 
 function TeamLeaderView(props) {
   const {
@@ -43,8 +44,19 @@ function TeamLeaderView(props) {
   };
   const getReg = (mid) => eventRegs.find((x) => x.memberId === mid);
   const getCancelledReg = (mid) => allEventRegs.find((x) => x.memberId === mid && x.cancelled);
+  // Flat pool of everyone on any of this leader's teams, for the scoped reports view.
+  const myTeamMemberIds = new Set(
+    myTeams.flatMap((team) => {
+      const roster = rosters.find((r) => r.eventId === event?.id && r.team === team);
+      return roster?.memberIds || [];
+    })
+  );
+  const myEventRegs = allEventRegs.filter((r) => myTeamMemberIds.has(r.memberId));
+  const myWlRegsForReports = myEventRegs.filter((r) => r.waitlisted && !r.cancelled);
+  const myExRegsForReports = myEventRegs.filter((r) => r.excedente && !r.cancelled && !r.waitlisted);
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
+  const [showReports, setShowReports] = useState(false);
   const [requestTarget, setRequestTarget] = useState(null); // { reg, type: "reactivation" | "deadline_extension" }
   const [requestNote, setRequestNote] = useState("");
   const submitRequest = () => {
@@ -141,12 +153,22 @@ function TeamLeaderView(props) {
       />
       <div className="main-scroll">
         <div className="page-pad">
-          <div style={{ marginBottom: 16 }}>
-            <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22 }}>
-              {t.hello}, {greetingName}!
-            </h2>
-            <p style={{ color: "#6b7280", fontSize: 13 }}>{t.teamReadOnly}</p>
+          <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22 }}>
+                {t.hello}, {greetingName}!
+              </h2>
+              <p style={{ color: "#6b7280", fontSize: 13 }}>{t.teamReadOnly}</p>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowReports((v) => !v)}>
+              {showReports ? "Ocultar Relatórios" : "📊 Relatórios"}
+            </button>
           </div>
+          {showReports && (
+            <div style={{ marginBottom: 20 }}>
+              <ReportsTab regs={myEventRegs} event={event} wlRegs={myWlRegsForReports} exRegs={myExRegsForReports} lang={lang} />
+            </div>
+          )}
           {myTeams.length === 0 && (
             <div style={{ padding: "24px", background: "var(--card)", borderRadius: 10, border: "1px solid var(--border)", color: "var(--muted)", textAlign: "center" }}>
               Nenhuma equipe cadastrada para este evento.

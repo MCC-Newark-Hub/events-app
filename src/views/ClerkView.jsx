@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, ClipboardList, Users, Home, HeartHandshake } from "lucide-react";
+import { Search, ClipboardList, Users, Home, HeartHandshake, BarChart2 } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { ROLE_BADGE, fmt, deadlineStatus } from "@/constants";
 import { sb } from "@/lib/supabase";
@@ -15,6 +15,7 @@ import FamiliesPanel from "@/components/directory/FamiliesPanel";
 import GroupsPanel from "@/components/directory/GroupsPanel";
 import MemberEditModal from "@/components/directory/MemberEditModal";
 import RoleBadges from "@/components/directory/RoleBadges";
+import ReportsTab from "./admin/ReportsTab";
 import { newMemberForm, memberToForm } from "@/lib/memberForm";
 import { resendConfirmation } from "@/lib/resendConfirmation";
 import { useSortable } from "@/hooks/useSortable";
@@ -64,6 +65,7 @@ function ClerkView(props) {
   // full history to anchor the payment countdown to their earliest attempt.
   const allForCity = regs.filter((r) => r.eventId === event?.id && cityOf(r.church) === myCity);
   const myWlRegs = (wlRegs || []).filter((r) => cityOf(r.church) === myCity);
+  const myExRegs = allActive.filter((r) => r.excedente);
   const isOverdue = (r) => deadlineStatus(r, event, allForCity)?.overdue;
   const myOverdueRegs = allActive.filter(isOverdue);
   const viewRegsBase = (
@@ -95,6 +97,7 @@ function ClerkView(props) {
 
   const navItems = [
     { id: "regs", icon: <ClipboardList size={16} />, label: t.registrations || "Inscrições" },
+    { id: "reports", icon: <BarChart2 size={16} />, label: t.reports },
     { id: "members", icon: <Users size={16} />, label: `Membros (${myMembers.length})` },
     { id: "families", icon: <Home size={16} />, label: `Famílias (${myFamilies.length})` },
     { id: "groups", icon: <HeartHandshake size={16} />, label: `Grupos (${myGas.length})` },
@@ -268,6 +271,8 @@ function ClerkView(props) {
                 )}
               </div>
             </>
+          ) : sec === "reports" ? (
+            <ReportsTab regs={allForCity} event={event} wlRegs={myWlRegs} exRegs={myExRegs} lang={lang} />
           ) : sec === "members" ? (
             <>
               <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>

@@ -8,6 +8,7 @@ import SearchSelect from "@/components/SearchSelect";
 import FamiliesPanel from "@/components/directory/FamiliesPanel";
 import MemberEditModal from "@/components/directory/MemberEditModal";
 import RoleBadges from "@/components/directory/RoleBadges";
+import ReportsTab from "./admin/ReportsTab";
 import { newMemberForm, memberToForm } from "@/lib/memberForm";
 import { resendConfirmation } from "@/lib/resendConfirmation";
 import { eventSubtitle } from "@/lib/registrationDeadline";
@@ -24,6 +25,7 @@ function GALeaderView(props) {
   const [savingMember, setSavingMember] = useState(false);
   const [newFamilyName, setNewFamilyName] = useState("");
   const [showFamilies, setShowFamilies] = useState(false);
+  const [showReports, setShowReports] = useState(false);
   const [transferMemberId, setTransferMemberId] = useState("");
   const [transferTargetGaId, setTransferTargetGaId] = useState("");
   const [requestTarget, setRequestTarget] = useState(null); // { reg, type: "reactivation" | "deadline_extension" }
@@ -99,6 +101,9 @@ function GALeaderView(props) {
   // myMembers/myFamilies above, which stay city-wide since they back the member
   // transfer flow (a leader can pull a member into their group from anywhere in it).
   const myGaFamilies = families.filter((f) => (f.memberIds || []).some((id) => allMyMembers.some((m) => m.id === id)));
+  const myEventRegs = allEventRegs.filter((r) => allMyMembers.some((m) => m.id === r.memberId));
+  const myWlRegsForReports = myEventRegs.filter((r) => r.waitlisted && !r.cancelled);
+  const myExRegsForReports = myEventRegs.filter((r) => r.excedente && !r.cancelled && !r.waitlisted);
   const totalMembers = allMyMembers.length;
   const totalReg = allMyMembers.filter((m) => getStatus(m.id) !== "not_registered").length;
   const totalNotReg = totalMembers - totalReg;
@@ -127,6 +132,9 @@ function GALeaderView(props) {
               <p style={{ color: "#6b7280", fontSize: 13 }}>{t.readOnlyNote}</p>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowReports((v) => !v)}>
+                {showReports ? "Ocultar Relatórios" : "📊 Relatórios"}
+              </button>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowFamilies((v) => !v)}>
                 {showFamilies ? "Ocultar Famílias" : `👪 Famílias (${myGaFamilies.length})`}
               </button>
@@ -135,6 +143,12 @@ function GALeaderView(props) {
               </button>
             </div>
           </div>
+
+          {showReports && (
+            <div style={{ marginBottom: 20 }}>
+              <ReportsTab regs={myEventRegs} event={event} wlRegs={myWlRegsForReports} exRegs={myExRegsForReports} lang={lang} />
+            </div>
+          )}
 
           {showFamilies && (
             <div style={{ marginBottom: 20 }}>

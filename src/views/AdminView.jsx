@@ -1003,7 +1003,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       <input type="checkbox" id="is-hub" checked={!!formData.isHub}
                         onChange={(e) => setFormData({ ...formData, isHub: e.target.checked })} />
                       <label htmlFor="is-hub" style={{ margin: 0, cursor: "pointer", fontSize: 13, fontWeight: 500, textTransform: "none", letterSpacing: 0, color: "var(--text)" }}>
-                        Igreja do Hub (Newark, Filadélfia, Nova York, Toms River)
+                        Igreja do Pólo (Newark, Filadélfia, Nova York, Toms River)
                       </label>
                     </div>
                   </div>
@@ -1057,7 +1057,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                   {list.map((c) => (
                     <tr key={c.id || c.display} style={{ background: c.id && selected.includes(c.id) ? "var(--sidebar-active-bg)" : "" }}>
                       <td><input type="checkbox" disabled={!c.id} checked={!!(c.id && selected.includes(c.id))} onChange={() => c.id && toggleSel(c.id)} /></td>
-                      <td style={{ fontWeight: 500 }}>{c.display}{c.is_hub && <span className="badge badge-green" style={{ marginLeft: 6 }}>Hub</span>}</td>
+                      <td style={{ fontWeight: 500 }}>{c.display}{c.is_hub && <span className="badge badge-green" style={{ marginLeft: 6 }}>Pólo</span>}</td>
                       <td style={{ fontSize: 12 }}>{c.city || "—"}</td>
                       <td><span className="badge badge-gray">{c.state_code || c.stateCode || "—"}</span></td>
                       <td><span className="badge badge-blue">{c.country_code || c.code || "—"}</span></td>
@@ -1187,7 +1187,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
                     <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
                       if (!formData.name?.trim() && !formData.firstName?.trim()) { notify("Nome obrigatório."); return; }
-                      if (churches.find((c) => c.display === formData.church)?.is_hub && !formData.gaId) { notify("Grupo é obrigatório para igrejas do Hub."); return; }
+                      if (churches.find((c) => c.display === formData.church)?.is_hub && !formData.gaId) { notify("Grupo é obrigatório para igrejas do Pólo."); return; }
                       const fullName = formData.name?.trim() || ((formData.firstName || '') + ' ' + (formData.lastName || '')).trim();
                       const row = { name: fullName, first_name: formData.firstName || null, last_name: formData.lastName || null, badge_name: formData.badgeName || fullName, gender: formData.gender || "M", category: formData.category || "Adulto", church: formData.church || "", roles: formData.roles || [], role: (formData.roles || [])[0] || "", family_id: formData.familyId || null, ga_id: formData.gaId || null, allergies: formData.allergies || null, special_needs: formData.specialNeeds || null, notes: formData.notes || null };
                       if (!isNew) row.id = editing.id;

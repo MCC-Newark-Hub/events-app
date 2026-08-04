@@ -45,7 +45,7 @@ function PastorView(props) {
   const hubChurchNames = new Set((churches || []).filter((c) => c.is_hub).map((c) => c.display));
   const isHubChurch = (church) => hubChurchNames.has(church);
   const byHubOf = (rows) => {
-    const label = (h) => h ? "Hub" : (lang === "en" ? "Outside the Hub" : "Fora do Hub");
+    const label = (h) => (lang === "en" ? (h ? "Hub" : "Outside the Hub") : (h ? "Pólo" : "Fora do Pólo"));
     return [true, false].map((h) => ({
       key: label(h),
       isHub: h,
@@ -159,7 +159,7 @@ function PastorView(props) {
                 {(byHub.length > 0 || guestsByInviter.length > 0) && (
                   <div className="two-col" style={{ marginBottom: 14 }}>
                     <div className="card">
-                      <h4 style={{ fontWeight: 700, marginBottom: 10 }}>{lang === "en" ? "Hub × Outside the Hub" : "Hub × Fora do Hub"}</h4>
+                      <h4 style={{ fontWeight: 700, marginBottom: 10 }}>{lang === "en" ? "Hub × Outside the Hub" : "Pólo × Fora do Pólo"}</h4>
                       {byHub.map((x) => {
                         const isOpen = !!expandedHub[x.key];
                         const subRows = isOpen ? byChOf(er.filter((r) => isHubChurch(r.church) === x.isHub)) : [];
