@@ -241,6 +241,7 @@ export default function RegistrationsTab(props) {
           members={members}
           setMembers={setMembers}
           families={families}
+          gas={gas}
           dbTeams={dbTeams}
           isFull={isFull}
           existingRegs={active}

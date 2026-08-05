@@ -272,14 +272,14 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
   );
 }
 
-function PublicPortal({ event, members: propMembers, setMembers, churches, loading, regs, addReg, submitApproval, lang, setLang, onReset, onLookup }) {
+function PublicPortal({ event, members: propMembers, setMembers, churches, gas, loading, regs, addReg, submitApproval, lang, setLang, onReset, onLookup }) {
   const t = STRINGS[lang || "pt"];
   const [step, setStep] = useState(1);
   const [primary, setPrimary] = useState(null);
   const [primarySearch, setPrimarySearch] = useState("");
   const [primaryNotFound, setPrimaryNotFound] = useState(false);
   const [showManualPrimary, setShowManualPrimary] = useState(false);
-  const [manualPrimary, setManualPrimary] = useState({ name: "", gender: "M", category: "Adulto", role: "", church: "" });
+  const [manualPrimary, setManualPrimary] = useState({ name: "", gender: "M", category: "Adulto", role: "", church: "", gaId: "" });
   const [correctingSuggestion, setCorrectingSuggestion] = useState(null); // { member, target: "primary" | "family" }
   const [correctedName, setCorrectedName] = useState("");
   const [savingCorrection, setSavingCorrection] = useState(false);
@@ -287,7 +287,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
   const [famSearch, setFamSearch] = useState("");
   const [famNotFound, setFamNotFound] = useState(false);
   const [showManualFam, setShowManualFam] = useState(false);
-  const [manualFam, setManualFam] = useState({ name: "", gender: "M", category: "Adulto", role: "", church: "" });
+  const [manualFam, setManualFam] = useState({ name: "", gender: "M", category: "Adulto", role: "", church: "", gaId: "" });
   const [contact, setContact] = useState({ phone: "", email: "", whatsapp: true });
   const [invitedByMemberId, setInvitedByMemberId] = useState("");
   const [translations, setTranslations] = useState({ en: false, es: false });
@@ -377,6 +377,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
       church: m.church || "",
       role: m.role || "",
       roles: m.role ? [m.role] : [],
+      ga_id: m.gaId || null,
     };
     const { data, error } = await sb.from("members").insert(row).select().single();
     if (error) {
@@ -654,6 +655,21 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
                             placeholder={t.selectChurch}
                           />
                         </div>
+                        <div>
+                          <label>{lang === "en" ? "Group (optional)" : "Grupo (opcional)"}</label>
+                          <SearchSelect
+                            value={manualPrimary.gaId}
+                            onSelect={(v) => setManualPrimary({ ...manualPrimary, gaId: v })}
+                            items={(gas || []).filter((g) => {
+                              if (!manualPrimary.church) return true;
+                              const gaCity = (g.church || "").split(",")[0].trim().toLowerCase();
+                              return !gaCity || manualPrimary.church.toLowerCase().includes(gaCity);
+                            })}
+                            getLabel={(g) => g.name}
+                            getId={(g) => g.id}
+                            placeholder={lang === "en" ? "Search group…" : "Buscar grupo…"}
+                          />
+                        </div>
                         <div style={{ display: "flex", gap: 8 }}>
                           <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => setShowManualPrimary(false)}>{t.back}</button>
                           <button
@@ -670,6 +686,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
                                 verified: false,
                                 role: manualPrimary.role,
                                 church: manualPrimary.church,
+                                gaId: manualPrimary.gaId,
                                 badgeName: manualPrimary.name.trim(),
                               });
                               setShowManualPrimary(false);
@@ -844,7 +861,22 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, loadi
                           placeholder={t.selectChurch}
                         />
                       </div>
-                      <button className="btn btn-warn btn-sm" disabled={!manualFam.name || !manualFam.church} onClick={() => { if (!manualFam.name || !manualFam.church) return; setFamilyMembers((prev) => [...prev, { ...manualFam, id: "MANUAL-" + Date.now(), verified: false, badgeName: manualFam.name }]); setManualFam({ name: "", gender: "M", category: "Adulto", role: "", church: "" }); setShowManualFam(false); }}>
+                      <div>
+                        <label>{lang === "en" ? "Group (optional)" : "Grupo (opcional)"}</label>
+                        <SearchSelect
+                          value={manualFam.gaId}
+                          onSelect={(v) => setManualFam({ ...manualFam, gaId: v })}
+                          items={(gas || []).filter((g) => {
+                            if (!manualFam.church) return true;
+                            const gaCity = (g.church || "").split(",")[0].trim().toLowerCase();
+                            return !gaCity || manualFam.church.toLowerCase().includes(gaCity);
+                          })}
+                          getLabel={(g) => g.name}
+                          getId={(g) => g.id}
+                          placeholder={lang === "en" ? "Search group…" : "Buscar grupo…"}
+                        />
+                      </div>
+                      <button className="btn btn-warn btn-sm" disabled={!manualFam.name || !manualFam.church} onClick={() => { if (!manualFam.name || !manualFam.church) return; setFamilyMembers((prev) => [...prev, { ...manualFam, id: "MANUAL-" + Date.now(), verified: false, badgeName: manualFam.name }]); setManualFam({ name: "", gender: "M", category: "Adulto", role: "", church: "", gaId: "" }); setShowManualFam(false); }}>
                         + {lang === "en" ? "Add Unverified Member" : "Adicionar Membro Não Verificado"}
                       </button>
                     </div>

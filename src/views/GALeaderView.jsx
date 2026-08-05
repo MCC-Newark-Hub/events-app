@@ -27,6 +27,7 @@ function GALeaderView(props) {
   const [newFamilyName, setNewFamilyName] = useState("");
   const [showFamilies, setShowFamilies] = useState(false);
   const [showReports, setShowReports] = useState(false);
+  const [showTransfer, setShowTransfer] = useState(false);
   const [groupByFam, setGroupByFam] = useState(false);
   const [transferMemberId, setTransferMemberId] = useState("");
   const [transferTargetGaId, setTransferTargetGaId] = useState("");
@@ -143,6 +144,11 @@ function GALeaderView(props) {
               <button className={`btn btn-sm ${groupByFam ? "btn-primary" : "btn-ghost"}`} onClick={() => setGroupByFam((v) => !v)}>
                 Agrupar por Família
               </button>
+              {myChurchGAs.length > 1 && (
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowTransfer((v) => !v)}>
+                  {showTransfer ? "Ocultar Transferência" : "🔀 Transferir Membro"}
+                </button>
+              )}
               <button className="btn btn-primary btn-sm" onClick={() => { setEditingMember(newMemberForm()); setNewFamilyName(""); }}>
                 + Novo Membro
               </button>
@@ -162,7 +168,7 @@ function GALeaderView(props) {
           )}
 
           {/* ── Transfer member between groups (same church only) ── */}
-          {myChurchGAs.length > 1 && (
+          {showTransfer && myChurchGAs.length > 1 && (
             <div className="card" style={{ marginBottom: 20, padding: "14px 16px" }}>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>🔀 Transferir Membro Entre Grupos</div>
               <div className="fr" style={{ marginBottom: 10 }}>

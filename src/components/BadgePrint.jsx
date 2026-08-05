@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import QRCode from "qrcode";
 import logoSrc from "@/assets/images/logo/icm-logo.png";
 
 export default function BadgePrint({ regs, event, lang }) {
+  const [generating, setGenerating] = useState(false);
   const [pdfDone, setPdfDone] = useState(false);
   const [pdfError, setPdfError] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const primary = regs[0];
 
   const makePDF = async (JsPDF) => {
     const W = 216, H = 144; // 3"×2" landscape in points (72pt/inch)
@@ -130,50 +129,59 @@ export default function BadgePrint({ regs, event, lang }) {
       }
     }
 
-    doc.save("crachas-" + (regs[0]?.regNumber || "ICM") + ".pdf");
+    // Opened in a new tab rather than force-downloaded — this only runs from an
+    // explicit click (never automatically), so the popup isn't blocked.
+    const blobUrl = doc.output("bloburl");
+    window.open(blobUrl, "_blank");
     setPdfDone(true);
-    setEmailSent(true);
   };
 
   const generateBadgePDF = async () => {
-    if (window.jspdf && window.jspdf.jsPDF) { await makePDF(window.jspdf.jsPDF); return; }
-    await new Promise((resolve, reject) => {
-      var s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-      s.onload = resolve;
-      s.onerror = reject;
-      document.head.appendChild(s);
-    }).then(() => makePDF(window.jspdf.jsPDF)).catch(() => { setPdfError(true); setPdfDone(true); });
+    setGenerating(true);
+    setPdfError(false);
+    try {
+      if (window.jspdf && window.jspdf.jsPDF) { await makePDF(window.jspdf.jsPDF); return; }
+      await new Promise((resolve, reject) => {
+        var s = document.createElement("script");
+        s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      }).then(() => makePDF(window.jspdf.jsPDF));
+    } catch {
+      setPdfError(true);
+    } finally {
+      setGenerating(false);
+    }
   };
-
-  useEffect(() => {
-    const timer = setTimeout(() => { generateBadgePDF(); }, 800);
-    return () => clearTimeout(timer);
-  }, []);
 
   return (
     <div>
       {/* PDF status */}
-      {!pdfDone ? (
+      {generating ? (
         <div style={{ background: "#eff6ff", borderRadius: 8, padding: "12px 14px", marginBottom: 12, textAlign: "center", fontSize: 13, color: "#1e40af" }}>
           {lang === "en" ? "Generating your badges PDF..." : "Gerando o PDF dos crachás..."}
         </div>
       ) : pdfError ? (
         <div style={{ marginBottom: 12 }}>
           <div style={{ background: "#fff0e6", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#c4390a", marginBottom: 8 }}>
-            {lang === "en" ? "Could not auto-download. Click below:" : "Não foi possível baixar automaticamente. Clique abaixo:"}
+            {lang === "en" ? "Could not generate the PDF. Try again:" : "Não foi possível gerar o PDF. Tente novamente:"}
           </div>
           <button className="btn btn-primary" style={{ width: "100%", marginBottom: 8 }} onClick={generateBadgePDF}>
-            {lang === "en" ? "Download Badges PDF" : "Baixar PDF dos Crachás"}
+            {lang === "en" ? "Open Badges PDF" : "Abrir PDF dos Crachás"}
+          </button>
+        </div>
+      ) : pdfDone ? (
+        <div style={{ background: "#d1fae5", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#065f46", textAlign: "center" }}>
+          {lang === "en" ? "Badges PDF opened in a new tab!" : "PDF dos crachás aberto em uma nova aba!"}{" · "}
+          <button onClick={generateBadgePDF} style={{ background: "none", border: "none", cursor: "pointer", color: "#065f46", textDecoration: "underline", fontSize: 13, padding: 0 }}>
+            {lang === "en" ? "Open again" : "Abrir novamente"}
           </button>
         </div>
       ) : (
-        <div style={{ background: "#d1fae5", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#065f46", textAlign: "center" }}>
-          {lang === "en" ? "Badges PDF downloaded!" : "PDF dos crachás baixado!"}{" · "}
-          <button onClick={generateBadgePDF} style={{ background: "none", border: "none", cursor: "pointer", color: "#065f46", textDecoration: "underline", fontSize: 13, padding: 0 }}>
-            {lang === "en" ? "Download again" : "Baixar novamente"}
-          </button>
-        </div>
+        <button className="btn btn-primary" style={{ width: "100%", marginBottom: 12 }} onClick={generateBadgePDF}>
+          🖨️ {lang === "en" ? "View / Download Badge(s) PDF" : "Ver / Baixar PDF do(s) Crachá(s)"}
+        </button>
       )}
 
       {/* Badge preview grid */}

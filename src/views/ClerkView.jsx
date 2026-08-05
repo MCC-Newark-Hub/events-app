@@ -337,7 +337,7 @@ function ClerkView(props) {
         </div>
         </div>
       </div>
-      {showReg && <RegModal event={event} members={myMembers} setMembers={setMembers} families={families} dbTeams={dbTeams} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
+      {showReg && <RegModal event={event} members={myMembers} setMembers={setMembers} families={families} gas={gas} dbTeams={dbTeams} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
       {detail && (
         <DetailModal
           reg={detail}

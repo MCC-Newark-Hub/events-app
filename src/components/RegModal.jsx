@@ -17,6 +17,7 @@ function RegModal({
   setMembers,
   families,
   churches,
+  gas,
   dbTeams,
   isFull,
   existingRegs,
@@ -57,6 +58,7 @@ function RegModal({
     category: "Adulto",
     church: "",
     role: "",
+    gaId: "",
     invitedByMemberId: "",
   });
 
@@ -117,6 +119,7 @@ function RegModal({
       church: f.church,
       role: f.role,
       roles: f.role ? [f.role] : [],
+      ga_id: f.gaId || null,
     };
     const { data, error } = await sb.from("members").insert(row).select().single();
     setCreatingMember(false);
@@ -789,6 +792,21 @@ function RegModal({
                 value={f.church}
                 onChange={(v) => setF({ ...f, church: v })}
                 placeholder={t.selectChurch}
+              />
+            </div>
+            <div>
+              <label>Grupo (GA) <span style={{ fontSize: 11, fontWeight: 400, textTransform: "none" }}>({t.optional})</span></label>
+              <SearchSelect
+                value={f.gaId}
+                onSelect={(v) => setF({ ...f, gaId: v })}
+                items={(gas || []).filter((g) => {
+                  if (!f.church) return true;
+                  const gaCity = (g.church || "").split(",")[0].trim().toLowerCase();
+                  return !gaCity || f.church.toLowerCase().includes(gaCity);
+                })}
+                getLabel={(g) => g.name}
+                getId={(g) => g.id}
+                placeholder={f.church ? "Buscar grupo…" : "Selecione a igreja primeiro…"}
               />
             </div>
             <div>

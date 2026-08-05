@@ -142,6 +142,7 @@ export default function App() {
             members={appData.members}
             setMembers={appData.setMembers}
             churches={appData.churches}
+            gas={appData.gas}
             updateReg={appData.updateReg}
             addReg={appData.addReg}
             lang={lang}
@@ -155,6 +156,7 @@ export default function App() {
             members={appData.members}
             setMembers={appData.setMembers}
             churches={appData.churches}
+            gas={appData.gas}
             loading={appData.loading}
             regs={appData.regs}
             addReg={appData.addReg}

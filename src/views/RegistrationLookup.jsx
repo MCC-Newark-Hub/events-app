@@ -95,7 +95,7 @@ function RegCard({ reg, onCancel, lang }) {
   );
 }
 
-export default function RegistrationLookup({ event, regs, members, setMembers, churches, updateReg, addReg, lang, onBack, initialName }) {
+export default function RegistrationLookup({ event, regs, members, setMembers, churches, gas, updateReg, addReg, lang, onBack, initialName }) {
   const [searchMode, setSearchMode] = useState(initialName ? "name" : "number"); // "number" | "name"
   const [query, setQuery] = useState("");
   const [nameQuery, setNameQuery] = useState(initialName || "");
@@ -110,7 +110,7 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
   const [famSearch, setFamSearch] = useState("");
   const [famSelected, setFamSelected] = useState(null);
   const [showManual, setShowManual] = useState(false);
-  const [manualMember, setManualMember] = useState({ name: "", category: "Adulto", role: "", church: "" });
+  const [manualMember, setManualMember] = useState({ name: "", category: "Adulto", role: "", church: "", gaId: "" });
   const [famInvitedBy, setFamInvitedBy] = useState("");
   const [addDone, setAddDone] = useState(false);
   const [addingFamily, setAddingFamily] = useState(false);
@@ -227,6 +227,7 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
         church: famSelected.church || "",
         role: famSelected.role || "",
         roles: famSelected.role ? [famSelected.role] : [],
+        ga_id: famSelected.gaId || null,
       };
       const { data, error } = await sb.from("members").insert(row).select().single();
       setAddingFamily(false);
@@ -259,7 +260,7 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
     setShowAddFamily(false);
     setFamSelected(null);
     setFamSearch("");
-    setManualMember({ name: "", category: "Adulto", role: "", church: "" });
+    setManualMember({ name: "", category: "Adulto", role: "", church: "", gaId: "" });
     setFamInvitedBy("");
     setShowManual(false);
   };
@@ -539,12 +540,27 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
                                 placeholder={lang === "en" ? "Select church..." : "Selecione a igreja..."}
                               />
                             </div>
+                            <div>
+                              <label style={{ fontSize: 13 }}>{lang === "en" ? "Group (optional)" : "Grupo (opcional)"}</label>
+                              <SearchSelect
+                                value={manualMember.gaId}
+                                onSelect={(v) => setManualMember({ ...manualMember, gaId: v })}
+                                items={(gas || []).filter((g) => {
+                                  if (!manualMember.church) return true;
+                                  const gaCity = (g.church || "").split(",")[0].trim().toLowerCase();
+                                  return !gaCity || manualMember.church.toLowerCase().includes(gaCity);
+                                })}
+                                getLabel={(g) => g.name}
+                                getId={(g) => g.id}
+                                placeholder={lang === "en" ? "Search group…" : "Buscar grupo…"}
+                              />
+                            </div>
                             <button
                               className="btn btn-warn btn-sm"
                               disabled={!manualMember.name.trim() || !manualMember.church}
                               onClick={() => {
                                 if (!manualMember.name.trim() || !manualMember.church) return;
-                                setFamSelected({ id: "MANUAL-" + Date.now(), name: manualMember.name.trim(), category: manualMember.category, church: manualMember.church, role: manualMember.role, verified: false });
+                                setFamSelected({ id: "MANUAL-" + Date.now(), name: manualMember.name.trim(), category: manualMember.category, church: manualMember.church, role: manualMember.role, gaId: manualMember.gaId, verified: false });
                                 setShowManual(false);
                               }}
                             >
