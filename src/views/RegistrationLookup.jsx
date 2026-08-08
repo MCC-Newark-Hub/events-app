@@ -241,7 +241,8 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
       memberId = data.id;
       if (setMembers) setMembers((prev) => [...prev, mapMember(data)]);
     }
-    const newReg = addReg({
+    setAddingFamily(true);
+    const optimisticReg = addReg({
       memberId,
       memberName: famSelected.name,
       badgeName: famSelected.name,
@@ -255,7 +256,18 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
       note: found.note, // inherit batch token + contact info from existing registration
       invitedByMemberId: famInvitedBy || null,
     });
-    setRelated((prev) => [...prev, newReg]);
+    // addReg shows this reg immediately (before the DB write is confirmed) — await
+    // .confirmed so a failed insert doesn't leave someone thinking a family member
+    // was added when the row never actually persisted.
+    const result = optimisticReg.confirmed ? await optimisticReg.confirmed : { ok: true, reg: optimisticReg };
+    setAddingFamily(false);
+    if (!result.ok && !result.duplicate) {
+      setAddFamilyError(lang === "en"
+        ? "Could not confirm this registration. Please try again."
+        : "Não foi possível confirmar esta inscrição. Tente novamente.");
+      return;
+    }
+    setRelated((prev) => [...prev, result.reg || optimisticReg]);
     setAddDone(true);
     setShowAddFamily(false);
     setFamSelected(null);

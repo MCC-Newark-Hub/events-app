@@ -282,6 +282,9 @@ export function useAppData({ getUserRef, notify }) {
       );
       if (dupe) {
         notify(data.memberName + " já possui inscrição ativa neste evento.");
+        // Callers that await confirmed (see below) need this path to resolve too,
+        // not just the real-insert path.
+        dupe.confirmed = Promise.resolve({ ok: false, duplicate: true, reg: dupe });
         return dupe;
       }
     }
@@ -336,7 +339,14 @@ export function useAppData({ getUserRef, notify }) {
     setSeq(n);
     var label = forceExcedente ? "Excedente" : isWaitlisted ? "Em Espera" : "OK";
     notify(data.memberName + " " + label + "! (" + regNumber + ")");
-    sb.from("registrations")
+    // The optimistic reg (r) is what most callers use immediately — this UI update
+    // and the notify above happen before the DB has confirmed anything. Callers that
+    // can't afford a false positive (e.g. the public self-registration success screen,
+    // which the person may never revisit) should `await r.confirmed` and check `.ok`
+    // instead of trusting the optimistic notify — a failed insert here rolls the
+    // optimistic entry back out of local state, but by then a caller that already
+    // showed its own "success" UI from the synchronous return has no way to know.
+    r.confirmed = sb.from("registrations")
       .insert(dbRow)
       .select()
       .single()
@@ -351,14 +361,16 @@ export function useAppData({ getUserRef, notify }) {
           } else {
             notify("Erro ao salvar inscrição. Verifique sua conexão e tente novamente.");
           }
-          return;
+          return { ok: false, error: res.error, reg: null };
         }
-        if (!res.data) return;
+        if (!res.data) return { ok: false, error: null, reg: null };
+        var confirmedReg = mapReg(res.data);
         setRegs(function (p) {
           return p.map(function (x) {
-            return x.regNumber === regNumber ? mapReg(res.data) : x;
+            return x.regNumber === regNumber ? confirmedReg : x;
           });
         });
+        return { ok: true, error: null, reg: confirmedReg };
       });
     return r;
   };

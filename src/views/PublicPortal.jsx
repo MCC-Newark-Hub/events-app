@@ -413,6 +413,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
     ].filter(Boolean).join(" | ");
     const isPastDeadline = getDeadlineStatus(event?.registration_deadline) === "past";
     const submittedRegs = [];
+    const failedNames = [];
     for (const m of allParticipants) {
       const isVerifiedMember = m.verified !== false && m.id && !m.id.startsWith("MANUAL-");
       const resolvedBadge = (badgeNames[m.id] || "").trim() || m.badgeName || m.name;
@@ -449,7 +450,12 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
           note: sharedNote,
         });
       } else {
-        submittedRegs.push(addReg({
+        // addReg updates the UI optimistically (reg number shown immediately), then
+        // confirms the actual insert async — awaiting r.confirmed here is what stops
+        // this screen from telling someone they're registered when the write behind
+        // it actually failed (constraint violation, dropped connection, etc.). Someone
+        // self-registering rarely comes back to notice a rollback toast after the fact.
+        const optimisticReg = addReg({
           memberId,
           memberName: m.name,
           badgeName: resolvedBadge,
@@ -463,12 +469,37 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
           needsTranslation: translations.en || translations.es,
           note: sharedNote,
           invitedByMemberId: invitedByMemberId || null,
-        }));
+        });
+        const result = optimisticReg.confirmed ? await optimisticReg.confirmed : { ok: true, reg: optimisticReg };
+        if (result.ok) {
+          submittedRegs.push(result.reg);
+        } else if (!result.duplicate) {
+          // A duplicate just means this person already has an active registration —
+          // not a failure worth blocking on, the existing reg still counts as "done".
+          failedNames.push(m.name);
+        } else {
+          submittedRegs.push(result.reg);
+        }
       }
     }
     setSubmitting(false);
     if (isPastDeadline) {
       setSubmitted({ pendingApproval: true, participantNames: allParticipants.map((m) => m.name), email: contact.email });
+    } else if (failedNames.length > 0) {
+      // Don't show the success screen at all when anyone failed to confirm — it's a
+      // full-page takeover (see the early `if (submitted) return ...` below) that would
+      // bury this error completely. Whoever did succeed is safely in the DB already
+      // (submittedRegs), so staying on this screen just means retrying doesn't
+      // double-register them — addReg's own duplicate guard covers that.
+      const succeededNames = submittedRegs.map((r) => r.memberName || r.name).filter(Boolean);
+      setSubmitError(
+        (lang === "en"
+          ? `Could not confirm registration for: ${failedNames.join(", ")}. Please try again.`
+          : `Não foi possível confirmar a inscrição de: ${failedNames.join(", ")}. Tente novamente.`) +
+        (succeededNames.length > 0
+          ? (lang === "en" ? ` (${succeededNames.join(", ")} succeeded and don't need to resubmit.)` : ` (${succeededNames.join(", ")} foi(ram) confirmado(s) e não precisa(m) reenviar.)`)
+          : "")
+      );
     } else {
       setSubmitted({ regs: submittedRegs, email: contact.email });
     }
