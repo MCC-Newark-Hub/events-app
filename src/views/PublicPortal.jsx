@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Search, ArrowLeft, CheckCircle2, ClipboardList, Share2, AlertTriangle } from "lucide-react";
 import { STRINGS } from "@/i18n/strings";
-import { CATEGORIES, ROLE_BADGE, OBREIRO_ROLES, fmt } from "@/constants";
+import { CATEGORIES, ROLE_BADGE, OBREIRO_ROLES, fmt, teamForRole } from "@/constants";
 import BadgePrint from "@/components/BadgePrint";
 import Modal from "@/components/Modal";
 import ChurchSearch from "@/components/ChurchSearch";
@@ -444,7 +444,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
           category,
           church: m.church || "",
           role: m.role || "",
-          team: "Participante",
+          team: teamForRole(m.role),
           fee: event?.fees?.[category] ?? 0,
           reason: lang === "en" ? "Submitted after the registration deadline." : "Enviado após o prazo de encerramento das inscrições.",
           note: sharedNote,
@@ -463,7 +463,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
           church: m.church || "",
           role: m.role || "",
           familyId: null,
-          team: "Participante",
+          team: teamForRole(m.role),
           paid: false,
           exempt: false,
           needsTranslation: translations.en || translations.es,

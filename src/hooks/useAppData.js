@@ -116,6 +116,12 @@ export function mapTeam(t) {
 
 const OBREIRO_ROLES = ["Pastor", "Ungido", "Diácono", "Obreiro"];
 
+// Pastors, Ungidos ("anointed"), and Diáconos belong to their respective
+// leadership team by virtue of the role itself — independent of whatever the
+// registration's own `team` field is set to (a Pastor can also be bulk-assigned
+// into e.g. "Louvor" via TeamsTab; that shouldn't un-assign them from Pastores).
+const SERVICE_LEADER_TEAMS = { Pastor: "Pastores", Ungido: "Ungidos", Diácono: "Diáconos" };
+
 export function useAppData({ getUserRef, notify }) {
   // Support both a getter function (for ref-based pattern) and a direct value
   const getUser = typeof getUserRef === "function" ? getUserRef : () => getUserRef;
@@ -287,6 +293,39 @@ export function useAppData({ getUserRef, notify }) {
     }).then(function (res) { if (res.error) console.error("logAudit error:", res.error); });
   };
 
+  // Reads `rosters` directly from this closure rather than via a setRosters
+  // updater + deferred setTimeout (the pattern TeamsTab.jsx's addToRoster uses) —
+  // that pattern relies on React having already run the updater callback by the
+  // time the setTimeout(0) fires, which only holds when called synchronously from
+  // a click handler. Called from here (inside addReg's async insert .then()), the
+  // setTimeout consistently fired before the updater did, silently no-op-ing every
+  // time. Matches how addReg's own dupe-check above already reads `regs` directly.
+  const addToRosterInternal = function (team, memberId, memberLabel) {
+    var ex = rosters.find(function (r) { return r.eventId === event.id && r.team === team; });
+    if (ex && ex.memberIds.includes(memberId)) return;
+    if (ex) {
+      var newIds = ex.memberIds.concat([memberId]);
+      setRosters(function (prev) {
+        return prev.map(function (r) { return r === ex ? Object.assign({}, r, { memberIds: newIds }) : r; });
+      });
+      sb.from("rosters").update({ member_ids: newIds }).eq("id", ex.id)
+        .then(function (res) { if (res.error) console.error("addToRosterInternal update error:", res.error); });
+    } else {
+      var newRoster = { eventId: event.id, team: team, memberIds: [memberId], leaderId: null };
+      setRosters(function (prev) { return prev.concat([newRoster]); });
+      sb.from("rosters").insert({
+        event_id: newRoster.eventId, team: newRoster.team,
+        member_ids: newRoster.memberIds, leader_id: null,
+      }).select().single().then(function (res) {
+        if (res.error) { console.error("addToRosterInternal insert error:", res.error); return; }
+        setRosters(function (p) {
+          return p.map(function (r) { return r === newRoster ? Object.assign({}, r, { id: res.data.id }) : r; });
+        });
+      });
+    }
+    logAudit("roster_auto_added", "roster", null, memberLabel, { team: team });
+  };
+
   // ── Mutations ─────────────────────────────────────────────────────────────
   const addReg = function (data, forceExcedente) {
     forceExcedente = forceExcedente || false;
@@ -394,6 +433,10 @@ export function useAppData({ getUserRef, notify }) {
           regNumber: regNumber, category: data.category, church: data.church,
           waitlisted: isWaitlisted, excedente: forceExcedente,
         });
+        var leaderTeam = SERVICE_LEADER_TEAMS[confirmedReg.role];
+        if (leaderTeam && confirmedReg.memberId && confirmedReg.memberId !== "GUEST" && !isWaitlisted) {
+          addToRosterInternal(leaderTeam, confirmedReg.memberId, confirmedReg.memberName);
+        }
         return { ok: true, error: null, reg: confirmedReg };
       });
     return r;

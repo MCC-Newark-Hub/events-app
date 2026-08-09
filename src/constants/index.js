@@ -158,6 +158,13 @@ export const addDays = (dateStr, n) => {
 
 export const OBREIRO_ROLES = ["Pastor", "Ungido", "Diácono", "Obreiro"];
 
+// Pastores/Ungidos/Diáconos belong to their leadership team by virtue of the
+// role itself. Mirrors SERVICE_LEADER_TEAMS in useAppData.js (that copy drives
+// the actual roster auto-assignment; this one just keeps the registration
+// form's team field in sync with whatever role gets picked).
+export const teamForRole = (role, fallback = "Participante") =>
+  role === "Pastor" ? "Pastores" : role === "Diácono" ? "Diáconos" : role === "Ungido" ? "Ungidos" : fallback;
+
 export const isDeadlineExempt = (reg, allEventRegs = []) => {
   if (reg.paid || reg.exempt || reg.cancelled || reg.waitlisted) return true;
   // A $0 registration has nothing to pay, so no payment deadline applies — check

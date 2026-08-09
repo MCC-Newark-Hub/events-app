@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
-import { CATEGORIES, ROLE_GROUPS, TEAMS, OBREIRO_ROLES, ROLE_BADGE, fmt } from "@/constants";
+import { CATEGORIES, ROLE_GROUPS, TEAMS, OBREIRO_ROLES, ROLE_BADGE, fmt, teamForRole } from "@/constants";
 import { sb } from "@/lib/supabase";
 import { mapMember } from "@/hooks/useAppData";
 import { genMemberId } from "@/lib/genMemberId";
@@ -41,14 +41,7 @@ function RegModal({
   const [creatingMember, setCreatingMember] = useState(false);
   const [manualError, setManualError] = useState(null);
   const [f, setF] = useState({
-    team:
-      prefill?.role === "Pastor"
-        ? "Pastores"
-        : prefill?.role === "Diácono"
-          ? "Diáconos"
-          : prefill?.role === "Ungido"
-            ? "Ungidos"
-            : "Participante",
+    team: teamForRole(prefill?.role),
     paid: false,
     exempt: false,
     note: "",
@@ -72,14 +65,7 @@ function RegModal({
     setSrc(m.name);
     setF((p) => ({
       ...p,
-      team:
-        m.role === "Pastor"
-          ? "Pastores"
-          : m.role === "Diácono"
-            ? "Diáconos"
-            : m.role === "Ungido"
-              ? "Ungidos"
-              : "Participante",
+      team: teamForRole(m.role),
       church: m.church || p.church,
       role: m.role || "",
       category: m.category || p.category,
@@ -366,7 +352,7 @@ function RegModal({
                         setF((p) => ({
                           ...p,
                           role,
-                          team: role === "Pastor" ? "Pastores" : role === "Diácono" ? "Diáconos" : role === "Ungido" ? "Ungidos" : p.team,
+                          team: teamForRole(role, p.team),
                         }));
                       }}
                     >
@@ -597,7 +583,7 @@ function RegModal({
                               church: m.church || "",
                               role: (m.roles || [])[0] || m.role || "",
                               familyId: sharedFamilyId,
-                              team: m.role === "Pastor" ? "Pastores" : m.role === "Diácono" ? "Diáconos" : m.role === "Ungido" ? "Ungidos" : "Participante",
+                              team: teamForRole(m.role),
                               paid: f.paid,
                               exempt: ["Pastor", "Ungido"].includes(m.role),
                               needsTranslation: false,
@@ -710,14 +696,7 @@ function RegModal({
                         memberId: m.id,
                         memberName: m.name,
                         badgeName: m.badgeName || m.name,
-                        team:
-                          m.role === "Pastor"
-                            ? "Pastores"
-                            : m.role === "Diácono"
-                              ? "Diáconos"
-                              : m.role === "Ungido"
-                                ? "Ungidos"
-                                : "Participante",
+                        team: teamForRole(m.role),
                         paid: false,
                         exempt: OBREIRO_ROLES.includes(m.role),
                         note: "",
@@ -767,7 +746,7 @@ function RegModal({
               </div>
               <div>
                 <label>{t.role}</label>
-                <select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>
+                <select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value, team: teamForRole(e.target.value) })}>
                   {[
                     <option key="" value="">
                       {t.noRole}

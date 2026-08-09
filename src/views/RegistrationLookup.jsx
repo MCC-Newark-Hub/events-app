@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Search, ArrowLeft, XCircle, CheckCircle2, AlertTriangle, UserPlus } from "lucide-react";
-import { fmt, CATEGORIES, ROLE_BADGE, OBREIRO_ROLES } from "@/constants";
+import { fmt, CATEGORIES, ROLE_BADGE, OBREIRO_ROLES, teamForRole } from "@/constants";
 import ChurchSearch from "@/components/ChurchSearch";
 import SearchSelect from "@/components/SearchSelect";
 import BadgePrint from "@/components/BadgePrint";
@@ -96,7 +96,7 @@ function RegCard({ reg, onCancel, lang }) {
 }
 
 export default function RegistrationLookup({ event, regs, members, setMembers, churches, gas, updateReg, addReg, lang, onBack, initialName }) {
-  const [searchMode, setSearchMode] = useState(initialName ? "name" : "number"); // "number" | "name"
+  const [searchMode, setSearchMode] = useState("name"); // "number" | "name" — name first, people search by name far more than by their reg number
   const [query, setQuery] = useState("");
   const [nameQuery, setNameQuery] = useState(initialName || "");
   const [found, setFound] = useState(null);
@@ -250,7 +250,7 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
       church: famSelected.church || "",
       role: famSelected.role || "",
       familyId: null,
-      team: "Participante",
+      team: teamForRole(famSelected.role),
       paid: false,
       exempt: false,
       note: found.note, // inherit batch token + contact info from existing registration
@@ -295,8 +295,8 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
           </h1>
           <p style={{ color: "rgba(255,255,255,.75)", fontSize: 13 }}>
             {lang === "en"
-              ? "Enter your registration number to check your status, cancel, or add family members."
-              : "Digite seu número de inscrição para consultar, cancelar ou adicionar familiares."}
+              ? "Enter your name or registration number to check your status, cancel, or add family members."
+              : "Digite seu nome ou número de inscrição para consultar, cancelar ou adicionar familiares."}
           </p>
         </div>
 
@@ -304,8 +304,8 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
           {/* Mode tabs */}
           <div style={{ display: "flex", background: "#f3f4f6", borderRadius: 8, padding: 3, marginBottom: 16, gap: 2 }}>
             {[
-              { key: "number", label: lang === "en" ? "By reg number" : "Por número" },
               { key: "name",   label: lang === "en" ? "By name"       : "Por nome" },
+              { key: "number", label: lang === "en" ? "By reg number" : "Por número" },
             ].map(({ key, label }) => (
               <button
                 key={key}

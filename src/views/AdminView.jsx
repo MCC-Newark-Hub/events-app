@@ -60,7 +60,7 @@ function AdminView(props) {
             {sec === "reports" && <ReportsTab {...props} />}
             {sec === "events" && <EventsTab events={props.events} setEvents={props.setEvents} event={props.event} setEvent={props.setEvent} lang={props.lang} notify={props.notify} rosters={props.rosters} setRosters={props.setRosters} />}
             {sec === "import" && <AdminImport members={props.members} setMembers={props.setMembers} families={props.families} setFamilies={props.setFamilies} gas={props.gas} setGas={props.setGas} rosters={props.rosters} setRosters={props.setRosters} churches={props.churches} setChurches={props.setChurches} notify={props.notify} />}
-            {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} notify={props.notify} settings={props.settings} updateSessionTtlHours={props.updateSessionTtlHours} logAudit={props.logAudit} />}
+            {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} dbTeams={props.dbTeams} notify={props.notify} settings={props.settings} updateSessionTtlHours={props.updateSessionTtlHours} logAudit={props.logAudit} />}
             {sec === "directory" && <AdminDirectory {...props} dbTeams={props.dbTeams} setDbTeams={props.setDbTeams} />}
             {sec === "audit" && <AuditLogTab dbUsers={props.dbUsers} />}
           </div>
@@ -680,7 +680,7 @@ function SessionTtlCard({ settings, updateSessionTtlHours }) {
   );
 }
 
-function AdminUsers({ dbUsers, setDbUsers, churches, notify, settings, updateSessionTtlHours, logAudit }) {
+function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, notify, settings, updateSessionTtlHours, logAudit }) {
   const [editing, setEditing] = useState(null); // { id, name, pin, sysRole, initials, church }
   const [showPin, setShowPin] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -691,11 +691,13 @@ function AdminUsers({ dbUsers, setDbUsers, churches, notify, settings, updateSes
   const Th = makeTh(sk, sd, toggle);
 
   const startEdit = (u) => {
-    setEditing({ ...u, newPin: "", confirmPin: "" });
+    // dbUsers items are raw DB rows (snake_case) — normalize here since the rest
+    // of this form (sysRole select, and the new teamLeads field) reads camelCase.
+    setEditing({ ...u, sysRole: u.sys_role || u.sysRole, teamLeads: u.team_leads || u.teamLeads || [], newPin: "", confirmPin: "" });
     setShowPin(false);
   };
   const startNew = () => {
-    setEditing({ id: null, name: "", sysRole: "clerk", initials: "", church: "", newPin: "", confirmPin: "" });
+    setEditing({ id: null, name: "", sysRole: "clerk", initials: "", church: "", teamLeads: [], newPin: "", confirmPin: "" });
     setShowPin(false);
   };
   const cancel = () => setEditing(null);
@@ -712,6 +714,7 @@ function AdminUsers({ dbUsers, setDbUsers, churches, notify, settings, updateSes
         sys_role: editing.sysRole,
         initials: editing.initials || editing.name.slice(0, 2).toUpperCase(),
         church: editing.church || null,
+        team_leads: editing.sysRole === "team_leader" ? (editing.teamLeads || []) : [],
         ...(editing.newPin ? { pin: editing.newPin } : {}),
       };
       if (editing.id) {
@@ -784,6 +787,33 @@ function AdminUsers({ dbUsers, setDbUsers, churches, notify, settings, updateSes
                   placeholder="Buscar igreja…"
                 />
               </div>
+              {editing.sysRole === "team_leader" && (
+                <div>
+                  <label>Equipes que lidera</label>
+                  <p style={{ fontSize: 11, color: "var(--muted)", margin: "0 0 6px" }}>
+                    Pode liderar mais de uma — ex: um pastor responsável pelos Pastores assumindo outra equipe interinamente.
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {[...(dbTeams || [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((t) => {
+                      const checked = (editing.teamLeads || []).includes(t.name);
+                      return (
+                        <label key={t.id} className="cb" style={{ fontWeight: 400, textTransform: "none", fontSize: 13 }}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              const cur = editing.teamLeads || [];
+                              const next = e.target.checked ? [...cur, t.name] : cur.filter((n) => n !== t.name);
+                              setEditing({ ...editing, teamLeads: next });
+                            }}
+                          />
+                          {t.name}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div>
                 <label>{editing.id ? "Novo PIN (deixe em branco para manter)" : "PIN *"}</label>
                 <div style={{ position: "relative" }}>
@@ -853,7 +883,7 @@ function AdminUsers({ dbUsers, setDbUsers, churches, notify, settings, updateSes
                   </button>
                 </td>
                 <td>
-                  <button className="btn btn-ghost btn-sm" onClick={() => startEdit({ id: u.id, name: u.name, sysRole: u.sys_role || u.sysRole, initials: u.initials, church: u.church, pin: u.pin })}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => startEdit(u)}>
                     Editar
                   </button>
                 </td>
