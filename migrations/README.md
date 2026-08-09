@@ -30,3 +30,33 @@ Run these files **in order** using the Supabase SQL editor or `psql`. Each migra
 
 - Migrations assume the base schema (all 12 core tables) already exists. The base schema is created separately via the Supabase dashboard or a seed script.
 - Row Level Security is disabled on all tables. If Supabase Auth is ever added, re-evaluate RLS policies before re-enabling.
+
+## ⚠️ Creating a new table? Read this first.
+
+**Supabase enables RLS by default on every newly created table**, unlike this
+schema's original 12 tables, which predate that default and have it off. This
+has already caused two real incidents: `app_settings` (015) and `audit_log`
+(016) both shipped with writes silently blocked from day one, undetected until
+2026-08-09 — days later for `app_settings`, since its own admin-facing "save"
+button reported success every time regardless (see the "silent no-op" note
+below).
+
+Any `CREATE TABLE` migration **must** include, right after the table
+definition:
+```sql
+ALTER TABLE your_table DISABLE ROW LEVEL SECURITY;
+GRANT ALL PRIVILEGES ON your_table TO anon, authenticated, service_role;
+```
+After running it, verify — don't assume:
+```sql
+select relrowsecurity from pg_class where relname = 'your_table';  -- must be false
+```
+
+**Silent no-op is worse than a thrown error, and it's the default failure mode
+for UPDATE/DELETE.** A blocked `INSERT` throws a real, catchable error. A
+blocked `UPDATE`/`DELETE` under RLS just matches zero rows — no error, `error`
+is `null`. Any mutation that only checks `if (error)` will report success on a
+write that changed nothing. Always chain `.select().single()` (or check
+`data.length`) and treat an empty result as a failure too — this is what
+`updateSessionTtlHours` in `useAppData.js` was missing, which is exactly why
+its bug went unnoticed for 5 days.

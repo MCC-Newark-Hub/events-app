@@ -724,8 +724,11 @@ export function useAppData({ getUserRef, notify }) {
   };
 
   const updateSessionTtlHours = async (hours) => {
-    const { error } = await sb.from("app_settings").update({ session_ttl_hours: hours, updated_at: new Date().toISOString() }).eq("id", 1);
-    if (error) { notify("Erro ao salvar: " + error.message); return; }
+    // A blocked RLS policy makes UPDATE/DELETE affect zero rows with NO error at
+    // all (unlike INSERT, which throws) — .select().single() is what turns that
+    // silent no-op into a real, checkable failure instead of a false "saved!".
+    const { data, error } = await sb.from("app_settings").update({ session_ttl_hours: hours, updated_at: new Date().toISOString() }).eq("id", 1).select().single();
+    if (error || !data) { notify("Erro ao salvar: " + (error?.message || "nenhuma linha afetada")); return; }
     setSettings({ sessionTtlHours: hours });
     notify("Duração da sessão atualizada!");
   };
