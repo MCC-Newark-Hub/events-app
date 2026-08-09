@@ -1,3 +1,4 @@
 {
-  "alias": ["newark-events-app-navy-alpha.vercel.app"]
+  "alias": ["newark-events-app-navy-alpha.vercel.app"],
+  "crons": [{ "path": "/api/daily-backup", "schedule": "0 9 * * *" }]
 }
