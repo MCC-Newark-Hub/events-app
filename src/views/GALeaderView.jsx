@@ -17,7 +17,7 @@ import { groupByFamily } from "@/lib/family";
 const cityOf = (s) => (s || "").split(",")[0].trim().toLowerCase();
 
 function GALeaderView(props) {
-  const { event, regs, setRegs, members, setMembers, gas, families, setFamilies, churches, user, logout, lang, setLang, theme, toggleTheme, notify, submitApproval } = props;
+  const { event, regs, setRegs, members, setMembers, gas, families, setFamilies, churches, user, logout, lang, setLang, theme, toggleTheme, notify, submitApproval, logAudit } = props;
   const t = useT();
   const [resendingId, setResendingId] = useState(null);
   const [managingGA, setManagingGA] = useState(null);
@@ -475,6 +475,7 @@ function GALeaderView(props) {
         defaultChurch={myChurch}
         notify={notify}
         setRegs={setRegs}
+        logAudit={logAudit}
       />
 
       {pendingMove && (

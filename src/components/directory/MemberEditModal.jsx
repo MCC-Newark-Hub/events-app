@@ -26,6 +26,7 @@ export default function MemberEditModal({
   defaultChurch,
   notify,
   setRegs,
+  logAudit,
 }) {
   if (!editingMember) return null;
 
@@ -67,11 +68,13 @@ export default function MemberEditModal({
         if (oldMember && oldMember.name !== fullName && setRegs) {
           syncRegistrationNames({ memberId: editingMember.id, oldName: oldMember.name, newName: fullName, newBadgeName: row.badge_name, setRegs });
         }
+        logAudit?.("member_updated", "member", editingMember.id, fullName, null);
       } else {
         const { data, error } = await sb.from("members").insert({ ...row, id: genMemberId() }).select().single();
         if (error) throw error;
         memberId = data.id;
         setMembers((prev) => [...prev, mapMember(data)]);
+        logAudit?.("member_created", "member", data.id, fullName, null);
       }
 
       if (editingMember.familyId === "__new__") {

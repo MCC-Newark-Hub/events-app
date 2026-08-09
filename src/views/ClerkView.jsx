@@ -25,7 +25,7 @@ const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u
 const statusSortOf = (r) => r.cancelled ? "cancelado" : r.waitlisted ? "lista de espera" : r.excedente ? "excedente" : r.exempt ? "isento" : r.paid ? "pago" : "pendente";
 
 function ClerkView(props) {
-  const { event, regs, setRegs, members, setMembers, families, setFamilies, gas, setGas, churches, dbTeams, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify } = props;
+  const { event, regs, setRegs, members, setMembers, families, setFamilies, gas, setGas, churches, dbTeams, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify, logAudit } = props;
   const t = useT();
   const [sec, setSec] = useState("regs");
   const [search, setSearch] = useState("");
@@ -394,6 +394,7 @@ function ClerkView(props) {
         defaultChurch={myChurch}
         notify={notify}
         setRegs={setRegs}
+        logAudit={logAudit}
       />
 
       {confirmBulkCancel && (

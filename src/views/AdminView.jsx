@@ -1,5 +1,5 @@
 import { useState, useRef, Fragment } from "react";
-import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X, ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, TEAMS, ROLE_BADGE, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
@@ -21,6 +21,7 @@ import RegistrationsTab from "./admin/RegistrationsTab";
 import TeamsTab from "./admin/TeamsTab";
 import EventsTab from "./admin/EventsTab";
 import ReportsTab from "./admin/ReportsTab";
+import AuditLogTab from "./admin/AuditLogTab";
 import { syncRegistrationNames } from "@/lib/syncMemberName";
 import { groupByFamily } from "@/lib/family";
 
@@ -42,6 +43,7 @@ function AdminView(props) {
     { id: "import", icon: <Upload size={16} />, label: "Importar" },
     { id: "users", icon: <KeyRound size={16} />, label: "Usuários & PINs" },
     { id: "directory", icon: <BookOpen size={16} />, label: "Diretório" },
+    { id: "audit", icon: <ShieldCheck size={16} />, label: "Auditoria" },
   ];
   return (
     <div className="app-shell">
@@ -58,8 +60,9 @@ function AdminView(props) {
             {sec === "reports" && <ReportsTab {...props} />}
             {sec === "events" && <EventsTab events={props.events} setEvents={props.setEvents} event={props.event} setEvent={props.setEvent} lang={props.lang} notify={props.notify} rosters={props.rosters} setRosters={props.setRosters} />}
             {sec === "import" && <AdminImport members={props.members} setMembers={props.setMembers} families={props.families} setFamilies={props.setFamilies} gas={props.gas} setGas={props.setGas} rosters={props.rosters} setRosters={props.setRosters} churches={props.churches} setChurches={props.setChurches} notify={props.notify} />}
-            {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} notify={props.notify} settings={props.settings} updateSessionTtlHours={props.updateSessionTtlHours} />}
+            {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} notify={props.notify} settings={props.settings} updateSessionTtlHours={props.updateSessionTtlHours} logAudit={props.logAudit} />}
             {sec === "directory" && <AdminDirectory {...props} dbTeams={props.dbTeams} setDbTeams={props.setDbTeams} />}
+            {sec === "audit" && <AuditLogTab dbUsers={props.dbUsers} />}
           </div>
         </div>
       </div>
@@ -677,7 +680,7 @@ function SessionTtlCard({ settings, updateSessionTtlHours }) {
   );
 }
 
-function AdminUsers({ dbUsers, setDbUsers, churches, notify, settings, updateSessionTtlHours }) {
+function AdminUsers({ dbUsers, setDbUsers, churches, notify, settings, updateSessionTtlHours, logAudit }) {
   const [editing, setEditing] = useState(null); // { id, name, pin, sysRole, initials, church }
   const [showPin, setShowPin] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -715,10 +718,13 @@ function AdminUsers({ dbUsers, setDbUsers, churches, notify, settings, updateSes
         const { error } = await sb.from("app_users").update(row).eq("id", editing.id);
         if (error) throw error;
         setDbUsers((prev) => prev.map((u) => u.id === editing.id ? { ...u, ...row, pin: editing.newPin || u.pin } : u));
+        // Never log the PIN value itself — just that it changed.
+        logAudit?.("app_user_updated", "app_user", editing.id, row.name, { sysRole: row.sys_role, church: row.church, pinChanged: !!editing.newPin });
       } else {
         const { data, error } = await sb.from("app_users").insert({ ...row, pin: editing.newPin }).select().single();
         if (error) throw error;
         setDbUsers((prev) => [...prev, data]);
+        logAudit?.("app_user_created", "app_user", data.id, row.name, { sysRole: row.sys_role, church: row.church });
       }
       notify(editing.id ? "Usuário atualizado!" : "Usuário criado!");
       setEditing(null);
@@ -884,7 +890,7 @@ function makeTh(sk, sd, toggle) {
 
 // ── Directory ─────────────────────────────────────────────────────────────────
 
-function AdminDirectory({ churches, setChurches, members, setMembers, families, setFamilies, gas, setGas, rosters, setRosters, dbTeams, setDbTeams, events, regs, setRegs, notify }) {
+function AdminDirectory({ churches, setChurches, members, setMembers, families, setFamilies, gas, setGas, rosters, setRosters, dbTeams, setDbTeams, events, regs, setRegs, notify, logAudit }) {
   const TABS = [
     { id: "churches",  label: "Igrejas",              count: churches?.length },
     { id: "members",   label: "Membros",              count: members?.length },
@@ -933,14 +939,17 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
   const saveRow = async (table, row, creating, stateList, setList, mapFn) => {
     setSaving(true);
+    const label = row.name || row.display || row.id;
     if (creating) {
       const { data, error } = await sb.from(table).insert(row).select().single();
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setList([...stateList, mapFn ? mapFn(data) : data]);
+      logAudit?.(table + "_created", table, data.id, label, null);
     } else {
       const { error } = await sb.from(table).update(row).eq("id", row.id);
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setList(stateList.map((r) => r.id === row.id ? (mapFn ? mapFn({ ...r, ...row }) : { ...r, ...row }) : r));
+      logAudit?.(table + "_updated", table, row.id, label, null);
     }
     notify(creating ? "Criado!" : "Atualizado!");
     setSaving(false);
@@ -951,6 +960,8 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   const deleteRows = async (table, ids, stateList, setList) => {
     const { error } = await sb.from(table).delete().in("id", ids);
     if (error) { notify("Erro: " + error.message); setDeleting(null); return; }
+    const deletedLabels = stateList.filter((r) => ids.includes(r.id)).map((r) => r.name || r.display || r.id);
+    logAudit?.(table + "_deleted", table, ids.join(","), deletedLabels.join(", "), { count: ids.length });
     setList(stateList.filter((r) => !ids.includes(r.id)));
     notify(`${ids.length} item(s) excluído(s).`);
     setDeleting(null);

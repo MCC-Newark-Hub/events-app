@@ -267,6 +267,26 @@ export function useAppData({ getUserRef, notify }) {
     [approvals, event]
   );
 
+  // ── Audit log ─────────────────────────────────────────────────────────────
+  // One consistent, queryable record of who did what — independent of any one
+  // entity's own optional fields (registrations.timeline is only populated by
+  // some mutation paths; approvals.resolved_by was never surfaced in the UI at
+  // all). Every mutation below calls this; fire-and-forget like the mutations
+  // themselves, since audit logging failing shouldn't block the actual action.
+  const logAudit = function (action, entityType, entityId, entityLabel, details) {
+    var u = getUser();
+    sb.from("audit_log").insert({
+      actor_name: u ? u.name : "Sistema",
+      actor_id: u ? u.id : null,
+      actor_role: u ? u.sysRole : null,
+      action: action,
+      entity_type: entityType,
+      entity_id: entityId != null ? String(entityId) : null,
+      entity_label: entityLabel || null,
+      details: details || null,
+    }).then(function (res) { if (res.error) console.error("logAudit error:", res.error); });
+  };
+
   // ── Mutations ─────────────────────────────────────────────────────────────
   const addReg = function (data, forceExcedente) {
     forceExcedente = forceExcedente || false;
@@ -370,6 +390,10 @@ export function useAppData({ getUserRef, notify }) {
             return x.regNumber === regNumber ? confirmedReg : x;
           });
         });
+        logAudit("registration_created", "registration", confirmedReg.id, confirmedReg.memberName, {
+          regNumber: regNumber, category: data.category, church: data.church,
+          waitlisted: isWaitlisted, excedente: forceExcedente,
+        });
         return { ok: true, error: null, reg: confirmedReg };
       });
     return r;
@@ -381,6 +405,7 @@ export function useAppData({ getUserRef, notify }) {
     var freedSlot = false;
     var today = new Date().toISOString().slice(0, 10);
     var byName = getUser() ? getUser().name : "Sistema";
+    var beforeReg = regs.find(function (r) { return r.id === id; });
     var updatedReg = null;
     setRegs(function (p) {
       return p.map(function (r) {
@@ -444,7 +469,22 @@ export function useAppData({ getUserRef, notify }) {
         .update(dbUpd)
         .eq("id", id)
         .then(function (res) {
-          if (res.error) { console.error("updateReg DB error:", res.error); if (!opts.silent) notify("Erro ao salvar alteração. Verifique sua conexão e tente novamente."); }
+          if (res.error) { console.error("updateReg DB error:", res.error); if (!opts.silent) notify("Erro ao salvar alteração. Verifique sua conexão e tente novamente."); return; }
+          // action label prioritizes the most notable field changed, so the audit
+          // log reads as "marked paid" / "cancelled" rather than a generic "updated"
+          // for the actions people actually care about tracing.
+          var action = "registration_updated";
+          if (upd.paid === true) action = "registration_marked_paid";
+          else if (upd.cancelled === true) action = "registration_cancelled";
+          else if (upd.cancelled === false) action = "registration_reactivated";
+          else if (upd.deadlineExtendedTo !== undefined) action = "registration_deadline_extended";
+          else if (upd.exempt === true) action = "registration_exempted";
+          var details = {};
+          Object.keys(dbUpd).forEach(function (k) {
+            if (k === "timeline") return;
+            details[k] = { from: beforeReg ? beforeReg[k.replace(/_([a-z])/g, function (_, c) { return c.toUpperCase(); })] : undefined, to: dbUpd[k] };
+          });
+          logAudit(action, "registration", id, (beforeReg && beforeReg.memberName) || null, details);
         });
     }
   };
@@ -489,7 +529,10 @@ export function useAppData({ getUserRef, notify }) {
       })
       .eq("id", id)
       .then(function (res) {
-        if (res.error) console.error("reactivateReg DB error:", res.error);
+        if (res.error) { console.error("reactivateReg DB error:", res.error); return; }
+        logAudit("registration_reactivated", "registration", id, reg.memberName, {
+          waitlisted: willBeFull, newDeadline: newDeadline,
+        });
       });
   };
 
@@ -562,7 +605,10 @@ export function useAppData({ getUserRef, notify }) {
       })
       .eq("id", id)
       .then(function (res) {
-        if (res.error) console.error("resolveApproval error:", res.error);
+        if (res.error) { console.error("resolveApproval error:", res.error); return; }
+        logAudit(approved ? "approval_approved" : "approval_denied", "approval", id, apr ? apr.memberName : null, {
+          type: apr ? apr.type : null, pastorNote: pastorNote || null,
+        });
       });
     if (!apr) return;
     if (approved) {
@@ -639,6 +685,7 @@ export function useAppData({ getUserRef, notify }) {
 
   const updatePresence = async (regId, presence, method = 'manual') => {
     const now = new Date().toISOString();
+    const memberName = regs.find((r) => r.id === regId)?.memberName || null;
     setRegs((p) =>
       p.map((r) =>
         r.id === regId
@@ -650,12 +697,14 @@ export function useAppData({ getUserRef, notify }) {
       .from('registrations')
       .update({ presence, checkin_method: method, checked_in_at: now })
       .eq('id', regId);
+    logAudit("registration_checkin", "registration", regId, memberName, { presence, method });
   };
 
   const promoteFromWaitlist = (regId) => {
     const today = new Date().toISOString().slice(0, 10);
     const byName = getUser()?.name || "Sistema";
     const entry = { status: "Confirmado", date: today, by: byName, note: "Confirmado da lista de espera" };
+    const memberName = regs.find((r) => r.id === regId)?.memberName || null;
     let updatedTimeline;
     setRegs((p) =>
       p.map((r) => {
@@ -668,7 +717,10 @@ export function useAppData({ getUserRef, notify }) {
     sb.from("registrations")
       .update({ waitlisted: false, waitlist_reason: null, timeline: updatedTimeline })
       .eq("id", regId)
-      .then(({ error }) => { if (error) console.error("promoteFromWaitlist DB error:", error); });
+      .then(({ error }) => {
+        if (error) { console.error("promoteFromWaitlist DB error:", error); return; }
+        logAudit("registration_promoted_from_waitlist", "registration", regId, memberName, null);
+      });
   };
 
   const updateSessionTtlHours = async (hours) => {
@@ -722,5 +774,6 @@ export function useAppData({ getUserRef, notify }) {
     submitApproval,
     resolveApproval,
     promoteFromWaitlist,
+    logAudit,
   };
 }
