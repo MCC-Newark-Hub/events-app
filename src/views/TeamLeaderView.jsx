@@ -9,6 +9,7 @@ import { eventSubtitle } from "@/lib/registrationDeadline";
 import Topbar from "@/components/Topbar";
 import Modal from "@/components/Modal";
 import ReportsTab from "./admin/ReportsTab";
+import KitchenTab from "./admin/KitchenTab";
 
 function TeamLeaderView(props) {
   const {
@@ -167,6 +168,11 @@ function TeamLeaderView(props) {
           {showReports && (
             <div style={{ marginBottom: 20 }}>
               <ReportsTab regs={myEventRegs} event={event} wlRegs={myWlRegsForReports} exRegs={myExRegsForReports} lang={lang} />
+            </div>
+          )}
+          {myTeams.includes("Cozinha") && (
+            <div style={{ marginBottom: 24 }}>
+              <KitchenTab regs={regs} event={event} />
             </div>
           )}
           {myTeams.length === 0 && (
