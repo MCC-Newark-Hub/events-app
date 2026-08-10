@@ -276,7 +276,8 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
   const t = STRINGS[lang || "pt"];
   const [cashAcknowledged, setCashAcknowledged] = useState(false);
   const [cashChecked, setCashChecked] = useState(false);
-  const [step, setStep] = useState(1);
+  const [introAgreed, setIntroAgreed] = useState(false);
+  const [step, setStep] = useState(0);
   const [primary, setPrimary] = useState(null);
   const [primarySearch, setPrimarySearch] = useState("");
   const [primaryNotFound, setPrimaryNotFound] = useState(false);
@@ -537,7 +538,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
         setLang={setLang}
         t={t}
         onReset={() => {
-          setStep(1); setPrimary(null); setPrimarySearch(""); setFamilyMembers([]);
+          setStep(0); setIntroAgreed(false); setPrimary(null); setPrimarySearch(""); setFamilyMembers([]);
           setShowManualPrimary(false); setManualPrimary({ name: "", gender: "M", category: "Adulto" });
           setContact({ phone: "", email: "", whatsapp: true }); setBadgeNames({});
           setTranslations({ en: false, es: false });
@@ -568,18 +569,69 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
           <DeadlineBanner event={event} t={t} />
         </div>
 
-        <div style={{ display: "flex", gap: 4, marginBottom: 20, justifyContent: "center" }}>
-          {stepLabels.map((label, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <div style={{ width: 28, height: 28, borderRadius: "50%", background: step > i + 1 ? "#f8f7f3" : step === i + 1 ? "#f8f7f3" : "rgba(255,255,255,.25)", color: step > i + 1 ? "#8B0000" : step === i + 1 ? "#8B0000" : "rgba(255,255,255,.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                {step > i + 1 ? "✓" : i + 1}
+        {step > 0 && (
+          <div style={{ display: "flex", gap: 4, marginBottom: 20, justifyContent: "center" }}>
+            {stepLabels.map((label, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: step > i + 1 ? "#f8f7f3" : step === i + 1 ? "#f8f7f3" : "rgba(255,255,255,.25)", color: step > i + 1 ? "#8B0000" : step === i + 1 ? "#8B0000" : "rgba(255,255,255,.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                  {step > i + 1 ? "✓" : i + 1}
+                </div>
+                {i < stepLabels.length - 1 && <div style={{ width: 24, height: 2, background: step > i + 1 ? "#f8f7f3" : "rgba(255,255,255,.25)" }} />}
               </div>
-              {i < stepLabels.length - 1 && <div style={{ width: 24, height: 2, background: step > i + 1 ? "#f8f7f3" : "rgba(255,255,255,.25)" }} />}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         <div style={{ background: "#fff", borderRadius: 20, padding: "24px 20px" }}>
+          {step === 0 && (
+            <div>
+              <div style={{ textAlign: "center", marginBottom: 24 }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>💵</div>
+                <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, fontWeight: 700, color: "#03223f", marginBottom: 10 }}>
+                  {lang === "en" ? "In-Person Payment Only" : "Pagamento Presencial"}
+                </h3>
+                <p style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
+                  {lang === "en"
+                    ? "Before you register, please read the payment policy."
+                    : "Antes de se inscrever, leia a política de pagamento."}
+                </p>
+              </div>
+
+              <div style={{ background: "#fef2f2", border: "1.5px solid #fca5a5", borderRadius: 12, padding: "16px 18px", marginBottom: 24 }}>
+                <ul style={{ margin: 0, paddingLeft: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <li style={{ fontSize: 14, color: "#374151", lineHeight: 1.6 }}>
+                    {lang === "en"
+                      ? "Payment must be made in cash, in person, to authorized staff at the event."
+                      : "O pagamento deve ser feito em dinheiro, presencialmente, com a equipe autorizada no evento."}
+                  </li>
+                  <li style={{ fontSize: 14, color: "#991b1b", fontWeight: 700, lineHeight: 1.6 }}>
+                    {lang === "en"
+                      ? "We do not accept Zelle, Venmo, PayPal, Cash App, or credit/debit cards."
+                      : "Não aceitamos Zelle, Venmo, PayPal, Cash App ou cartões de crédito/débito."}
+                  </li>
+                  <li style={{ fontSize: 14, color: "#374151", lineHeight: 1.6 }}>
+                    {lang === "en"
+                      ? "Your registration will remain PENDING until payment is confirmed in person."
+                      : "Sua inscrição ficará PENDENTE até que o pagamento seja confirmado presencialmente."}
+                  </li>
+                </ul>
+              </div>
+
+              <div className="cb" style={{ marginBottom: 16, padding: "12px 14px", background: introAgreed ? "#f0fdf4" : "#f8f9fb", border: `1.5px solid ${introAgreed ? "#86efac" : "var(--border)"}`, borderRadius: 10 }}>
+                <input type="checkbox" id="intro-agree" checked={introAgreed} onChange={(e) => setIntroAgreed(e.target.checked)} />
+                <label htmlFor="intro-agree" style={{ fontSize: 14, fontWeight: 600, color: "#1a1e2e", cursor: "pointer" }}>
+                  {lang === "en"
+                    ? "I understand that payment must be made in cash, in person. I wish to proceed with registration."
+                    : "Entendo que o pagamento deve ser feito em dinheiro, presencialmente. Desejo prosseguir com a inscrição."}
+                </label>
+              </div>
+
+              <button className="btn btn-accent" style={{ width: "100%", padding: 14, fontSize: 16, opacity: introAgreed ? 1 : 0.45 }} disabled={!introAgreed} onClick={() => setStep(1)}>
+                {lang === "en" ? "Proceed to Registration →" : "Prosseguir com a Inscrição →"}
+              </button>
+            </div>
+          )}
+
           {step === 1 && (
             <div>
               <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 700, color: "#03223f", marginBottom: 4 }}>1. {t.step1}</h3>
