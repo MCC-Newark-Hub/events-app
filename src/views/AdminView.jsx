@@ -1,5 +1,5 @@
 import { useState, useRef, Fragment } from "react";
-import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X, ShieldCheck, IdCard } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, TEAMS, ROLE_BADGE, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
@@ -22,6 +22,7 @@ import TeamsTab from "./admin/TeamsTab";
 import EventsTab from "./admin/EventsTab";
 import ReportsTab from "./admin/ReportsTab";
 import AuditLogTab from "./admin/AuditLogTab";
+import BadgeGeneratorTab from "./admin/BadgeGeneratorTab";
 import { syncRegistrationNames } from "@/lib/syncMemberName";
 import { groupByFamily } from "@/lib/family";
 
@@ -44,6 +45,7 @@ function AdminView(props) {
     { id: "users", icon: <KeyRound size={16} />, label: "Usuários & PINs" },
     { id: "directory", icon: <BookOpen size={16} />, label: "Diretório" },
     { id: "audit", icon: <ShieldCheck size={16} />, label: "Auditoria" },
+    { id: "badges", icon: <IdCard size={16} />, label: "Crachás" },
   ];
   return (
     <div className="app-shell">
@@ -63,6 +65,7 @@ function AdminView(props) {
             {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} dbTeams={props.dbTeams} notify={props.notify} settings={props.settings} updateSessionTtlHours={props.updateSessionTtlHours} logAudit={props.logAudit} />}
             {sec === "directory" && <AdminDirectory {...props} dbTeams={props.dbTeams} setDbTeams={props.setDbTeams} />}
             {sec === "audit" && <AuditLogTab dbUsers={props.dbUsers} />}
+            {sec === "badges" && <BadgeGeneratorTab regs={props.regs} event={props.event} notify={props.notify} />}
           </div>
         </div>
       </div>

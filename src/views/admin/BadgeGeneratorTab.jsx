@@ -1,0 +1,219 @@
+import { useState } from "react";
+import logoSrc from "@/assets/images/logo/icm-logo.png";
+
+const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+// 2"×1" landscape, one badge per PDF page — bulk pre-print/cut tool for check-in
+// tables. Distinct from BadgePrint.jsx (the 3"×2" self-service confirmation
+// receipt) — different size, different audience (staff, bulk), different trigger
+// (explicit "Gerar Crachás" click, not tied to any single registration).
+async function loadJsPDF() {
+  if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
+  await new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  return window.jspdf.jsPDF;
+}
+
+// doc.text({align:"center"}) doesn't shrink or wrap to fit — a long enough
+// string just overflows past the card border at this card's tiny width. Found
+// this rendering a real long name locally before shipping (e.g. a hyphenated
+// double surname) — every line on the card needs this, not just the name.
+function fitFontSize(doc, text, startSize, minSize, maxWidth) {
+  let size = startSize;
+  doc.setFontSize(size);
+  while (size > minSize && doc.getTextWidth(text) > maxWidth) {
+    size -= 0.5;
+    doc.setFontSize(size);
+  }
+  return size;
+}
+
+function drawBadge(doc, r, event, isFirst) {
+  const W = 144, H = 72; // 2in × 1in in points (72pt/inch)
+  if (!isFirst) doc.addPage([H, W], "landscape");
+  const cx = W / 2;
+  const maxTextWidth = W - 12;
+
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, W, H, "F");
+  doc.setDrawColor(200);
+  doc.setLineWidth(1);
+  doc.rect(2, 2, W - 4, H - 4);
+
+  const badgeName = r.badgeName || r.memberName || "";
+  const parts = badgeName.trim().split(/\s+/);
+  const nome = (parts[0] || "").toUpperCase();
+  const sobrenome = parts.slice(1).join(" ").toUpperCase();
+  const churchCity = (r.church || "").split(",")[0].replace(/\s*[-–]\s*(EUA|CAN|BRA|USA)$/i, "").trim();
+  const team = r.team && r.team !== "Participante" ? r.team : "";
+  const catTeam = [r.category, team].filter(Boolean).join("  ·  ");
+
+  let y = 9;
+  try { doc.addImage(logoSrc, "PNG", cx - 9, y, 18, 7); } catch { /* skip logo if it fails to load */ }
+  y += 12;
+
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0);
+  fitFontSize(doc, nome, 15, 8, maxTextWidth);
+  doc.text(nome, cx, y, { align: "center" });
+  y += 9;
+
+  if (sobrenome) {
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(60);
+    fitFontSize(doc, sobrenome, 7.5, 5, maxTextWidth);
+    doc.text(sobrenome, cx, y, { align: "center" });
+    y += 7;
+  }
+
+  if (catTeam) {
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30);
+    fitFontSize(doc, catTeam, 6.5, 4.5, maxTextWidth);
+    doc.text(catTeam, cx, y, { align: "center" });
+    y += 6.5;
+  }
+
+  if (churchCity) {
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(110);
+    fitFontSize(doc, churchCity, 6, 4.5, maxTextWidth);
+    doc.text(churchCity, cx, y, { align: "center" });
+  }
+
+  const eventDate = event?.date ? new Date(event.date + "T12:00:00") : new Date();
+  const monthYear = eventDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).toUpperCase();
+  const footer = `${(event?.name || "EVENTO").toUpperCase()} · ${monthYear}`;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(150);
+  fitFontSize(doc, footer, 4.8, 3.5, maxTextWidth);
+  doc.text(footer, cx, H - 5, { align: "center" });
+}
+
+export default function BadgeGeneratorTab({ regs, event, notify }) {
+  const [churchFilter, setChurchFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState([]);
+  const [generating, setGenerating] = useState(false);
+
+  const active = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
+  const churchOptions = [...new Set(active.map((r) => r.church).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const categoryOptions = [...new Set(active.map((r) => r.category).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+  const filtered = active.filter((r) =>
+    (!churchFilter || r.church === churchFilter) &&
+    (!categoryFilter || r.category === categoryFilter) &&
+    (!search || norm(r.memberName).includes(norm(search)))
+  ).sort((a, b) => (a.memberName || "").localeCompare(b.memberName || ""));
+
+  const toggleOne = (id) => setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  const filteredIds = filtered.map((r) => r.id);
+  const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selected.includes(id));
+  const toggleAllFiltered = () => setSelected(allFilteredSelected ? [] : [...new Set([...selected, ...filteredIds])]);
+
+  const generate = async () => {
+    const toGenerate = active.filter((r) => selected.includes(r.id));
+    if (toGenerate.length === 0) return;
+    setGenerating(true);
+    try {
+      const JsPDF = await loadJsPDF();
+      const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: [72, 144] });
+      toGenerate.forEach((r, idx) => drawBadge(doc, r, event, idx === 0));
+      const blobUrl = doc.output("bloburl");
+      window.open(blobUrl, "_blank");
+    } catch (err) {
+      console.error("badge generation error:", err);
+      notify?.("Erro ao gerar crachás. Tente novamente.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700 }}>Crachás</h2>
+      </div>
+      <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 18 }}>
+        Gere um PDF com um crachá por página (2×1 pol.) para imprimir e cortar antes do evento.
+      </p>
+
+      <div className="card" style={{ padding: "14px 16px", marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: "1 1 200px", minWidth: 180 }}>
+            <label style={{ fontSize: 12 }}>Buscar por nome</label>
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Nome…" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12 }}>Igreja</label>
+            <select value={churchFilter} onChange={(e) => setChurchFilter(e.target.value)}>
+              <option value="">Todas</option>
+              {churchOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: 12 }}>Categoria</label>
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              <option value="">Todas</option>
+              {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          {(churchFilter || categoryFilter || search) && (
+            <button className="btn btn-ghost btn-sm" onClick={() => { setChurchFilter(""); setCategoryFilter(""); setSearch(""); }}>
+              Limpar filtros
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <span style={{ fontSize: 13, color: "var(--muted)" }}>{selected.length} selecionado(s) de {filtered.length} exibido(s)</span>
+        <button
+          className="btn btn-primary btn-sm"
+          disabled={selected.length === 0 || generating}
+          onClick={generate}
+        >
+          🖨️ {generating ? "Gerando…" : `Gerar Crachás (${selected.length})`}
+        </button>
+      </div>
+
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th style={{ width: 36 }}>
+                  <input type="checkbox" checked={allFilteredSelected} onChange={toggleAllFiltered} />
+                </th>
+                <th>Nome</th>
+                <th>Categoria</th>
+                <th>Equipe</th>
+                <th>Igreja</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 && (
+                <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>Nenhum resultado.</td></tr>
+              )}
+              {filtered.map((r) => (
+                <tr key={r.id} style={{ background: selected.includes(r.id) ? "var(--sidebar-active-bg)" : "" }}>
+                  <td><input type="checkbox" checked={selected.includes(r.id)} onChange={() => toggleOne(r.id)} /></td>
+                  <td style={{ fontWeight: 500 }}>{r.memberName}</td>
+                  <td><span className="badge badge-blue">{r.category}</span></td>
+                  <td style={{ fontSize: 12 }}>{r.team && r.team !== "Participante" ? r.team : <span style={{ color: "var(--muted)" }}>—</span>}</td>
+                  <td style={{ fontSize: 12 }}>{r.church}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
