@@ -24,6 +24,7 @@ import ReportsTab from "./admin/ReportsTab";
 import AuditLogTab from "./admin/AuditLogTab";
 import BadgeGeneratorTab from "./admin/BadgeGeneratorTab";
 import KitchenTab from "./admin/KitchenTab";
+import KitchenPlanningTab from "./admin/KitchenPlanningTab";
 import { syncRegistrationNames } from "@/lib/syncMemberName";
 import { groupByFamily } from "@/lib/family";
 
@@ -67,7 +68,14 @@ function AdminView(props) {
             {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} dbTeams={props.dbTeams} gas={props.gas} notify={props.notify} settings={props.settings} updateSessionTtlHours={props.updateSessionTtlHours} logAudit={props.logAudit} />}
             {sec === "directory" && <AdminDirectory {...props} dbTeams={props.dbTeams} setDbTeams={props.setDbTeams} />}
             {sec === "audit" && <AuditLogTab dbUsers={props.dbUsers} />}
-            {sec === "kitchen" && <KitchenTab regs={props.regs} event={props.event} />}
+            {sec === "kitchen" && (
+              <>
+                <KitchenTab regs={props.regs} event={props.event} />
+                <div style={{ marginTop: 28 }}>
+                  <KitchenPlanningTab regs={props.regs} event={props.event} events={props.events} notify={props.notify} />
+                </div>
+              </>
+            )}
             {sec === "badges" && <BadgeGeneratorTab regs={props.regs} event={props.event} notify={props.notify} />}
           </div>
         </div>

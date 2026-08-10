@@ -10,6 +10,7 @@ import Topbar from "@/components/Topbar";
 import Modal from "@/components/Modal";
 import ReportsTab from "./admin/ReportsTab";
 import KitchenTab from "./admin/KitchenTab";
+import KitchenPlanningTab from "./admin/KitchenPlanningTab";
 
 function TeamLeaderView(props) {
   const {
@@ -55,6 +56,8 @@ function TeamLeaderView(props) {
   const myEventRegs = allEventRegs.filter((r) => myTeamMemberIds.has(r.memberId));
   const myWlRegsForReports = myEventRegs.filter((r) => r.waitlisted && !r.cancelled);
   const myExRegsForReports = myEventRegs.filter((r) => r.excedente && !r.cancelled && !r.waitlisted);
+  const isCozinhaLeader = myTeams.includes("Cozinha");
+  const [kitchenView, setKitchenView] = useState("equipe");
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
   const [showReports, setShowReports] = useState(false);
@@ -154,32 +157,59 @@ function TeamLeaderView(props) {
       />
       <div className="main-scroll">
         <div className="page-pad">
-          <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
-            <div>
-              <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22 }}>
-                {t.hello}, {greetingName}!
-              </h2>
-              <p style={{ color: "#6b7280", fontSize: 13 }}>{t.teamReadOnly}</p>
-            </div>
-            <button className="btn btn-ghost btn-sm" onClick={() => setShowReports((v) => !v)}>
-              {showReports ? "Ocultar Relatórios" : "📊 Relatórios"}
-            </button>
+          <div style={{ marginBottom: 16 }}>
+            <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22 }}>
+              {t.hello}, {greetingName}!
+            </h2>
+            <p style={{ color: "#6b7280", fontSize: 13 }}>{t.teamReadOnly}</p>
           </div>
-          {showReports && (
-            <div style={{ marginBottom: 20 }}>
-              <ReportsTab regs={myEventRegs} event={event} wlRegs={myWlRegsForReports} exRegs={myExRegsForReports} lang={lang} />
+
+          {/* Tab bar — only for Cozinha leaders */}
+          {isCozinhaLeader && (
+            <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: "2px solid var(--border)", paddingBottom: 0 }}>
+              {[{ id: "equipe", label: "Equipe" }, { id: "planejamento", label: "🍽️ Planejamento" }].map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => setKitchenView(id)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer", padding: "6px 14px",
+                    fontWeight: kitchenView === id ? 700 : 400,
+                    color: kitchenView === id ? "var(--primary)" : "var(--muted)",
+                    borderBottom: kitchenView === id ? "2px solid var(--primary)" : "2px solid transparent",
+                    marginBottom: -2, fontSize: 14,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           )}
-          {myTeams.includes("Cozinha") && (
-            <div style={{ marginBottom: 24 }}>
-              <KitchenTab regs={regs} event={event} />
-            </div>
-          )}
-          {myTeams.length === 0 && (
-            <div style={{ padding: "24px", background: "var(--card)", borderRadius: 10, border: "1px solid var(--border)", color: "var(--muted)", textAlign: "center" }}>
-              Nenhuma equipe cadastrada para este evento.
-            </div>
-          )}
+
+          {/* Planejamento tab */}
+          {isCozinhaLeader && kitchenView === "planejamento" ? (
+            <>
+              <div style={{ marginBottom: 24 }}>
+                <KitchenTab regs={regs} event={event} />
+              </div>
+              <KitchenPlanningTab regs={regs} event={event} events={props.events} notify={notify} />
+            </>
+          ) : (
+            <>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowReports((v) => !v)}>
+                  {showReports ? "Ocultar Relatórios" : "📊 Relatórios"}
+                </button>
+              </div>
+              {showReports && (
+                <div style={{ marginBottom: 20 }}>
+                  <ReportsTab regs={myEventRegs} event={event} wlRegs={myWlRegsForReports} exRegs={myExRegsForReports} lang={lang} />
+                </div>
+              )}
+              {myTeams.length === 0 && (
+                <div style={{ padding: "24px", background: "var(--card)", borderRadius: 10, border: "1px solid var(--border)", color: "var(--muted)", textAlign: "center" }}>
+                  Nenhuma equipe cadastrada para este evento.
+                </div>
+              )}
           {myTeams.map((team) => {
             const roster = rosters.find((r) => r.eventId === event?.id && r.team === team);
             const mids = roster?.memberIds || [];
@@ -456,6 +486,8 @@ function TeamLeaderView(props) {
               {t.notRegistered}
             </span>
           </div>
+            </>
+          )}
         </div>
       </div>
       {requestTarget && (
