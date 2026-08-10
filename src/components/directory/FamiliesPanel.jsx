@@ -110,6 +110,7 @@ export default function FamiliesPanel({ members, families, setFamilies, gas, sho
       {showGroup && <td style={{ fontSize: 12 }}>{f.gaName !== "—" ? <span className="badge badge-gray" style={{ fontSize: 10 }}>{f.gaName}</span> : <span style={{ color: "var(--muted)" }}>—</span>}</td>}
       <td>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", minWidth: 20 }}>{(f.memberIds || []).length}</span>
           {(f.memberIds || []).slice(0, expanded === f.id ? undefined : 3).map((mid) => {
             const m = (members || []).find((x) => x.id === mid);
             return <span key={mid} className="badge badge-gray">{m ? m.name : mid}</span>;
