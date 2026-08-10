@@ -163,7 +163,7 @@ function GALeaderView(props) {
 
           {showFamilies && (
             <div style={{ marginBottom: 20 }}>
-              <FamiliesPanel members={allMyMembers} families={myGaFamilies} setFamilies={setFamilies} notify={notify} />
+              <FamiliesPanel members={allMyMembers} families={myGaFamilies} setFamilies={setFamilies} gas={myGAs} showGroup notify={notify} />
             </div>
           )}
 

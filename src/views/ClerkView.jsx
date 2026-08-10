@@ -330,7 +330,7 @@ function ClerkView(props) {
               </div>
             </>
           ) : sec === "families" ? (
-            <FamiliesPanel members={myMembers} families={myFamilies} setFamilies={setFamilies} notify={notify} />
+            <FamiliesPanel members={myMembers} families={myFamilies} setFamilies={setFamilies} gas={myGas} showGroup notify={notify} />
           ) : (
             <GroupsPanel members={myMembers} setMembers={setMembers} gas={myGas} setGas={setGas} churches={churches} notify={notify} defaultChurch={myChurch} lockChurch />
           )}

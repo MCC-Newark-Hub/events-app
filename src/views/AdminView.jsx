@@ -1185,7 +1185,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       {tab === "members" && (() => {
         const rawList = (members || [])
           .filter((m) => ["name", "firstName", "lastName", "church", "category", "role", "badgeName"].some((f) => norm(m[f]).includes(norm(search))) || norm((gas || []).find((g) => g.id === m.gaId)?.name || "").includes(norm(search)))
-          .map((m) => ({ ...m, gaName: (gas || []).find((g) => g.id === m.gaId)?.name || "" }))
+          .map((m) => ({ ...m, gaName: (gas || []).find((g) => g.id === m.gaId)?.name || "", familyName: (families || []).find((f) => f.id === m.familyId || (f.memberIds || []).includes(m.id))?.name || "" }))
           .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const list = sortData(rawList, mbSk, mbSd);
         const allIds = list.map((m) => m.id).filter(Boolean);
@@ -1199,6 +1199,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
             <td><span className="badge badge-blue">{m.category}</span></td>
             <td style={{ fontSize: 12 }}>{m.church}</td>
             <td style={{ fontSize: 12 }}>{m.gaName ? <span className="badge badge-gray" style={{ fontSize: 10 }}>{m.gaName}</span> : <span style={{ color: "var(--muted)" }}>—</span>}</td>
+            <td style={{ fontSize: 12 }}>{m.familyName ? <span className="badge badge-gray" style={{ fontSize: 10 }}>{m.familyName}</span> : <span style={{ color: "var(--muted)" }}>—</span>}</td>
             <td style={{ fontSize: 12 }}>
               {(() => {
                 const roles = m.roles && m.roles.length > 0 ? m.roles : (m.role ? [m.role] : []);
@@ -1428,7 +1429,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
                           onChange={(e) => e.target.checked ? selAll(allIds) : clearSel()} />
                       </th>
-                      <MbTh k="name">Nome</MbTh><th>Crachá</th><th style={{ width: 55 }}>Gên.</th><MbTh k="category">Categoria</MbTh><MbTh k="church">Igreja</MbTh><MbTh k="gaName">GA</MbTh><th>Função</th><th>Notas</th><th style={{ width: 90 }}></th>
+                      <MbTh k="name">Nome</MbTh><th>Crachá</th><th style={{ width: 55 }}>Gên.</th><MbTh k="category">Categoria</MbTh><MbTh k="church">Igreja</MbTh><MbTh k="gaName">GA</MbTh><MbTh k="familyName">Família</MbTh><th>Função</th><th>Notas</th><th style={{ width: 90 }}></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1462,7 +1463,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── Families ─────────────────────────────────────────────────────── */}
       {tab === "families" && (
-        <FamiliesPanel members={members} families={families} setFamilies={setFamilies} notify={notify} />
+        <FamiliesPanel members={members} families={families} setFamilies={setFamilies} gas={gas} showGroup showChurch notify={notify} />
       )}
 
       {/* ── GA Groups ────────────────────────────────────────────────────── */}
