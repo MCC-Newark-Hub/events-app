@@ -274,6 +274,8 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
 
 function PublicPortal({ event, members: propMembers, setMembers, churches, gas, loading, regs, addReg, submitApproval, lang, setLang, onReset, onLookup }) {
   const t = STRINGS[lang || "pt"];
+  const [cashAcknowledged, setCashAcknowledged] = useState(false);
+  const [cashChecked, setCashChecked] = useState(false);
   const [step, setStep] = useState(1);
   const [primary, setPrimary] = useState(null);
   const [primarySearch, setPrimarySearch] = useState("");
@@ -391,6 +393,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
   const handleSubmit = async () => {
     if (!termsAccepted) { setTermsError(true); return; }
     if (deadlineDays && !deadlineAccepted) { setDeadlineError(true); return; }
+    if (totalFee > 0 && !cashAcknowledged) { setCashChecked(true); return; }
     if (!addReg || submitting) return;
     // Last line of defense — catches a verified/directory member whose church is
     // blank on file, which the earlier per-field checks can't see.
@@ -540,7 +543,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
           setTranslations({ en: false, es: false });
           setAllergies({ hasAny: false, other: "" });
           setSpecialNeeds({ hasAny: false, other: "" });
-          setTermsAccepted(false); setDeadlineAccepted(false); setSubmitted(null);
+          setTermsAccepted(false); setDeadlineAccepted(false); setCashAcknowledged(false); setCashChecked(false); setSubmitted(null);
         }}
         onHome={onReset}
       />
@@ -1028,6 +1031,21 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
               <div style={{ background: "#f8f9fb", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 18px", maxHeight: 300, overflowY: "auto", marginBottom: 16 }}>
                 <TermsContent termLang={termLang} deadlineDays={deadlineDays} />
               </div>
+
+              {/* Cash/in-person payment acknowledgment — shown only when there's a fee */}
+              {totalFee > 0 && (
+                <div style={{ background: cashChecked ? "#fef2f2" : "#f0f9ff", border: `1.5px solid ${cashChecked ? "#fca5a5" : "#7dd3fc"}`, borderRadius: 10, padding: "14px 16px", marginBottom: 12 }}>
+                  <div className="cb">
+                    <input type="checkbox" id="cash-ack" checked={cashAcknowledged} onChange={(e) => { setCashAcknowledged(e.target.checked); setCashChecked(false); }} />
+                    <label htmlFor="cash-ack" style={{ fontSize: 13, fontWeight: 600, color: "#0c4a6e" }}>
+                      {termLang === "en"
+                        ? "I understand that payment must be made in person with cash — no online, card, or app payments are accepted."
+                        : "Entendo que o pagamento deve ser feito presencialmente, em dinheiro — não são aceitos pagamentos online, por cartão ou aplicativo."}
+                    </label>
+                  </div>
+                  {cashChecked && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 6, marginBottom: 0, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={12} /> {termLang === "en" ? "Please confirm you understand how to pay." : "Por favor, confirme que entendeu como efetuar o pagamento."}</p>}
+                </div>
+              )}
 
               {/* Deadline acknowledgement — shown only when event has a deadline */}
               {deadlineDays && (
