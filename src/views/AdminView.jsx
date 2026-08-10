@@ -73,7 +73,22 @@ function AdminView(props) {
   );
 }
 
-function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members }) {
+function PaymentStatusStrip({ paid, exempt, pend, total, lang }) {
+  const pt = lang !== "en";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 10, padding: "11px 16px", marginBottom: 18 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em", marginRight: 6 }}>{pt ? "Por pagamento" : "By payment"}</span>
+      <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 20, fontWeight: 800, color: "#2d8a4e" }}>{paid}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "pagantes" : "paying"}</span></span>
+      <span style={{ color: "var(--muted)" }}>·</span>
+      <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 20, fontWeight: 800, color: "#6b7280" }}>{exempt}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "isentos" : "exempt"}</span></span>
+      <span style={{ color: "var(--muted)" }}>·</span>
+      <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 20, fontWeight: 800, color: "#d4820a" }}>{pend}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "pendentes" : "pending"}</span></span>
+      <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>= {total} {pt ? "total" : "total"}</span>
+    </div>
+  );
+}
+
+function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members, lang }) {
   const t = useT();
   const [expandedCat, setExpandedCat] = useState({});
   const [expandedCh, setExpandedCh] = useState({});
@@ -85,6 +100,7 @@ function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members }) {
   const liveChurchOf = (r) => (members || []).find((m) => m.id === r.memberId)?.church || r.church || "—";
   const er = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const paid = er.filter((r) => r.paid && !r.exempt);
+  const exempt = er.filter((r) => r.exempt);
   const pend = er.filter((r) => !r.paid && !r.exempt);
   const coll = paid.reduce((s, r) => s + r.fee, 0);
   const pendA = pend.reduce((s, r) => s + r.fee, 0);
@@ -111,6 +127,7 @@ function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members }) {
           </div>
         ))}
       </div>
+      <PaymentStatusStrip paid={paid.length} exempt={exempt.length} pend={pend.length} total={er.length} lang={lang} />
       <div className="two-col">
         <div className="card">
           <h4 style={{ fontWeight: 700, marginBottom: 12 }}>{t.category}</h4>

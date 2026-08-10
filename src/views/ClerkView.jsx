@@ -147,12 +147,12 @@ function ClerkView(props) {
             <>
               <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} />
 
-              <div className="stat-grid-4" style={{ marginBottom: 18 }}>
+              <div className="stat-grid-4" style={{ marginBottom: 12 }}>
                 {[
                   { label: t.registered, value: allActive.length, color: "#1a3a6b" },
-                  { label: t.paid, value: allActive.filter((r) => r.paid || r.exempt).length, color: "#2d8a4e" },
+                  { label: t.paid, value: allActive.filter((r) => r.paid && !r.exempt).length, color: "#2d8a4e" },
+                  { label: t.exempt, value: allActive.filter((r) => r.exempt).length, color: "#6b7280" },
                   { label: t.pending, value: allActive.filter((r) => !r.paid && !r.exempt).length, color: "#d4820a" },
-                  { label: t.waitlist, value: myWlRegs.length, color: "#92400e" },
                 ].map((s) => (
                   <div className="stat-card" key={s.label} style={{ textAlign: "center", borderTop: `3px solid ${s.color}` }}>
                     <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
