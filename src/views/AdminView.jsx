@@ -62,7 +62,7 @@ function AdminView(props) {
             {sec === "reports" && <ReportsTab {...props} />}
             {sec === "events" && <EventsTab events={props.events} setEvents={props.setEvents} event={props.event} setEvent={props.setEvent} lang={props.lang} notify={props.notify} rosters={props.rosters} setRosters={props.setRosters} />}
             {sec === "import" && <AdminImport members={props.members} setMembers={props.setMembers} families={props.families} setFamilies={props.setFamilies} gas={props.gas} setGas={props.setGas} rosters={props.rosters} setRosters={props.setRosters} churches={props.churches} setChurches={props.setChurches} notify={props.notify} />}
-            {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} dbTeams={props.dbTeams} notify={props.notify} settings={props.settings} updateSessionTtlHours={props.updateSessionTtlHours} logAudit={props.logAudit} />}
+            {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} dbTeams={props.dbTeams} gas={props.gas} notify={props.notify} settings={props.settings} updateSessionTtlHours={props.updateSessionTtlHours} logAudit={props.logAudit} />}
             {sec === "directory" && <AdminDirectory {...props} dbTeams={props.dbTeams} setDbTeams={props.setDbTeams} />}
             {sec === "audit" && <AuditLogTab dbUsers={props.dbUsers} />}
             {sec === "badges" && <BadgeGeneratorTab regs={props.regs} event={props.event} notify={props.notify} />}
@@ -700,7 +700,7 @@ function SessionTtlCard({ settings, updateSessionTtlHours }) {
   );
 }
 
-function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, notify, settings, updateSessionTtlHours, logAudit }) {
+function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, settings, updateSessionTtlHours, logAudit }) {
   const [editing, setEditing] = useState(null); // { id, name, pin, sysRole, initials, church }
   const [showPin, setShowPin] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -713,11 +713,11 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, notify, settings, 
   const startEdit = (u) => {
     // dbUsers items are raw DB rows (snake_case) — normalize here since the rest
     // of this form (sysRole select, and the new teamLeads field) reads camelCase.
-    setEditing({ ...u, sysRole: u.sys_role || u.sysRole, teamLeads: u.team_leads || u.teamLeads || [], newPin: "", confirmPin: "" });
+    setEditing({ ...u, sysRole: u.sys_role || u.sysRole, teamLeads: u.team_leads || u.teamLeads || [], gaIds: u.ga_ids || u.gaIds || [], newPin: "", confirmPin: "" });
     setShowPin(false);
   };
   const startNew = () => {
-    setEditing({ id: null, name: "", sysRole: "clerk", initials: "", church: "", teamLeads: [], newPin: "", confirmPin: "" });
+    setEditing({ id: null, name: "", sysRole: "clerk", initials: "", church: "", teamLeads: [], gaIds: [], newPin: "", confirmPin: "" });
     setShowPin(false);
   };
   const cancel = () => setEditing(null);
@@ -735,6 +735,7 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, notify, settings, 
         initials: editing.initials || editing.name.slice(0, 2).toUpperCase(),
         church: editing.church || null,
         team_leads: editing.sysRole === "team_leader" ? (editing.teamLeads || []) : [],
+        ga_ids: editing.sysRole === "ga_leader" ? (editing.gaIds || []) : [],
         ...(editing.newPin ? { pin: editing.newPin } : {}),
       };
       if (editing.id) {
@@ -834,6 +835,33 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, notify, settings, 
                   </div>
                 </div>
               )}
+              {editing.sysRole === "ga_leader" && (
+                <div>
+                  <label>Grupos de Assistência que lidera</label>
+                  <p style={{ fontSize: 11, color: "var(--muted)", margin: "0 0 6px" }}>
+                    Pode liderar mais de um — ex: co-líderes ou líder interino.
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {[...(gas || [])].sort((a, b) => (a.name || "").localeCompare(b.name || "")).map((g) => {
+                      const checked = (editing.gaIds || []).includes(g.id);
+                      return (
+                        <label key={g.id} className="cb" style={{ fontWeight: 400, textTransform: "none", fontSize: 13 }}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              const cur = editing.gaIds || [];
+                              const next = e.target.checked ? [...cur, g.id] : cur.filter((id) => id !== g.id);
+                              setEditing({ ...editing, gaIds: next });
+                            }}
+                          />
+                          {g.name}{g.church ? ` (${g.church})` : ""}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div>
                 <label>{editing.id ? "Novo PIN (deixe em branco para manter)" : "PIN *"}</label>
                 <div style={{ position: "relative" }}>
@@ -895,7 +923,17 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, notify, settings, 
                 </td>
                 <td style={{ fontWeight: 600 }}>{u.name}</td>
                 <td><span className="badge badge-blue">{ROLE_LABELS[u.sys_role || u.sysRole] || u.sys_role || u.sysRole}</span></td>
-                <td style={{ fontSize: 12, color: "var(--muted)" }}>{u.church || "—"}</td>
+                <td style={{ fontSize: 12, color: "var(--muted)" }}>
+                  {u.church || "—"}
+                  {(u.sys_role === "ga_leader" || u.sysRole === "ga_leader") && (u.ga_ids || u.gaIds || []).length > 0 && (
+                    <div style={{ marginTop: 2 }}>
+                      {(u.ga_ids || u.gaIds || []).map((gid) => {
+                        const g = (gas || []).find((x) => x.id === gid);
+                        return g ? <span key={gid} className="badge badge-gray" style={{ fontSize: 10, marginRight: 3 }}>{g.name}</span> : null;
+                      })}
+                    </div>
+                  )}
+                </td>
                 <td style={{ fontFamily: "monospace", letterSpacing: 2, display: "flex", alignItems: "center", gap: 6 }}>
                   {revealPins[u.id] ? (u.pin || "—") : "••••"}
                   <button onClick={() => setRevealPins((p) => ({ ...p, [u.id]: !p[u.id] }))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0, lineHeight: 1 }}>
