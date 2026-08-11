@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { TrendingUp, ClipboardList, Receipt, Banknote, Plus, Pencil, Trash2, ExternalLink, X } from "lucide-react";
+import { TrendingUp, ClipboardList, Receipt, Plus, Pencil, Trash2, ExternalLink, X } from "lucide-react";
 import { sb } from "@/lib/supabase";
 import { fmt } from "@/constants";
 import { useT } from "@/i18n/strings";
@@ -18,27 +18,25 @@ const EXPENSE_CATS = [
 function fmtCur(n) { return "$" + Number(n || 0).toFixed(2); }
 
 // ── Balance tab ───────────────────────────────────────────────────────────────
-function BalanceTab({ eventRegs, expenses, collections }) {
+function BalanceTab({ eventRegs, expenses }) {
   const active  = eventRegs.filter((r) => !r.cancelled && !r.waitlisted);
   const paid    = active.filter((r) => r.paid && !r.exempt);
   const pending = active.filter((r) => !r.paid && !r.exempt && r.fee > 0);
   const exempt  = active.filter((r) => r.exempt);
 
-  const totalExpected  = active.filter((r) => !r.exempt).reduce((s, r) => s + (r.fee || 0), 0);
-  const totalPaid      = paid.reduce((s, r) => s + (r.fee || 0), 0);
-  const totalPending   = pending.reduce((s, r) => s + (r.fee || 0), 0);
-  const totalColetas   = collections.reduce((s, c) => s + (c.amount || 0), 0);
-  const totalDespesas  = expenses.reduce((s, e) => s + (e.amount || 0), 0);
-  const saldo          = totalPaid - totalDespesas;
+  const totalExpected = active.filter((r) => !r.exempt).reduce((s, r) => s + (r.fee || 0), 0);
+  const totalPaid     = paid.reduce((s, r) => s + (r.fee || 0), 0);
+  const totalPending  = pending.reduce((s, r) => s + (r.fee || 0), 0);
+  const totalDespesas = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+  const saldo         = totalPaid - totalDespesas;
 
   const cards = [
-    { label: "Total Esperado",    value: fmtCur(totalExpected), color: "#1a3a6b", sub: `${active.filter(r => !r.exempt).length} inscritos pagantes` },
-    { label: "Arrecadado",        value: fmtCur(totalPaid),     color: "#16a34a", sub: `${paid.length} pagos` },
-    { label: "Pendente",          value: fmtCur(totalPending),  color: "#d97706", sub: `${pending.length} aguardando` },
-    { label: "Isentos",           value: String(exempt.length), color: "#6b7280", sub: "pastores/ungidos/etc." },
-    { label: "Coletas Registradas", value: fmtCur(totalColetas), color: "#7c3aed", sub: `${collections.length} entradas` },
-    { label: "Despesas",          value: fmtCur(totalDespesas), color: "#dc2626", sub: `${expenses.length} itens` },
-    { label: "Saldo Líquido",     value: fmtCur(saldo),         color: saldo >= 0 ? "#16a34a" : "#dc2626", sub: "arrecadado − despesas" },
+    { label: "Total Esperado", value: fmtCur(totalExpected), color: "#1a3a6b", sub: `${active.filter(r => !r.exempt).length} inscritos pagantes` },
+    { label: "Arrecadado",     value: fmtCur(totalPaid),     color: "#16a34a", sub: `${paid.length} pagos` },
+    { label: "Pendente",       value: fmtCur(totalPending),  color: "#d97706", sub: `${pending.length} aguardando` },
+    { label: "Isentos",        value: String(exempt.length), color: "#6b7280", sub: "pastores/ungidos/etc." },
+    { label: "Despesas",       value: fmtCur(totalDespesas), color: "#dc2626", sub: `${expenses.length} itens` },
+    { label: "Saldo Líquido",  value: fmtCur(saldo),         color: saldo >= 0 ? "#16a34a" : "#dc2626", sub: "arrecadado − despesas" },
   ];
 
   const byCategory = EXPENSE_CATS.map((cat) => {
@@ -348,139 +346,12 @@ function ExpensesTab({ event, expenses, setExpenses, notify }) {
   );
 }
 
-// ── Collections tab ───────────────────────────────────────────────────────────
-function CollectionsTab({ event, collections, setCollections, notify, user }) {
-  const [editing, setEditing] = useState(null);
-  const [saving,  setSaving]  = useState(false);
-
-  const openNew  = () => setEditing({ date: today(), amount: "", collector_name: user?.name || "", notes: "" });
-  const openEdit = (c) => setEditing({ ...c });
-
-  const save = async () => {
-    if (!editing.amount || isNaN(Number(editing.amount))) { notify("Valor inválido."); return; }
-    setSaving(true);
-    const row = {
-      event_id:       event.id,
-      date:           editing.date || today(),
-      amount:         Number(editing.amount),
-      collector_name: editing.collector_name || null,
-      notes:          editing.notes || null,
-    };
-    if (editing.id) {
-      const { error } = await sb.from("treasury_collections").update(row).eq("id", editing.id);
-      if (error) { notify("Erro: " + error.message); setSaving(false); return; }
-      setCollections((prev) => prev.map((c) => c.id === editing.id ? { ...c, ...row } : c));
-    } else {
-      row.id = "COL" + String(Date.now()).slice(-8);
-      const { data, error } = await sb.from("treasury_collections").insert(row).select().single();
-      if (error) { notify("Erro: " + error.message); setSaving(false); return; }
-      setCollections((prev) => [...prev, data || row]);
-    }
-    setSaving(false); setEditing(null); notify("Salvo!");
-  };
-
-  const del = async (id) => {
-    const { error } = await sb.from("treasury_collections").delete().eq("id", id);
-    if (error) { notify("Erro: " + error.message); return; }
-    setCollections((prev) => prev.filter((c) => c.id !== id));
-  };
-
-  const total = collections.reduce((s, c) => s + (c.amount || 0), 0);
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <div>
-          <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Coletas</h2>
-          <p style={{ fontSize: 12, color: "var(--muted)" }}>Registro de entradas de dinheiro em caixa.</p>
-        </div>
-        <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={openNew}><Plus size={14} /> Nova Coleta</button>
-      </div>
-
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <table className="table">
-          <thead>
-            <tr>
-              <th style={{ width: 110 }}>Data</th>
-              <th style={{ textAlign: "right", width: 120 }}>Valor</th>
-              <th>Cobrado por</th>
-              <th>Notas</th>
-              <th style={{ width: 80 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {collections.map((c) => (
-              <tr key={c.id}>
-                <td style={{ fontSize: 12, color: "var(--muted)" }}>{c.date}</td>
-                <td style={{ textAlign: "right", fontWeight: 700, fontSize: 15 }}>{fmtCur(c.amount)}</td>
-                <td style={{ fontSize: 13 }}>{c.collector_name || "—"}</td>
-                <td style={{ fontSize: 12, color: "var(--muted)" }}>{c.notes || "—"}</td>
-                <td>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <button className="btn btn-ghost btn-xs" onClick={() => openEdit(c)}><Pencil size={12} /></button>
-                    <button className="btn btn-danger btn-xs" onClick={() => del(c.id)}><Trash2 size={12} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {collections.length === 0 && (
-              <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>Nenhuma coleta registrada.</td></tr>
-            )}
-            {collections.length > 0 && (
-              <tr style={{ background: "var(--bg2)", fontWeight: 700 }}>
-                <td>Total</td>
-                <td style={{ textAlign: "right" }}>{fmtCur(total)}</td>
-                <td colSpan={3} />
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {editing && (
-        <div className="modal-bg" onClick={(ev) => ev.target === ev.currentTarget && setEditing(null)}>
-          <div className="modal" style={{ maxWidth: 400 }}>
-            <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, marginBottom: 16 }}>
-              {editing.id ? "Editar Coleta" : "Nova Coleta"}
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div className="fr">
-                <div>
-                  <label>Data *</label>
-                  <input type="date" value={editing.date} onChange={(e) => setEditing({ ...editing, date: e.target.value })} />
-                </div>
-                <div>
-                  <label>Valor ($) *</label>
-                  <input type="number" min={0} step={0.01} value={editing.amount} onChange={(e) => setEditing({ ...editing, amount: e.target.value })} placeholder="0.00" />
-                </div>
-              </div>
-              <div>
-                <label>Cobrado por</label>
-                <input value={editing.collector_name || ""} onChange={(e) => setEditing({ ...editing, collector_name: e.target.value })} placeholder="Nome do responsável" />
-              </div>
-              <div>
-                <label>Notas (opcional)</label>
-                <input value={editing.notes || ""} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} placeholder="Ex: Coleta de domingo" />
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
-              <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={save}>{saving ? "Salvando…" : "Salvar"}</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Main view ─────────────────────────────────────────────────────────────────
 export default function TreasurerView(props) {
   const { event, regs, updateReg, user, logout, notify, lang, setLang, theme, toggleTheme } = props;
-  const [sec,         setSec]         = useState("balanco");
-  const [expenses,    setExpenses]    = useState([]);
-  const [collections, setCollections] = useState([]);
-  const [loaded,      setLoaded]      = useState(false);
+  const [sec,      setSec]      = useState("balanco");
+  const [expenses, setExpenses] = useState([]);
+  const [loaded,   setLoaded]   = useState(false);
 
   const eventRegs = useMemo(
     () => (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted),
@@ -490,21 +361,14 @@ export default function TreasurerView(props) {
   useEffect(() => {
     if (!event?.id) return;
     setLoaded(false);
-    Promise.all([
-      sb.from("treasury_expenses").select("*").eq("event_id", event.id).order("date", { ascending: false }),
-      sb.from("treasury_collections").select("*").eq("event_id", event.id).order("date", { ascending: false }),
-    ]).then(([{ data: exp }, { data: col }]) => {
-      setExpenses(exp || []);
-      setCollections(col || []);
-      setLoaded(true);
-    });
+    sb.from("treasury_expenses").select("*").eq("event_id", event.id).order("date", { ascending: false })
+      .then(({ data }) => { setExpenses(data || []); setLoaded(true); });
   }, [event?.id]);
 
   const navItems = [
-    { id: "balanco",   icon: <TrendingUp size={16} />,  label: "Balanço" },
-    { id: "regs",      icon: <ClipboardList size={16} />, label: "Inscrições" },
-    { id: "despesas",  icon: <Receipt size={16} />,     label: "Despesas" },
-    { id: "coletas",   icon: <Banknote size={16} />,    label: "Coletas" },
+    { id: "balanco",  icon: <TrendingUp size={16} />,   label: "Balanço" },
+    { id: "regs",     icon: <ClipboardList size={16} />, label: "Inscrições" },
+    { id: "despesas", icon: <Receipt size={16} />,       label: "Despesas" },
   ];
 
   return (
@@ -522,10 +386,9 @@ export default function TreasurerView(props) {
               <p style={{ color: "var(--muted)" }}>Carregando…</p>
             ) : (
               <>
-                {sec === "balanco"  && <BalanceTab eventRegs={eventRegs} expenses={expenses} collections={collections} />}
+                {sec === "balanco"  && <BalanceTab eventRegs={eventRegs} expenses={expenses} />}
                 {sec === "regs"     && <RegsTab eventRegs={eventRegs} updateReg={updateReg} notify={notify} />}
                 {sec === "despesas" && <ExpensesTab event={event} expenses={expenses} setExpenses={setExpenses} notify={notify} />}
-                {sec === "coletas"  && <CollectionsTab event={event} collections={collections} setCollections={setCollections} notify={notify} user={user} />}
               </>
             )}
           </div>
