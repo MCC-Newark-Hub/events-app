@@ -61,7 +61,7 @@ export default function App() {
   // Restore session from localStorage on mount, unless it's past the TTL
   const [view, setView] = useState(() => (isSessionValid() && localStorage.getItem("mcc_view")) || "login");
   const [savedPin] = useState(() => (isSessionValid() && localStorage.getItem("mcc_pin")) || null);
-  const [rolePicker, setRolePicker] = useState(false);
+  const [roleSwitcher, setRoleSwitcher] = useState(false);
   const [lookupPrefill, setLookupPrefill] = useState("");
   const [toast, setToast] = useState(null);
   const userRef = useRef(null);
@@ -101,13 +101,7 @@ export default function App() {
       const mapped = authLogin(savedPin);
       if (mapped) {
         const restoredView = localStorage.getItem("mcc_view");
-        if (restoredView && restoredView !== "login") {
-          setView(restoredView);
-        } else if (mapped.sysRoles.length > 1) {
-          setRolePicker(true);
-        } else {
-          selectRole(mapped.sysRoles[0]);
-        }
+        selectRole(restoredView && restoredView !== "login" ? restoredView : (mapped.primaryRole || mapped.sysRole));
       } else {
         clearSession();
         setView("login");
@@ -120,11 +114,7 @@ export default function App() {
     if (mapped) {
       localStorage.setItem("mcc_pin", pin);
       localStorage.setItem("mcc_pin_ts", String(Date.now()));
-      if (mapped.sysRoles.length > 1) {
-        setRolePicker(true);
-      } else {
-        selectRole(mapped.sysRoles[0]);
-      }
+      selectRole(mapped.primaryRole || mapped.sysRole);
       return true;
     }
     return false;
@@ -132,7 +122,7 @@ export default function App() {
   const logout = () => {
     authLogout();
     clearSession();
-    setRolePicker(false);
+    setRoleSwitcher(false);
     setView("login");
   };
 
@@ -140,7 +130,7 @@ export default function App() {
 
   return (
     <LangContext.Provider value={lang}>
-      <SwitchRoleContext.Provider value={user?.sysRoles?.length > 1 ? () => setRolePicker(true) : null}>
+      <SwitchRoleContext.Provider value={user?.sysRoles?.length > 1 ? () => setRoleSwitcher(true) : null}>
       <div data-theme={theme} style={{ minHeight: "100vh", fontFamily: "'Montserrat','Segoe UI',sans-serif" }}>
         {toast && <div className="toast">{toast}</div>}
         {checkinParam && (
@@ -202,20 +192,17 @@ export default function App() {
         {!checkinParam && !selfCheckinParam && view === ROLES_SYS.TEAM_LEADER && <TeamLeaderView {...shared} />}
         {!checkinParam && !selfCheckinParam && view === ROLES_SYS.TREASURER && <TreasurerView {...shared} />}
 
-        {rolePicker && user && (
-          <div className="modal-bg" style={{ zIndex: 9998 }}>
-            <div className="modal" style={{ maxWidth: 340 }}>
-              <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 6 }}>Selecionar Função</h3>
-              <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 18 }}>
-                Bem-vindo(a), {user.name}. Qual função deseja acessar?
-              </p>
+        {roleSwitcher && user && (
+          <div className="modal-bg" style={{ zIndex: 9998 }} onClick={(e) => e.target === e.currentTarget && setRoleSwitcher(false)}>
+            <div className="modal" style={{ maxWidth: 320 }}>
+              <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 16 }}>Trocar Função</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {user.sysRoles.map((role) => {
                   const label = role === "team_leader" && user.teamLeads?.length
                     ? `Líder de Equipe — ${user.teamLeads.join(", ")}`
                     : ROLE_LABELS[role] || role;
                   return (
-                    <button key={role} className="btn btn-primary" style={{ textAlign: "left" }} onClick={() => selectRole(role)}>
+                    <button key={role} className={`btn ${view === role ? "btn-primary" : "btn-ghost"}`} style={{ textAlign: "left" }} onClick={() => { selectRole(role); setRoleSwitcher(false); }}>
                       {label}
                     </button>
                   );

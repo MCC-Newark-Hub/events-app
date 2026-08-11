@@ -723,13 +723,20 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
   const Th = makeTh(sk, sd, toggle);
 
   const startEdit = (u) => {
-    // dbUsers items are raw DB rows (snake_case) — normalize here since the rest
-    // of this form (sysRole select, and the new teamLeads field) reads camelCase.
-    setEditing({ ...u, sysRole: u.sys_role || u.sysRole, teamLeads: u.team_leads || u.teamLeads || [], gaIds: u.ga_ids || u.gaIds || [], newPin: "", confirmPin: "" });
+    const existingSysRoles = u.sys_roles?.length ? u.sys_roles : [u.sys_role || u.sysRole];
+    setEditing({
+      ...u,
+      sysRoles: existingSysRoles,
+      primaryRole: u.primary_role || u.sys_role || u.sysRole,
+      teamLeads: u.team_leads || u.teamLeads || [],
+      gaIds: u.ga_ids || u.gaIds || [],
+      newPin: "",
+      confirmPin: "",
+    });
     setShowPin(false);
   };
   const startNew = () => {
-    setEditing({ id: null, name: "", sysRole: "clerk", initials: "", church: "", teamLeads: [], gaIds: [], newPin: "", confirmPin: "" });
+    setEditing({ id: null, name: "", sysRoles: ["clerk"], primaryRole: "clerk", initials: "", church: "", teamLeads: [], gaIds: [], newPin: "", confirmPin: "" });
     setShowPin(false);
   };
   const cancel = () => setEditing(null);
@@ -741,13 +748,16 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
     if (!editing.id && !editing.newPin) { notify("PIN é obrigatório para novo usuário."); return; }
     setSaving(true);
     try {
+      const sysRoles = editing.sysRoles?.length ? editing.sysRoles : [editing.primaryRole];
       const row = {
         name: editing.name.trim(),
-        sys_role: editing.sysRole,
+        sys_role: editing.primaryRole,
+        sys_roles: sysRoles,
+        primary_role: editing.primaryRole,
         initials: editing.initials || editing.name.slice(0, 2).toUpperCase(),
         church: editing.church || null,
-        team_leads: editing.sysRole === "team_leader" ? (editing.teamLeads || []) : [],
-        ga_ids: editing.sysRole === "ga_leader" ? (editing.gaIds || []) : [],
+        team_leads: sysRoles.includes("team_leader") ? (editing.teamLeads || []) : [],
+        ga_ids: sysRoles.includes("ga_leader") ? (editing.gaIds || []) : [],
         ...(editing.newPin ? { pin: editing.newPin } : {}),
       };
       if (editing.id) {
@@ -797,18 +807,40 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
                 <label>Nome completo *</label>
                 <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="Nome do usuário" />
               </div>
-              <div className="fr">
-                <div>
-                  <label>Iniciais (crachá)</label>
-                  <input value={editing.initials} onChange={(e) => setEditing({ ...editing, initials: e.target.value.toUpperCase().slice(0, 3) })} placeholder="LA" maxLength={3} />
-                </div>
-                <div>
-                  <label>Função *</label>
-                  <select value={editing.sysRole} onChange={(e) => setEditing({ ...editing, sysRole: e.target.value })}>
-                    {Object.entries(ROLE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
+              <div>
+                <label>Iniciais (crachá)</label>
+                <input value={editing.initials} onChange={(e) => setEditing({ ...editing, initials: e.target.value.toUpperCase().slice(0, 3) })} placeholder="LA" maxLength={3} />
+              </div>
+              <div>
+                <label>Funções *</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                  {Object.entries(ROLE_LABELS).map(([v, l]) => {
+                    const checked = (editing.sysRoles || []).includes(v);
+                    return (
+                      <label key={v} className="cb" style={{ fontWeight: 400, textTransform: "none", fontSize: 13 }}>
+                        <input type="checkbox" checked={checked}
+                          onChange={(e) => {
+                            const cur = editing.sysRoles || [];
+                            const next = e.target.checked ? [...cur, v] : cur.filter((r) => r !== v);
+                            if (next.length === 0) return;
+                            const newPrimary = next.includes(editing.primaryRole) ? editing.primaryRole : next[0];
+                            setEditing({ ...editing, sysRoles: next, primaryRole: newPrimary });
+                          }}
+                        />
+                        {l}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
+              {(editing.sysRoles || []).length > 1 && (
+                <div>
+                  <label>Função padrão ao entrar</label>
+                  <select value={editing.primaryRole} onChange={(e) => setEditing({ ...editing, primaryRole: e.target.value })}>
+                    {(editing.sysRoles || []).map((v) => <option key={v} value={v}>{ROLE_LABELS[v] || v}</option>)}
+                  </select>
+                </div>
+              )}
               <div>
                 <label>Igreja (opcional)</label>
                 <SearchSelect
@@ -820,7 +852,7 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
                   placeholder="Buscar igreja…"
                 />
               </div>
-              {editing.sysRole === "team_leader" && (
+              {(editing.sysRoles || []).includes("team_leader") && (
                 <div>
                   <label>Equipes que lidera</label>
                   <p style={{ fontSize: 11, color: "var(--muted)", margin: "0 0 6px" }}>
@@ -847,7 +879,7 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
                   </div>
                 </div>
               )}
-              {editing.sysRole === "ga_leader" && (
+              {(editing.sysRoles || []).includes("ga_leader") && (
                 <div>
                   <label>Grupos de Assistência que lidera</label>
                   <p style={{ fontSize: 11, color: "var(--muted)", margin: "0 0 6px" }}>
@@ -934,7 +966,14 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
                   <div className="avatar" style={{ width: 28, height: 28, fontSize: 10 }}>{u.initials || u.name?.slice(0, 2).toUpperCase()}</div>
                 </td>
                 <td style={{ fontWeight: 600 }}>{u.name}</td>
-                <td><span className="badge badge-blue">{ROLE_LABELS[u.sys_role || u.sysRole] || u.sys_role || u.sysRole}</span></td>
+                <td>
+                  {(u.sys_roles?.length ? u.sys_roles : [u.sys_role || u.sysRole]).map((r) => (
+                    <span key={r} className="badge badge-blue" style={{ marginRight: 2 }}>{ROLE_LABELS[r] || r}</span>
+                  ))}
+                  {u.sys_roles?.length > 1 && u.primary_role && (
+                    <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>↳ padrão: {ROLE_LABELS[u.primary_role] || u.primary_role}</div>
+                  )}
+                </td>
                 <td style={{ fontSize: 12, color: "var(--muted)" }}>
                   {u.church || "—"}
                   {(u.sys_role === "ga_leader" || u.sysRole === "ga_leader") && (u.ga_ids || u.gaIds || []).length > 0 && (

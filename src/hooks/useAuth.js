@@ -18,6 +18,7 @@ export function useAuth(dbUsers) {
         name: u.name,
         sysRole: u.sys_role || u.sysRole,
         sysRoles: u.sys_roles?.length ? u.sys_roles : [u.sys_role || u.sysRole],
+        primaryRole: u.primary_role || u.primaryRole || u.sys_role || u.sysRole,
         pin: u.pin,
         initials: u.initials || u.name.slice(0, 2).toUpperCase(),
         church: u.church,
