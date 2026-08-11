@@ -90,9 +90,11 @@ export default function App() {
   }, [appData.settings?.sessionTtlHours]);
 
   const selectRole = (role) => {
-    localStorage.setItem("mcc_view", role);
-    setView(role);
-    setRolePicker(false);
+    const knownRoles = new Set(Object.values(ROLES_SYS));
+    const safeRole = knownRoles.has(role) ? role : ROLES_SYS.ADMIN;
+    localStorage.setItem("mcc_view", safeRole);
+    setView(safeRole);
+    setRoleSwitcher(false);
   };
 
   // Re-login from saved PIN once DB users have loaded
