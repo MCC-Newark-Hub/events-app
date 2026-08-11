@@ -139,6 +139,7 @@ export const ROLES_SYS = {
   PASTOR: "pastor",
   GA_LEADER: "ga_leader",
   TEAM_LEADER: "team_leader",
+  TREASURER: "treasurer",
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

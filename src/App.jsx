@@ -13,6 +13,7 @@ import AdminView from "@/views/AdminView";
 import PastorView from "@/views/PastorView";
 import GALeaderView from "@/views/GALeaderView";
 import TeamLeaderView from "@/views/TeamLeaderView";
+import TreasurerView from "@/views/TreasurerView";
 import RegistrationLookup from "@/views/RegistrationLookup";
 
 // Admin-configurable in Usuários & PINs (app_settings.session_ttl_hours). The
@@ -172,6 +173,7 @@ export default function App() {
         {!checkinParam && !selfCheckinParam && view === ROLES_SYS.PASTOR && <PastorView {...shared} />}
         {!checkinParam && !selfCheckinParam && view === ROLES_SYS.GA_LEADER && <GALeaderView {...shared} />}
         {!checkinParam && !selfCheckinParam && view === ROLES_SYS.TEAM_LEADER && <TeamLeaderView {...shared} />}
+        {!checkinParam && !selfCheckinParam && view === ROLES_SYS.TREASURER && <TreasurerView {...shared} />}
       </div>
     </LangContext.Provider>
   );

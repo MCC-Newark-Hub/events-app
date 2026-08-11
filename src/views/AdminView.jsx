@@ -671,6 +671,7 @@ const ROLE_LABELS = {
   pastor: "Pastor",
   ga_leader: "Líder de GA",
   team_leader: "Líder de Equipe",
+  treasurer: "Tesoureiro(a)",
 };
 
 // Keyed by settings.sessionTtlHours in the parent so a freshly-loaded value
