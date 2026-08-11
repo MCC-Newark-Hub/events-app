@@ -175,7 +175,7 @@ function ExpensesTab({ event, expenses, setExpenses, notify }) {
 
   const filtered = filterCat === "all" ? expenses : expenses.filter((e) => e.category === filterCat);
 
-  const openNew  = () => setEditing({ date: today(), description: "", category: EXPENSE_CATS[0], amount: "", receipt_url: "", notes: "" });
+  const openNew  = () => setEditing({ date: today(), description: "", category: EXPENSE_CATS[0], amount: "", receipt_path: null, notes: "" });
   const openEdit = (e) => setEditing({ ...e });
 
   const uploadReceipt = async (file) => {
@@ -184,9 +184,14 @@ function ExpensesTab({ event, expenses, setExpenses, notify }) {
     const path = `${event.id}/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
     const { data, error } = await sb.storage.from("receipts").upload(path, file, { upsert: false });
     setUploading(false);
-    if (error) { notify("Erro no upload: " + error.message + " — crie o bucket 'receipts' no Supabase Storage."); return null; }
-    const { data: { publicUrl } } = sb.storage.from("receipts").getPublicUrl(data.path);
-    return publicUrl;
+    if (error) { notify("Erro no upload: " + error.message); return null; }
+    return data.path;
+  };
+
+  const openReceipt = async (path) => {
+    const { data, error } = await sb.storage.from("receipts").createSignedUrl(path, 300);
+    if (error || !data?.signedUrl) { notify("Erro ao abrir recibo."); return; }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   };
 
   const save = async () => {
@@ -194,13 +199,13 @@ function ExpensesTab({ event, expenses, setExpenses, notify }) {
     if (!editing.amount || isNaN(Number(editing.amount))) { notify("Valor inválido."); return; }
     setSaving(true);
     const row = {
-      event_id:    event.id,
-      date:        editing.date || today(),
-      description: editing.description.trim(),
-      category:    editing.category,
-      amount:      Number(editing.amount),
-      receipt_url: editing.receipt_url || null,
-      notes:       editing.notes || null,
+      event_id:     event.id,
+      date:         editing.date || today(),
+      description:  editing.description.trim(),
+      category:     editing.category,
+      amount:       Number(editing.amount),
+      receipt_path: editing.receipt_path || null,
+      notes:        editing.notes || null,
     };
     if (editing.id) {
       const { error } = await sb.from("treasury_expenses").update(row).eq("id", editing.id);
@@ -258,8 +263,8 @@ function ExpensesTab({ event, expenses, setExpenses, notify }) {
                 <td><span className="badge badge-gray" style={{ fontSize: 11 }}>{e.category}</span></td>
                 <td style={{ textAlign: "right", fontWeight: 700 }}>{fmtCur(e.amount)}</td>
                 <td style={{ textAlign: "center" }}>
-                  {e.receipt_url
-                    ? <a href={e.receipt_url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)" }}><ExternalLink size={14} /></a>
+                  {e.receipt_path
+                    ? <button className="btn btn-ghost btn-xs" title="Ver recibo" onClick={() => openReceipt(e.receipt_path)}><ExternalLink size={14} /></button>
                     : <span style={{ color: "var(--muted)", fontSize: 11 }}>—</span>
                   }
                 </td>
@@ -316,14 +321,14 @@ function ExpensesTab({ event, expenses, setExpenses, notify }) {
                 <label>Recibo (imagem ou PDF)</label>
                 <input type="file" accept="image/*,.pdf"
                   onChange={async (e) => {
-                    const url = await uploadReceipt(e.target.files[0]);
-                    if (url) setEditing({ ...editing, receipt_url: url });
+                    const path = await uploadReceipt(e.target.files[0]);
+                    if (path) setEditing({ ...editing, receipt_path: path });
                   }}
                 />
                 {uploading && <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>Enviando…</p>}
-                {editing.receipt_url && (
+                {editing.receipt_path && (
                   <p style={{ fontSize: 12, marginTop: 4 }}>
-                    <a href={editing.receipt_url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)" }}>Ver recibo enviado ↗</a>
+                    <button className="btn btn-ghost btn-xs" onClick={() => openReceipt(editing.receipt_path)} style={{ color: "var(--primary)" }}>Ver recibo enviado ↗</button>
                   </p>
                 )}
               </div>
