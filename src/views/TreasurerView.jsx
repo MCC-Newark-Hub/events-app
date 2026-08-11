@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { TrendingUp, ClipboardList, Receipt, Plus, Pencil, Trash2, ExternalLink, X } from "lucide-react";
+import { TrendingUp, ClipboardList, Receipt, PlusCircle, Plus, Pencil, Trash2, ExternalLink, X } from "lucide-react";
 import { sb } from "@/lib/supabase";
 import { fmt } from "@/constants";
 import { useT } from "@/i18n/strings";
@@ -18,7 +18,7 @@ const EXPENSE_CATS = [
 function fmtCur(n) { return "$" + Number(n || 0).toFixed(2); }
 
 // ── Balance tab ───────────────────────────────────────────────────────────────
-function BalanceTab({ eventRegs, expenses }) {
+function BalanceTab({ eventRegs, expenses, extras }) {
   const active  = eventRegs.filter((r) => !r.cancelled && !r.waitlisted);
   const paid    = active.filter((r) => r.paid && !r.exempt);
   const pending = active.filter((r) => !r.paid && !r.exempt && r.fee > 0);
@@ -27,16 +27,18 @@ function BalanceTab({ eventRegs, expenses }) {
   const totalExpected = active.filter((r) => !r.exempt).reduce((s, r) => s + (r.fee || 0), 0);
   const totalPaid     = paid.reduce((s, r) => s + (r.fee || 0), 0);
   const totalPending  = pending.reduce((s, r) => s + (r.fee || 0), 0);
+  const totalExtras   = extras.reduce((s, e) => s + (e.amount || 0), 0);
   const totalDespesas = expenses.reduce((s, e) => s + (e.amount || 0), 0);
-  const saldo         = totalPaid - totalDespesas;
+  const saldo         = totalPaid + totalExtras - totalDespesas;
 
   const cards = [
-    { label: "Total Esperado", value: fmtCur(totalExpected), color: "#1a3a6b", sub: `${active.filter(r => !r.exempt).length} inscritos pagantes` },
-    { label: "Arrecadado",     value: fmtCur(totalPaid),     color: "#16a34a", sub: `${paid.length} pagos` },
-    { label: "Pendente",       value: fmtCur(totalPending),  color: "#d97706", sub: `${pending.length} aguardando` },
-    { label: "Isentos",        value: String(exempt.length), color: "#6b7280", sub: "pastores/ungidos/etc." },
-    { label: "Despesas",       value: fmtCur(totalDespesas), color: "#dc2626", sub: `${expenses.length} itens` },
-    { label: "Saldo Líquido",  value: fmtCur(saldo),         color: saldo >= 0 ? "#16a34a" : "#dc2626", sub: "arrecadado − despesas" },
+    { label: "Total Esperado",   value: fmtCur(totalExpected), color: "#1a3a6b", sub: `${active.filter(r => !r.exempt).length} inscritos pagantes` },
+    { label: "Arrecadado",       value: fmtCur(totalPaid),     color: "#16a34a", sub: `${paid.length} pagos` },
+    { label: "Pendente",         value: fmtCur(totalPending),  color: "#d97706", sub: `${pending.length} aguardando` },
+    { label: "Isentos",          value: String(exempt.length), color: "#6b7280", sub: "pastores/ungidos/etc." },
+    ...(totalExtras > 0 ? [{ label: "Outras Entradas", value: fmtCur(totalExtras), color: "#7c3aed", sub: `${extras.length} entrada(s)` }] : []),
+    { label: "Despesas",         value: fmtCur(totalDespesas), color: "#dc2626", sub: `${expenses.length} itens` },
+    { label: "Saldo Líquido",    value: fmtCur(saldo),         color: saldo >= 0 ? "#16a34a" : "#dc2626", sub: "arrecadado + entradas − despesas" },
   ];
 
   const byCategory = EXPENSE_CATS.map((cat) => {
@@ -346,11 +348,148 @@ function ExpensesTab({ event, expenses, setExpenses, notify }) {
   );
 }
 
+// ── Extra income tab ──────────────────────────────────────────────────────────
+function ExtraIncomeTab({ event, extras, setExtras, notify }) {
+  const [editing, setEditing] = useState(null);
+  const [saving,  setSaving]  = useState(false);
+
+  const TYPES = ["Doação", "Saldo anterior", "Oferta", "Outro"];
+
+  const openNew  = () => setEditing({ date: today(), amount: "", type: TYPES[0], description: "", notes: "" });
+  const openEdit = (e) => setEditing({ ...e });
+
+  const save = async () => {
+    if (!editing.amount || isNaN(Number(editing.amount))) { notify("Valor inválido."); return; }
+    setSaving(true);
+    const row = {
+      event_id:    event.id,
+      date:        editing.date || today(),
+      amount:      Number(editing.amount),
+      type:        editing.type,
+      description: editing.description || null,
+      notes:       editing.notes || null,
+    };
+    if (editing.id) {
+      const { error } = await sb.from("treasury_collections").update(row).eq("id", editing.id);
+      if (error) { notify("Erro: " + error.message); setSaving(false); return; }
+      setExtras((prev) => prev.map((e) => e.id === editing.id ? { ...e, ...row } : e));
+    } else {
+      row.id = "EXT" + String(Date.now()).slice(-8);
+      const { data, error } = await sb.from("treasury_collections").insert(row).select().single();
+      if (error) { notify("Erro: " + error.message); setSaving(false); return; }
+      setExtras((prev) => [...prev, data || row]);
+    }
+    setSaving(false); setEditing(null); notify("Salvo!");
+  };
+
+  const del = async (id) => {
+    const { error } = await sb.from("treasury_collections").delete().eq("id", id);
+    if (error) { notify("Erro: " + error.message); return; }
+    setExtras((prev) => prev.filter((e) => e.id !== id));
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <div>
+          <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Outras Entradas</h2>
+          <p style={{ fontSize: 12, color: "var(--muted)" }}>Doações, saldo de evento anterior, ofertas, ou qualquer outra entrada além das inscrições.</p>
+        </div>
+        <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={openNew}><Plus size={14} /> Nova Entrada</button>
+      </div>
+
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <table className="table">
+          <thead>
+            <tr>
+              <th style={{ width: 100 }}>Data</th>
+              <th style={{ width: 140 }}>Tipo</th>
+              <th>Descrição</th>
+              <th style={{ textAlign: "right", width: 110 }}>Valor</th>
+              <th style={{ width: 72 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {extras.map((e) => (
+              <tr key={e.id}>
+                <td style={{ fontSize: 12, color: "var(--muted)" }}>{e.date}</td>
+                <td><span className="badge badge-purple" style={{ fontSize: 11 }}>{e.type || "Outro"}</span></td>
+                <td style={{ fontSize: 13 }}>
+                  {e.description || "—"}
+                  {e.notes && <div style={{ fontSize: 11, color: "var(--muted)" }}>{e.notes}</div>}
+                </td>
+                <td style={{ textAlign: "right", fontWeight: 700 }}>{fmtCur(e.amount)}</td>
+                <td>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <button className="btn btn-ghost btn-xs" onClick={() => openEdit(e)}><Pencil size={12} /></button>
+                    <button className="btn btn-danger btn-xs" onClick={() => del(e.id)}><Trash2 size={12} /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {extras.length === 0 && (
+              <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>Nenhuma entrada extra registrada.</td></tr>
+            )}
+            {extras.length > 0 && (
+              <tr style={{ background: "var(--bg2)", fontWeight: 700 }}>
+                <td colSpan={3}>Total</td>
+                <td style={{ textAlign: "right" }}>{fmtCur(extras.reduce((s, e) => s + (e.amount || 0), 0))}</td>
+                <td />
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {editing && (
+        <div className="modal-bg" onClick={(ev) => ev.target === ev.currentTarget && setEditing(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, marginBottom: 16 }}>
+              {editing.id ? "Editar Entrada" : "Nova Entrada"}
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div className="fr">
+                <div>
+                  <label>Data *</label>
+                  <input type="date" value={editing.date} onChange={(e) => setEditing({ ...editing, date: e.target.value })} />
+                </div>
+                <div>
+                  <label>Valor ($) *</label>
+                  <input type="number" min={0} step={0.01} value={editing.amount} onChange={(e) => setEditing({ ...editing, amount: e.target.value })} placeholder="0.00" />
+                </div>
+              </div>
+              <div>
+                <label>Tipo *</label>
+                <select value={editing.type} onChange={(e) => setEditing({ ...editing, type: e.target.value })}>
+                  {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label>Descrição</label>
+                <input value={editing.description || ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} placeholder="Ex: Doação do Pr. João" />
+              </div>
+              <div>
+                <label>Notas (opcional)</label>
+                <input value={editing.notes || ""} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
+              <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={save}>{saving ? "Salvando…" : "Salvar"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main view ─────────────────────────────────────────────────────────────────
 export default function TreasurerView(props) {
   const { event, regs, updateReg, user, logout, notify, lang, setLang, theme, toggleTheme } = props;
   const [sec,      setSec]      = useState("balanco");
   const [expenses, setExpenses] = useState([]);
+  const [extras,   setExtras]   = useState([]);
   const [loaded,   setLoaded]   = useState(false);
 
   const eventRegs = useMemo(
@@ -361,14 +500,21 @@ export default function TreasurerView(props) {
   useEffect(() => {
     if (!event?.id) return;
     setLoaded(false);
-    sb.from("treasury_expenses").select("*").eq("event_id", event.id).order("date", { ascending: false })
-      .then(({ data }) => { setExpenses(data || []); setLoaded(true); });
+    Promise.all([
+      sb.from("treasury_expenses").select("*").eq("event_id", event.id).order("date", { ascending: false }),
+      sb.from("treasury_collections").select("*").eq("event_id", event.id).order("date", { ascending: false }),
+    ]).then(([{ data: exp }, { data: ext }]) => {
+      setExpenses(exp || []);
+      setExtras(ext || []);
+      setLoaded(true);
+    });
   }, [event?.id]);
 
   const navItems = [
     { id: "balanco",  icon: <TrendingUp size={16} />,   label: "Balanço" },
     { id: "regs",     icon: <ClipboardList size={16} />, label: "Inscrições" },
     { id: "despesas", icon: <Receipt size={16} />,       label: "Despesas" },
+    { id: "extras",   icon: <PlusCircle size={16} />,    label: "Outras Entradas" },
   ];
 
   return (
@@ -386,9 +532,10 @@ export default function TreasurerView(props) {
               <p style={{ color: "var(--muted)" }}>Carregando…</p>
             ) : (
               <>
-                {sec === "balanco"  && <BalanceTab eventRegs={eventRegs} expenses={expenses} />}
+                {sec === "balanco"  && <BalanceTab eventRegs={eventRegs} expenses={expenses} extras={extras} />}
                 {sec === "regs"     && <RegsTab eventRegs={eventRegs} updateReg={updateReg} notify={notify} />}
                 {sec === "despesas" && <ExpensesTab event={event} expenses={expenses} setExpenses={setExpenses} notify={notify} />}
+                {sec === "extras"   && <ExtraIncomeTab event={event} extras={extras} setExtras={setExtras} notify={notify} />}
               </>
             )}
           </div>
