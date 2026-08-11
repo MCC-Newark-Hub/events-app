@@ -2,6 +2,16 @@ import { useState, useRef, useEffect } from "react";
 import "./index.css";
 import { LangContext } from "@/i18n/strings";
 import { ROLES_SYS } from "@/constants";
+import { SwitchRoleContext } from "@/context/switchRole";
+
+const ROLE_LABELS = {
+  admin: "Administrador",
+  clerk: "Secretaria",
+  pastor: "Pastores",
+  ga_leader: "Líder de GA",
+  team_leader: "Líder de Equipe",
+  treasurer: "Tesouraria",
+};
 import { useAppData } from "@/hooks/useAppData";
 import { useAuth } from "@/hooks/useAuth";
 import LoginScreen from "@/views/LoginScreen";
@@ -51,6 +61,7 @@ export default function App() {
   // Restore session from localStorage on mount, unless it's past the TTL
   const [view, setView] = useState(() => (isSessionValid() && localStorage.getItem("mcc_view")) || "login");
   const [savedPin] = useState(() => (isSessionValid() && localStorage.getItem("mcc_pin")) || null);
+  const [rolePicker, setRolePicker] = useState(false);
   const [lookupPrefill, setLookupPrefill] = useState("");
   const [toast, setToast] = useState(null);
   const userRef = useRef(null);
@@ -78,15 +89,26 @@ export default function App() {
     }
   }, [appData.settings?.sessionTtlHours]);
 
+  const selectRole = (role) => {
+    localStorage.setItem("mcc_view", role);
+    setView(role);
+    setRolePicker(false);
+  };
+
   // Re-login from saved PIN once DB users have loaded
   useEffect(() => {
     if (savedPin && !user && appData.dbUsers && appData.dbUsers.length > 0) {
       const mapped = authLogin(savedPin);
       if (mapped) {
-        const restoredView = localStorage.getItem("mcc_view") || mapped.sysRole;
-        setView(restoredView);
+        const restoredView = localStorage.getItem("mcc_view");
+        if (restoredView && restoredView !== "login") {
+          setView(restoredView);
+        } else if (mapped.sysRoles.length > 1) {
+          setRolePicker(true);
+        } else {
+          selectRole(mapped.sysRoles[0]);
+        }
       } else {
-        // PIN no longer valid, clear session
         clearSession();
         setView("login");
       }
@@ -97,9 +119,12 @@ export default function App() {
     const mapped = authLogin(pin);
     if (mapped) {
       localStorage.setItem("mcc_pin", pin);
-      localStorage.setItem("mcc_view", mapped.sysRole);
       localStorage.setItem("mcc_pin_ts", String(Date.now()));
-      setView(mapped.sysRole);
+      if (mapped.sysRoles.length > 1) {
+        setRolePicker(true);
+      } else {
+        selectRole(mapped.sysRoles[0]);
+      }
       return true;
     }
     return false;
@@ -107,6 +132,7 @@ export default function App() {
   const logout = () => {
     authLogout();
     clearSession();
+    setRolePicker(false);
     setView("login");
   };
 
@@ -114,6 +140,7 @@ export default function App() {
 
   return (
     <LangContext.Provider value={lang}>
+      <SwitchRoleContext.Provider value={user?.sysRoles?.length > 1 ? () => setRolePicker(true) : null}>
       <div data-theme={theme} style={{ minHeight: "100vh", fontFamily: "'Montserrat','Segoe UI',sans-serif" }}>
         {toast && <div className="toast">{toast}</div>}
         {checkinParam && (
@@ -174,7 +201,31 @@ export default function App() {
         {!checkinParam && !selfCheckinParam && view === ROLES_SYS.GA_LEADER && <GALeaderView {...shared} />}
         {!checkinParam && !selfCheckinParam && view === ROLES_SYS.TEAM_LEADER && <TeamLeaderView {...shared} />}
         {!checkinParam && !selfCheckinParam && view === ROLES_SYS.TREASURER && <TreasurerView {...shared} />}
+
+        {rolePicker && user && (
+          <div className="modal-bg" style={{ zIndex: 9998 }}>
+            <div className="modal" style={{ maxWidth: 340 }}>
+              <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 6 }}>Selecionar Função</h3>
+              <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 18 }}>
+                Bem-vindo(a), {user.name}. Qual função deseja acessar?
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {user.sysRoles.map((role) => {
+                  const label = role === "team_leader" && user.teamLeads?.length
+                    ? `Líder de Equipe — ${user.teamLeads.join(", ")}`
+                    : ROLE_LABELS[role] || role;
+                  return (
+                    <button key={role} className="btn btn-primary" style={{ textAlign: "left" }} onClick={() => selectRole(role)}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+      </SwitchRoleContext.Provider>
     </LangContext.Provider>
   );
 }

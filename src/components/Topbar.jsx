@@ -1,5 +1,7 @@
+import { useContext } from "react";
 import { Clock, Moon, Sun } from "lucide-react";
 import ICMLogo from "@/components/ICMLogo";
+import { SwitchRoleContext } from "@/context/switchRole";
 
 export default function Topbar({
   title,
@@ -12,6 +14,7 @@ export default function Topbar({
   theme,
   toggleTheme,
 }) {
+  const onSwitchRole = useContext(SwitchRoleContext);
   return (
     <div className="topbar">
       <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 auto", overflow: "hidden" }}>
@@ -62,6 +65,15 @@ export default function Topbar({
         <span className="user-name" style={{ fontSize: 13 }}>
           {user?.name}
         </span>
+        {onSwitchRole && (
+          <button
+            className="btn btn-ghost"
+            style={{ padding: "5px 10px", fontSize: 12, borderColor: "rgba(255,255,255,.3)", color: "#fff" }}
+            onClick={onSwitchRole}
+          >
+            Trocar Função
+          </button>
+        )}
         <button
           className="btn btn-ghost"
           style={{
