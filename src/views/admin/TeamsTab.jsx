@@ -45,59 +45,41 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
     });
   };
 
-  const addToRoster = async (team, mid) => {
-    let updatedRoster = null;
-    setRosters((prev) => {
-      const ex = prev.find((r) => r.eventId === event?.id && r.team === team);
-      if (ex) {
-        if (ex.memberIds.includes(mid)) return prev;
-        updatedRoster = { ...ex, memberIds: [...ex.memberIds, mid] };
-        return prev.map((r) =>
-          r.eventId === event?.id && r.team === team ? updatedRoster : r
-        );
-      }
-      updatedRoster = { eventId: event?.id, team, memberIds: [mid], leaderId: null };
-      return [...prev, updatedRoster];
-    });
-    setTimeout(async () => {
-      if (!updatedRoster) return;
-      if (updatedRoster.id) {
-        await sb.from("rosters").update({ member_ids: updatedRoster.memberIds }).eq("id", updatedRoster.id);
-      } else {
-        const { data } = await sb.from("rosters").insert({
-          event_id: updatedRoster.eventId,
-          team: updatedRoster.team,
-          member_ids: updatedRoster.memberIds,
-          leader_id: null,
-        }).select().single();
+  const addToRoster = (team, mid) => {
+    const ex = rosters.find((r) => r.eventId === event?.id && r.team === team);
+    if (ex) {
+      if (ex.memberIds.includes(mid)) return;
+      const newIds = [...ex.memberIds, mid];
+      setRosters((prev) => prev.map((r) =>
+        r.eventId === event?.id && r.team === team ? { ...r, memberIds: newIds } : r
+      ));
+      sb.from("rosters").update({ member_ids: newIds }).eq("id", ex.id);
+    } else {
+      const newRoster = { eventId: event?.id, team, memberIds: [mid], leaderId: null };
+      setRosters((prev) => [...prev, newRoster]);
+      sb.from("rosters").insert({
+        event_id: newRoster.eventId, team: newRoster.team,
+        member_ids: newRoster.memberIds, leader_id: null,
+      }).select().single().then(({ data }) => {
         if (data) {
-          setRosters((p) =>
-            p.map((r) =>
-              r.eventId === updatedRoster.eventId && r.team === updatedRoster.team && !r.id
-                ? { ...r, id: data.id }
-                : r
-            )
-          );
+          setRosters((p) => p.map((r) =>
+            r.eventId === newRoster.eventId && r.team === newRoster.team && !r.id
+              ? { ...r, id: data.id } : r
+          ));
         }
-      }
-    }, 0);
+      });
+    }
     notify("✓");
   };
 
-  const removeFromRoster = async (team, mid) => {
-    let updatedIds = [];
-    let rosterId = null;
-    setRosters((prev) =>
-      prev.map((r) => {
-        if (r.eventId === event?.id && r.team === team) {
-          updatedIds = r.memberIds.filter((x) => x !== mid);
-          rosterId = r.id;
-          return { ...r, memberIds: updatedIds };
-        }
-        return r;
-      })
-    );
-    if (rosterId) await sb.from("rosters").update({ member_ids: updatedIds }).eq("id", rosterId);
+  const removeFromRoster = (team, mid) => {
+    const roster = rosters.find((r) => r.eventId === event?.id && r.team === team);
+    if (!roster) return;
+    const updatedIds = roster.memberIds.filter((x) => x !== mid);
+    setRosters((prev) => prev.map((r) =>
+      r.eventId === event?.id && r.team === team ? { ...r, memberIds: updatedIds } : r
+    ));
+    if (roster.id) sb.from("rosters").update({ member_ids: updatedIds }).eq("id", roster.id);
   };
 
   const toggleSelected = (team, mid) => {

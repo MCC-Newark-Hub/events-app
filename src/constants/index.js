@@ -94,6 +94,7 @@ export const TEAMS = [
   "Tradução",
   "Transporte",
   "Professoras",
+  "Tesouraria",
 ];
 export const SERVICE_TEAMS = TEAMS.filter((t) => t !== "Participante");
 
