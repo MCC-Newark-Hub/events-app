@@ -175,7 +175,7 @@ function ExpensesTab({ event, expenses, setExpenses, notify }) {
 
   const filtered = filterCat === "all" ? expenses : expenses.filter((e) => e.category === filterCat);
 
-  const openNew  = () => setEditing({ date: today(), description: "", category: EXPENSE_CATS[0], amount: "", receipt_path: null, notes: "" });
+  const openNew  = () => setEditing({ date: today(), description: "", category: EXPENSE_CATS[0], amount: "", beneficiary: "", receipt_path: null, notes: "" });
   const openEdit = (e) => setEditing({ ...e });
 
   const uploadReceipt = async (file) => {
@@ -204,6 +204,7 @@ function ExpensesTab({ event, expenses, setExpenses, notify }) {
       description:  editing.description.trim(),
       category:     editing.category,
       amount:       Number(editing.amount),
+      beneficiary:  editing.beneficiary?.trim() || null,
       receipt_path: editing.receipt_path || null,
       notes:        editing.notes || null,
     };
@@ -258,6 +259,7 @@ function ExpensesTab({ event, expenses, setExpenses, notify }) {
                 <td style={{ fontSize: 12, color: "var(--muted)" }}>{e.date}</td>
                 <td style={{ fontWeight: 500 }}>
                   {e.description}
+                  {e.beneficiary && <div style={{ fontSize: 11, color: "var(--primary)", fontWeight: 600 }}>↳ {e.beneficiary}</div>}
                   {e.notes && <div style={{ fontSize: 11, color: "var(--muted)" }}>{e.notes}</div>}
                 </td>
                 <td><span className="badge badge-gray" style={{ fontSize: 11 }}>{e.category}</span></td>
@@ -316,6 +318,10 @@ function ExpensesTab({ event, expenses, setExpenses, notify }) {
                 <select value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })}>
                   {EXPENSE_CATS.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
+              </div>
+              <div>
+                <label>Beneficiário (opcional)</label>
+                <input value={editing.beneficiary || ""} onChange={(e) => setEditing({ ...editing, beneficiary: e.target.value })} placeholder="Ex: Pr. João Silva (passagem aérea)" />
               </div>
               <div>
                 <label>Recibo (imagem ou PDF)</label>
