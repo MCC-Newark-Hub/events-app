@@ -125,8 +125,8 @@ export default function BadgeGeneratorTab({ regs, event, notify }) {
       const JsPDF = await loadJsPDF();
       const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: [72, 144] });
       toGenerate.forEach((r, idx) => drawBadge(doc, r, event, idx === 0));
-      const blobUrl = doc.output("bloburl");
-      window.open(blobUrl, "_blank");
+      const filename = `crachas-${(event?.name || "evento").replace(/\s+/g, "-").toLowerCase()}.pdf`;
+      doc.save(filename);
     } catch (err) {
       console.error("badge generation error:", err);
       notify?.("Erro ao gerar crachás. Tente novamente.");

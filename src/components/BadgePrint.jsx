@@ -129,10 +129,8 @@ export default function BadgePrint({ regs, event, lang }) {
       }
     }
 
-    // Opened in a new tab rather than force-downloaded — this only runs from an
-    // explicit click (never automatically), so the popup isn't blocked.
-    const blobUrl = doc.output("bloburl");
-    window.open(blobUrl, "_blank");
+    const filename = `crachas-${(regs[0]?.regNumber || "inscricao").replace(/[^a-zA-Z0-9]/g, "")}.pdf`;
+    doc.save(filename);
     setPdfDone(true);
   };
 
@@ -173,14 +171,14 @@ export default function BadgePrint({ regs, event, lang }) {
         </div>
       ) : pdfDone ? (
         <div style={{ background: "#d1fae5", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#065f46", textAlign: "center" }}>
-          {lang === "en" ? "Badges PDF opened in a new tab!" : "PDF dos crachás aberto em uma nova aba!"}{" · "}
+          {lang === "en" ? "Badges PDF downloaded!" : "PDF dos crachás baixado!"}{" · "}
           <button onClick={generateBadgePDF} style={{ background: "none", border: "none", cursor: "pointer", color: "#065f46", textDecoration: "underline", fontSize: 13, padding: 0 }}>
             {lang === "en" ? "Open again" : "Abrir novamente"}
           </button>
         </div>
       ) : (
         <button className="btn btn-primary" style={{ width: "100%", marginBottom: 12 }} onClick={generateBadgePDF}>
-          🖨️ {lang === "en" ? "View / Download Badge(s) PDF" : "Ver / Baixar PDF do(s) Crachá(s)"}
+          ⬇️ {lang === "en" ? "Download Badge(s) PDF" : "Baixar PDF do(s) Crachá(s)"}
         </button>
       )}
 
