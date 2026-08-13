@@ -117,6 +117,41 @@ export default function BadgeGeneratorTab({ regs, event, notify }) {
   const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selected.includes(id));
   const toggleAllFiltered = () => setSelected(allFilteredSelected ? [] : [...new Set([...selected, ...filteredIds])]);
 
+  const exportCSV = () => {
+    const toExport = selected.length > 0 ? active.filter((r) => selected.includes(r.id)) : filtered;
+    if (toExport.length === 0) { notify?.("Nenhum inscrito para exportar."); return; }
+
+    const churchCity = (church) =>
+      (church || "").split(",")[0].replace(/\s*[-–]\s*(EUA|CAN|BRA|USA)$/i, "").trim();
+
+    const eventDate = event?.date ? new Date(event.date + "T12:00:00") : new Date();
+    const mesEAno = eventDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).toUpperCase();
+    const local = (event?.location || "").toUpperCase();
+
+    const headers = ["NOME", "SOBRENOME", "EQUIPE", "CATEGORIA", "IGREJA", "NUMERO", "LOCAL", "MES_E_ANO", "CHECKIN_URL"];
+    const rows = toExport.map((r) => {
+      const badgeName = (r.badgeName || r.memberName || "").trim();
+      const parts = badgeName.split(/\s+/);
+      const nome = (parts[0] || "").toUpperCase();
+      const sobrenome = parts.slice(1).join(" ").toUpperCase();
+      const equipe = r.team && r.team !== "Participante" ? r.team.toUpperCase() : "";
+      const checkinUrl = `${window.location.origin}?checkin=${r.regNumber}`;
+      return [nome, sobrenome, equipe, r.category || "", churchCity(r.church), r.regNumber || "", local, mesEAno, checkinUrl];
+    });
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `crachas-${(event?.name || "evento").replace(/\s+/g, "-").toLowerCase()}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  };
+
   const generate = async () => {
     const toGenerate = active.filter((r) => selected.includes(r.id));
     if (toGenerate.length === 0) return;
@@ -174,13 +209,18 @@ export default function BadgeGeneratorTab({ regs, event, notify }) {
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <span style={{ fontSize: 13, color: "var(--muted)" }}>{selected.length} selecionado(s) de {filtered.length} exibido(s)</span>
-        <button
-          className="btn btn-primary btn-sm"
-          disabled={selected.length === 0 || generating}
-          onClick={generate}
-        >
-          🖨️ {generating ? "Gerando…" : `Gerar Crachás (${selected.length})`}
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-ghost btn-sm" onClick={exportCSV}>
+            📊 Exportar CSV{selected.length > 0 ? ` (${selected.length})` : ""}
+          </button>
+          <button
+            className="btn btn-primary btn-sm"
+            disabled={selected.length === 0 || generating}
+            onClick={generate}
+          >
+            🖨️ {generating ? "Gerando…" : `Gerar Crachás (${selected.length})`}
+          </button>
+        </div>
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
