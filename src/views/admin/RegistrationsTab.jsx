@@ -153,7 +153,7 @@ export default function RegistrationsTab(props) {
                 <Th k="church">{t.churchH}</Th>
                 <Th k="team">{t.teamH}</Th>
                 <Th k="fee">{t.feeH}</Th>
-                <Th k="registeredAt">{t.regDate}</Th>
+                <Th k="registeredAtTs">{t.regDate}</Th>
                 <Th k="statusSort">{t.statusH}</Th>
                 <th></th>
               </tr>
@@ -195,7 +195,9 @@ export default function RegistrationsTab(props) {
                     {r.exempt ? <span style={{ color: "#6b7280" }}>{t.exempt}</span> : fmt(r.fee)}
                   </td>
                   <td style={{ fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }}>
-                    {r.registeredAt || "—"}
+                    {r.registeredAtTs
+                      ? new Date(r.registeredAtTs).toLocaleString("pt-BR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+                      : r.registeredAt || "—"}
                   </td>
                   <td>
                     <StatusBadge r={r} event={event} allRegs={all} />

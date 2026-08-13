@@ -61,6 +61,7 @@ export function mapReg(r) {
     badgePrinted: !!r.badge_printed,
     timeline: r.timeline || [],
     registeredAt: r.registered_at,
+    registeredAtTs: r.created_at || null,
     registeredBy: r.registered_by,
     checkedInAt: r.checked_in_at || null,
     checkinMethod: r.checkin_method || null,
