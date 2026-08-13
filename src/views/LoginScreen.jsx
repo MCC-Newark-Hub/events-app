@@ -102,13 +102,33 @@ function LoginScreen({ login, lang, setLang, event, activeCount, waitlistedCount
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <button
-              className="btn btn-accent"
-              style={{ padding: "14px 24px", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-              onClick={onPublicRegister}
-            >
-              <ClipboardList size={18} /> {t.myReg}
-            </button>
+            {(() => {
+              const spotsLeft = event?.capacity ? Math.max(0, event.capacity - activeCount) : 1;
+              const full = event?.capacity && spotsLeft === 0;
+              const pt = lang !== "en";
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <button
+                    className="btn btn-accent"
+                    style={{ padding: "14px 24px", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                    onClick={onPublicRegister}
+                  >
+                    <ClipboardList size={18} />
+                    {full
+                      ? (pt ? "Entrar na Lista de Espera" : "Join the Waitlist")
+                      : t.myReg}
+                  </button>
+                  {full && (
+                    <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,.75)", textAlign: "center", lineHeight: 1.5 }}>
+                      {pt
+                        ? "O evento está lotado, mas você ainda pode se inscrever. Sua vaga será garantida se houver cancelamentos ou aumento de capacidade."
+                        : "The event is full, but you can still register. You'll get a spot if there are cancellations or a capacity increase."}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+
             <button
               className="btn btn-ghost"
               style={{
