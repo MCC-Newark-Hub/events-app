@@ -343,6 +343,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
   const [deadlineAccepted, setDeadlineAccepted] = useState(false);
   const [deadlineError, setDeadlineError] = useState(false);
   const [termLang, setTermLang] = useState(lang || "pt");
+  const [waitlistAcknowledged, setWaitlistAcknowledged] = useState(false);
   const [submitted, setSubmitted] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -588,7 +589,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
           setTranslations({ en: false, es: false });
           setAllergies({ hasAny: false, other: "" });
           setSpecialNeeds({ hasAny: false, other: "" });
-          setTermsAccepted(false); setDeadlineAccepted(false); setCashAcknowledged(false); setCashChecked(false); setSubmitted(null);
+          setTermsAccepted(false); setDeadlineAccepted(false); setCashAcknowledged(false); setCashChecked(false); setWaitlistAcknowledged(false); setSubmitted(null);
         }}
         onHome={onReset}
       />
@@ -629,6 +630,36 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
         <div style={{ background: "#fff", borderRadius: 20, padding: "24px 20px" }}>
           {step === 0 && (
             <div>
+              {/* Waitlist notice — shown FIRST when event is full */}
+              {eventIsFull && (
+                <div style={{ background: "#fef3c7", border: "2px solid #f59e0b", borderRadius: 14, padding: "20px 18px", marginBottom: 24 }}>
+                  <div style={{ textAlign: "center", marginBottom: 14 }}>
+                    <div style={{ fontSize: 40, marginBottom: 8 }}>⏳</div>
+                    <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 700, color: "#78350f", marginBottom: 6 }}>
+                      {lang === "en" ? "This event is at full capacity" : "Este evento está com capacidade esgotada"}
+                    </h3>
+                    <p style={{ fontSize: 13, color: "#92400e", lineHeight: 1.6, margin: 0 }}>
+                      {lang === "en"
+                        ? "You can still register, but your spot will be on the waiting list."
+                        : "Você ainda pode se inscrever, mas sua vaga será na lista de espera."}
+                    </p>
+                  </div>
+                  <div style={{ background: "#fff", border: "1px solid #fcd34d", borderRadius: 10, padding: "12px 14px", marginBottom: 14, fontSize: 13, color: "#78350f", lineHeight: 1.6 }}>
+                    {lang === "en"
+                      ? <>You will be moved to the <strong>main list automatically</strong> if spots open up due to <strong>cancellations</strong> or an <strong>increase in capacity</strong>. Payment is only required after you are transferred to the main list.</>
+                      : <>Você será transferido(a) para a <strong>lista principal automaticamente</strong> caso haja <strong>cancelamentos</strong> ou <strong>aumento de capacidade</strong>. O pagamento só será necessário após a transferência para a lista principal.</>}
+                  </div>
+                  <div className="cb" style={{ padding: "12px 14px", background: waitlistAcknowledged ? "#fef9c3" : "#fffbeb", border: `1.5px solid ${waitlistAcknowledged ? "#f59e0b" : "#fcd34d"}`, borderRadius: 10 }}>
+                    <input type="checkbox" id="waitlist-ack" checked={waitlistAcknowledged} onChange={(e) => setWaitlistAcknowledged(e.target.checked)} />
+                    <label htmlFor="waitlist-ack" style={{ fontSize: 14, fontWeight: 600, color: "#78350f", cursor: "pointer" }}>
+                      {lang === "en"
+                        ? "I understand I will be on the waiting list and I wish to continue."
+                        : "Entendo que estarei na lista de espera e desejo continuar."}
+                    </label>
+                  </div>
+                </div>
+              )}
+
               <div style={{ textAlign: "center", marginBottom: 24 }}>
                 <div style={{ fontSize: 48, marginBottom: 12 }}>💵</div>
                 <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, fontWeight: 700, color: "#03223f", marginBottom: 10 }}>
@@ -670,8 +701,15 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
                 </label>
               </div>
 
-              <button className="btn btn-accent" style={{ width: "100%", padding: 14, fontSize: 16, opacity: introAgreed ? 1 : 0.45 }} disabled={!introAgreed} onClick={() => setStep(1)}>
-                {lang === "en" ? "Proceed to Registration →" : "Prosseguir com a Inscrição →"}
+              <button
+                className="btn btn-accent"
+                style={{ width: "100%", padding: 14, fontSize: 16, opacity: (introAgreed && (!eventIsFull || waitlistAcknowledged)) ? 1 : 0.45 }}
+                disabled={!introAgreed || (eventIsFull && !waitlistAcknowledged)}
+                onClick={() => setStep(1)}
+              >
+                {eventIsFull
+                  ? (lang === "en" ? "Join Waitlist →" : "Entrar na Lista de Espera →")
+                  : (lang === "en" ? "Proceed to Registration →" : "Prosseguir com a Inscrição →")}
               </button>
             </div>
           )}

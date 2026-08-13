@@ -150,18 +150,7 @@ export default function ChurchSearch({ value, onChange, placeholder, churches })
         </div>
       )}
       {!value && (
-        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-          <button
-            type="button"
-            className="btn btn-ghost btn-xs"
-            onClick={function () {
-              setSearch("Sem Igreja");
-              setOpen(false);
-              onChange("Sem Igreja");
-            }}
-          >
-            Sem Igreja
-          </button>
+        <div style={{ marginTop: 6 }}>
           <button
             type="button"
             className="btn btn-ghost btn-xs"
@@ -171,7 +160,7 @@ export default function ChurchSearch({ value, onChange, placeholder, churches })
               onChange("Outra / Not Listed");
             }}
           >
-            Outra / Not Listed
+            Igreja não listada / Not Listed
           </button>
         </div>
       )}
