@@ -60,8 +60,8 @@ function TermsContent({ termLang, deadlineDays }) {
             <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
             <p style={{ ...p, margin: 0, color: "#991b1b" }}>
               {pt
-                ? <><span style={{ fontWeight: 800 }}>Inscrições não pagas serão CANCELADAS automaticamente após {deadlineDays} dias</span> sem confirmação de pagamento.</>
-                : <><span style={{ fontWeight: 800 }}>Unpaid registrations will be AUTOMATICALLY CANCELLED after {deadlineDays} days</span> without payment confirmation.</>}
+                ? <><span style={{ fontWeight: 800 }}>Inscrições não pagas serão movidas para a LISTA DE ESPERA após {deadlineDays} dias</span> sem confirmação de pagamento. O retorno à lista principal ocorre somente após o pagamento, se houver vagas.</>
+                : <><span style={{ fontWeight: 800 }}>Unpaid registrations will be moved to the WAITING LIST after {deadlineDays} days</span> without payment confirmation. Return to the main list occurs only after payment, if spots are available.</>}
             </p>
           </div>
         )}
@@ -229,8 +229,8 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
                     <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1.4 }}>⚠️</span>
                     <p style={{ margin: 0, fontSize: 13, color: "#991b1b", lineHeight: 1.5 }}>
                       {pt
-                        ? <><strong>Efetue o pagamento em até {deadlineDays} dias.</strong> Após esse prazo, sua inscrição será cancelada automaticamente.</>
-                        : <><strong>Complete payment within {deadlineDays} days.</strong> After this period, your registration will be automatically cancelled.</>}
+                        ? <><strong>Efetue o pagamento em até {deadlineDays} dias.</strong> Após esse prazo, sua inscrição será movida para a lista de espera e retornará à lista principal somente após o pagamento, se houver vagas.</>
+                        : <><strong>Complete payment within {deadlineDays} days.</strong> After this period, your registration will be moved to the waiting list and will only return to the main list after payment, if spots are available.</>}
                     </p>
                   </div>
                 )}
@@ -1106,19 +1106,19 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
                     <span style={{ fontSize: 20, flexShrink: 0, lineHeight: 1 }}>⚠️</span>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#92400e", lineHeight: 1.5 }}>
                       {termLang === "en"
-                        ? <>Unpaid registrations are <span style={{ color: "#dc2626" }}>automatically cancelled after {deadlineDays} days</span>. Payment must be made in person with authorized staff.</>
-                        : <>Inscrições não pagas são <span style={{ color: "#dc2626" }}>canceladas automaticamente após {deadlineDays} dias</span>. O pagamento deve ser feito presencialmente com a equipe autorizada.</>}
+                        ? <>If not paid within <span style={{ color: "#dc2626" }}>{deadlineDays} days</span>, your registration will be moved to the <span style={{ color: "#dc2626" }}>waiting list</span> and will only return to the main list after payment, if spots are available. Payment must be made in person with authorized staff.</>
+                        : <>Se não pago em <span style={{ color: "#dc2626" }}>{deadlineDays} dias</span>, sua inscrição será movida para a <span style={{ color: "#dc2626" }}>lista de espera</span> e retornará à lista principal somente após o pagamento, se houver vagas. O pagamento deve ser feito presencialmente com a equipe autorizada.</>}
                     </p>
                   </div>
                   <div className="cb">
                     <input type="checkbox" id="deadline-ack" checked={deadlineAccepted} onChange={(e) => { setDeadlineAccepted(e.target.checked); setDeadlineError(false); }} />
                     <label htmlFor="deadline-ack" style={{ fontSize: 13, fontWeight: 600, color: "#78350f" }}>
                       {termLang === "en"
-                        ? `I understand my registration will be cancelled after ${deadlineDays} days without payment.`
-                        : `Entendo que minha inscrição será cancelada após ${deadlineDays} dias sem pagamento.`}
+                        ? `I understand that if not paid within ${deadlineDays} days, my registration will be moved to the waiting list.`
+                        : `Entendo que, se não pago em ${deadlineDays} dias, minha inscrição será movida para a lista de espera.`}
                     </label>
                   </div>
-                  {deadlineError && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 6, marginBottom: 0, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={12} /> {termLang === "en" ? "Please confirm you understand the cancellation policy." : "Por favor, confirme que entendeu a política de cancelamento."}</p>}
+                  {deadlineError && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 6, marginBottom: 0, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={12} /> {termLang === "en" ? "Please confirm you understand the waiting list policy." : "Por favor, confirme que entendeu a política de lista de espera."}</p>}
                 </div>
               )}
 

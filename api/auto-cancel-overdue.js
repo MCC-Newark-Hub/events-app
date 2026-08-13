@@ -1,5 +1,7 @@
-// Vercel Cron endpoint: cancels registrations whose payment deadline has passed by
-// more than GRACE_DAYS, and emails a notice where an address is on file.
+// Vercel Cron endpoint: moves registrations to the waiting list when the payment
+// deadline has passed by more than GRACE_DAYS, and emails a notice where an address
+// is on file. Waitlisted registrations return to the main list only after payment
+// is confirmed by staff AND there is available capacity.
 //
 // Deliberately NOT reimplementing the deadline/exemption rules in SQL — imports the
 // real functions from src/constants/index.js, the same ones the app's UI (the
@@ -46,19 +48,20 @@ function mapReg(r) {
   };
 }
 
-function buildCancellationEmailHtml(reg, event) {
+function buildWaitlistEmailHtml(reg, event) {
   return `
     <div style="font-family: Georgia, 'Times New Roman', serif; max-width: 480px; margin: 0 auto; color: #1a1e2e;">
-      <h2 style="color:#8B0000; font-size: 20px; margin-bottom: 4px;">${event?.name || "Inscrição Cancelada"}</h2>
+      <h2 style="color:#8B0000; font-size: 20px; margin-bottom: 4px;">${event?.name || "Lista de Espera"}</h2>
       <p style="color:#6b7280; font-size: 13px; margin-top: 0;">${event?.date || ""} ${event?.time ? "· " + event.time : ""} ${event?.location ? "· " + event.location : ""}</p>
       <p>Olá <strong>${reg.badgeName || reg.memberName}</strong>,</p>
       <p style="font-size: 14px;">
-        Sua inscrição <strong style="font-family: monospace;">${reg.regNumber}</strong> foi cancelada automaticamente
-        por falta de pagamento dentro do prazo estabelecido.
+        Sua inscrição <strong style="font-family: monospace;">${reg.regNumber}</strong> foi movida para a
+        <strong>lista de espera</strong> por falta de pagamento dentro do prazo estabelecido.
       </p>
       <div style="margin-top:12px; padding:12px 14px; background:#fff7ea; border:1px solid #e3a94c; border-radius:8px; font-size:13px; color:#7a4a08;">
-        Se você já efetuou o pagamento ou acredita que isso é um engano, entre em contato com a
-        secretaria da sua igreja para solicitar a reativação da sua inscrição.
+        Sua vaga na lista principal será reservada novamente após a confirmação do pagamento,
+        <strong>se ainda houver vagas disponíveis</strong>. Entre em contato com a secretaria da sua
+        igreja para efetuar o pagamento e solicitar o retorno à lista principal.
       </div>
       <p style="margin-top: 24px; font-size: 12px; color: #9ca3af;">Igreja Cristã Maranatha</p>
     </div>
@@ -97,7 +100,7 @@ export default async function handler(req, res) {
     const events = await evRes.json();
     const allRegs = (await regRes.json()).map(mapReg);
 
-    const toCancel = [];
+    const toWaitlist = [];
     for (const event of events) {
       const paymentDeadlineDays = event.payment_deadline_days;
       if (!paymentDeadlineDays) continue;
@@ -108,20 +111,20 @@ export default async function handler(req, res) {
         // remaining is null when exempt or no deadline applies; more negative means
         // further past the deadline. Only act once GRACE_DAYS past it.
         if (remaining === null || remaining > -GRACE_DAYS) continue;
-        toCancel.push({ reg, event, remaining });
+        toWaitlist.push({ reg, event, remaining });
       }
     }
 
-    let cancelled = 0, emailed = 0, noEmail = 0, failed = 0;
+    let waitlisted = 0, emailed = 0, noEmail = 0, failed = 0;
     const details = [];
     const today = new Date().toISOString().slice(0, 10);
 
-    for (const { reg, event, remaining } of toCancel) {
+    for (const { reg, event, remaining } of toWaitlist) {
       const timelineEntry = {
-        status: "Cancelado",
+        status: "Lista de Espera",
         date: today,
         by: "Sistema (auto)",
-        note: `Cancelado automaticamente — pagamento em atraso (${-remaining}d após o prazo)`,
+        note: `Movido para lista de espera automaticamente — pagamento em atraso (${-remaining}d após o prazo)`,
       };
 
       if (!dryRun) {
@@ -129,18 +132,17 @@ export default async function handler(req, res) {
           method: "PATCH",
           headers: { ...headers, "Content-Type": "application/json", Prefer: "return=minimal" },
           body: JSON.stringify({
-            cancelled: true,
-            cancel_reason: "nonpayment_auto",
+            waitlisted: true,
             timeline: [...reg.timeline, timelineEntry],
           }),
         });
         if (!upd.ok) {
           failed++;
-          details.push({ regNumber: reg.regNumber, memberName: reg.memberName, action: "cancel_failed", status: upd.status });
+          details.push({ regNumber: reg.regNumber, memberName: reg.memberName, action: "waitlist_failed", status: upd.status });
           continue;
         }
       }
-      cancelled++;
+      waitlisted++;
 
       const toEmail = extractEmail(reg.note);
       let wasEmailed = false;
@@ -150,8 +152,8 @@ export default async function handler(req, res) {
             apiKey: RESEND_API_KEY,
             fromEmail: FROM_EMAIL,
             to: toEmail,
-            subject: `Inscrição cancelada — ${event.name || reg.regNumber}`,
-            html: buildCancellationEmailHtml(reg, event),
+            subject: `Inscrição na lista de espera — ${event.name || reg.regNumber}`,
+            html: buildWaitlistEmailHtml(reg, event),
           });
           wasEmailed = sendRes.ok;
         } else {
@@ -170,7 +172,7 @@ export default async function handler(req, res) {
       });
     }
 
-    res.status(200).json({ dryRun, gracedays: GRACE_DAYS, cancelled, emailed, noEmail, failed, details });
+    res.status(200).json({ dryRun, gracedays: GRACE_DAYS, waitlisted, emailed, noEmail, failed, details });
   } catch (err) {
     res.status(500).json({ error: "unexpected_error", detail: err?.message || String(err) });
   }

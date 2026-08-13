@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Search, ArrowLeft, XCircle, CheckCircle2, AlertTriangle, UserPlus } from "lucide-react";
-import { fmt, CATEGORIES, ROLE_BADGE, OBREIRO_ROLES, teamForRole } from "@/constants";
+import { fmt, CATEGORIES, ROLE_BADGE, OBREIRO_ROLES, teamForRole, remainingDeadlineDays } from "@/constants";
 import ChurchSearch from "@/components/ChurchSearch";
 import SearchSelect from "@/components/SearchSelect";
 import BadgePrint from "@/components/BadgePrint";
@@ -410,6 +410,39 @@ export default function RegistrationLookup({ event, regs, members, setMembers, c
 
           {found && (
             <div>
+              {/* Waitlisted due to non-payment */}
+              {found.waitlisted && !found.paid && found.fee > 0 && !found.exempt && (
+                <div style={{ background: "#fef3c7", border: "1.5px solid #f59e0b", borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#92400e", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                    <AlertTriangle size={14} />
+                    {lang === "en" ? "Registration on Waiting List" : "Inscrição na Lista de Espera"}
+                  </div>
+                  <p style={{ margin: 0, fontSize: 13, color: "#78350f", lineHeight: 1.5 }}>
+                    {lang === "en"
+                      ? "Your registration was moved to the waiting list due to non-payment. After paying, your registration will return to the main list if spots are still available. Please contact the church secretary to make your payment."
+                      : "Sua inscrição foi movida para a lista de espera por falta de pagamento. Após o pagamento, sua inscrição retornará à lista principal se ainda houver vagas. Procure a secretaria da sua igreja para efetuar o pagamento."}
+                  </p>
+                </div>
+              )}
+              {/* Upcoming payment deadline warning */}
+              {!found.waitlisted && !found.cancelled && !found.paid && !found.exempt && found.fee > 0 && (() => {
+                const remaining = remainingDeadlineDays(found, event, regs || []);
+                if (remaining === null || remaining <= 0) return null;
+                const urgent = remaining <= 2;
+                return (
+                  <div style={{ background: urgent ? "#fef2f2" : "#fef3c7", border: `1.5px solid ${urgent ? "#fca5a5" : "#f59e0b"}`, borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: urgent ? "#991b1b" : "#92400e", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                      <AlertTriangle size={14} />
+                      {lang === "en" ? `${remaining} day${remaining === 1 ? "" : "s"} left to pay` : `${remaining} dia${remaining === 1 ? "" : "s"} para pagar`}
+                    </div>
+                    <p style={{ margin: 0, fontSize: 13, color: urgent ? "#991b1b" : "#78350f", lineHeight: 1.5 }}>
+                      {lang === "en"
+                        ? `Pay within ${remaining} day${remaining === 1 ? "" : "s"} to keep your spot. After this deadline, your registration will be moved to the waiting list and will only return to the main list after payment, if spots are available.`
+                        : `Pague em até ${remaining} dia${remaining === 1 ? "" : "s"} para garantir sua vaga. Após esse prazo, sua inscrição será movida para a lista de espera e retornará à lista principal somente após o pagamento, se houver vagas.`}
+                    </p>
+                  </div>
+                );
+              })()}
               <RegCard reg={found} onCancel={() => setCancelTarget([found.id])} lang={lang} />
 
               {/* Family / same group */}
