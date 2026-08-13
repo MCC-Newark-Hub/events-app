@@ -7,7 +7,7 @@ import DeadlineBanner from "@/components/DeadlineBanner";
 import RegistrationThermometer from "@/components/RegistrationThermometer";
 import { formatDeadlineDate, deadlineLabel } from "@/lib/registrationDeadline";
 
-function LoginScreen({ login, lang, setLang, event, activeCount, onPublicRegister, onLookup }) {
+function LoginScreen({ login, lang, setLang, event, activeCount, waitlistedCount = 0, onPublicRegister, onLookup }) {
   const t = STRINGS[lang];
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
@@ -80,25 +80,20 @@ function LoginScreen({ login, lang, setLang, event, activeCount, onPublicRegiste
               <div style={{ color: "#6b7280", fontSize: 13, marginTop: 4 }}>
                 {event.date}{event.location ? ` · ${event.location}` : ""}
               </div>
-              <RegistrationThermometer event={event} activeCount={activeCount} lang={lang} />
-              {event.registration_deadline && (
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    color: "#92400e",
-                    background: "#fef3c7",
-                    borderRadius: 99,
-                    padding: "4px 12px",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    marginTop: 10,
-                  }}
-                >
-                  ⏰ {deadlineLabel(lang)}: {formatDeadlineDate(event.registration_deadline)}
-                </div>
-              )}
+              <RegistrationThermometer event={event} activeCount={activeCount} waitlistedCount={waitlistedCount} lang={lang} />
+              {event.registration_deadline && (() => {
+                const spotsLeft = event.capacity ? Math.max(0, event.capacity - activeCount) : 1;
+                const isFull = spotsLeft === 0;
+                const pt = lang !== "en";
+                const label = isFull
+                  ? (pt ? "Prazo para pagamento das inscrições" : "Payment deadline")
+                  : (pt ? "Prazo para inscrições e pagamento" : "Registration & payment deadline");
+                return (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#92400e", background: "#fef3c7", borderRadius: 99, padding: "4px 12px", fontSize: 13, fontWeight: 700, marginTop: 10 }}>
+                    ⏰ {label}: {formatDeadlineDate(event.registration_deadline)}
+                  </div>
+                );
+              })()}
             </div>
           )}
           {event && (

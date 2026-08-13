@@ -154,7 +154,7 @@ export default function App() {
             setLang={setLang}
           />
         )}
-        {!checkinParam && !selfCheckinParam && view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} event={appData.event} activeCount={appData.activeCount} onPublicRegister={() => setView("public")} onLookup={() => setView("lookup")} />}
+        {!checkinParam && !selfCheckinParam && view === "login" && <LoginScreen login={login} lang={lang} setLang={setLang} event={appData.event} activeCount={appData.activeCount} waitlistedCount={appData.wlRegs?.length || 0} onPublicRegister={() => setView("public")} onLookup={() => setView("lookup")} />}
         {!checkinParam && !selfCheckinParam && view === "lookup" && (
           <RegistrationLookup
             event={appData.event}

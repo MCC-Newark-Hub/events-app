@@ -127,6 +127,7 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
   const totalFee = regs.reduce((s, r) => s + r.fee, 0);
   const deadlineDays = event?.payment_deadline_days ?? event?.paymentDeadlineDays ?? null;
   const pt = lang !== "en";
+  const anyWaitlisted = regs.some((r) => r.waitlisted);
 
   const handleShare = () => {
     const text =
@@ -151,10 +152,20 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
         <div style={{ background: "#fff", borderRadius: 20, padding: "28px 24px" }}>
           <div style={{ textAlign: "center", marginBottom: 20 }}>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
-              <CheckCircle2 size={52} color="#2d8a4e" />
+              {anyWaitlisted
+                ? <span style={{ fontSize: 52, lineHeight: 1 }}>⏳</span>
+                : <CheckCircle2 size={52} color="#2d8a4e" />}
             </div>
-            <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, marginBottom: 4 }}>{t.confirmationTitle}</h2>
-            <p style={{ color: "#6b7280", fontSize: 13 }}>{t.confirmationSub}</p>
+            <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, marginBottom: 4 }}>
+              {anyWaitlisted
+                ? (pt ? "Inscrição na Lista de Espera" : "Waitlist Registration")
+                : t.confirmationTitle}
+            </h2>
+            <p style={{ color: "#6b7280", fontSize: 13 }}>
+              {anyWaitlisted
+                ? (pt ? "Sua inscrição foi registrada na lista de espera." : "Your registration has been placed on the waitlist.")
+                : t.confirmationSub}
+            </p>
           </div>
 
           {/* Primary registrant */}
@@ -182,8 +193,39 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
             </div>
           )}
 
+          {/* Waitlist card — shown instead of payment card when waitlisted */}
+          {anyWaitlisted && (
+            <div style={{ border: "2px solid #f59e0b", borderRadius: 14, overflow: "hidden", marginBottom: 16 }}>
+              <div style={{ background: "#f59e0b", padding: "14px 18px" }}>
+                <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>
+                  {pt ? "⏳ Você está na lista de espera" : "⏳ You're on the waitlist"}
+                </div>
+              </div>
+              <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
+                <p style={{ margin: 0, fontSize: 13, color: "#374151", lineHeight: 1.6 }}>
+                  {pt
+                    ? <>O evento atingiu a capacidade máxima. Sua inscrição foi registrada e você será movido(a) para a lista principal automaticamente caso:</>
+                    : <>The event is at full capacity. Your registration has been recorded and you'll be moved to the main list automatically if:</>}
+                </p>
+                <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <li style={{ fontSize: 13, color: "#374151", lineHeight: 1.5 }}>
+                    {pt ? "Houver cancelamentos ou desistências de outros participantes" : "Other participants cancel or withdraw"}
+                  </li>
+                  <li style={{ fontSize: 13, color: "#374151", lineHeight: 1.5 }}>
+                    {pt ? "A capacidade do evento for aumentada pela organização" : "The organizers increase the event capacity"}
+                  </li>
+                </ul>
+                <div style={{ marginTop: 4, background: "#fef3c7", border: "1px solid #f59e0b", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "#92400e" }}>
+                  {pt
+                    ? <>O pagamento só será necessário <strong>após sua transferência para a lista principal</strong>. Guarde seu número de inscrição: <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{primary.regNumber}</span></>
+                    : <>Payment will only be required <strong>after you're moved to the main list</strong>. Keep your registration number: <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{primary.regNumber}</span></>}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Payment card */}
-          {totalFee > 0 ? (
+          {!anyWaitlisted && totalFee > 0 ? (
             <div style={{ border: "2px solid #b41926", borderRadius: 14, overflow: "hidden", marginBottom: 16 }}>
               {/* Fee amount — hero element */}
               <div style={{ background: "#b41926", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -236,7 +278,7 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
                 )}
               </div>
             </div>
-          ) : (
+          ) : !anyWaitlisted ? (
             <div style={{ background: "#d1fae5", border: "1.5px solid #6ee7b7", borderRadius: 12, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
               <CheckCircle2 size={28} color="#059669" style={{ flexShrink: 0 }} />
               <div>
@@ -248,9 +290,9 @@ function PublicConfirmationInline({ regs, email, event, lang, t, onReset, onHome
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
 
-          <BadgePrint regs={regs} event={event} lang={lang} />
+          {!anyWaitlisted && <BadgePrint regs={regs} event={event} lang={lang} />}
 
           <button className="btn btn-ghost" style={{ width: "100%", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={handleShare}>
             <Share2 size={14} /> {t.shareConfirmation}
@@ -308,6 +350,8 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
   const [badgeNames, setBadgeNames] = useState({});
 
   const deadlineDays = event?.payment_deadline_days ?? event?.paymentDeadlineDays ?? null;
+  const activeRegCount = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted).length;
+  const eventIsFull = event?.capacity ? activeRegCount >= event.capacity : false;
 
   const allMembers = propMembers || [];
   const existingMemberIds = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled && r.memberId !== "GUEST").map((r) => r.memberId);
@@ -1129,11 +1173,24 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
               </div>
               {termsError && <p style={{ color: "#c0392b", fontSize: 13, marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={13} /> {t.termsRequired}</p>}
 
+              {eventIsFull && (
+                <div style={{ background: "#fef3c7", border: "1.5px solid #f59e0b", borderRadius: 10, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#92400e", marginBottom: 6 }}>
+                    ⏳ {lang === "en" ? "This event is at full capacity" : "Este evento está com capacidade esgotada"}
+                  </div>
+                  <p style={{ margin: 0, fontSize: 13, color: "#78350f", lineHeight: 1.6 }}>
+                    {lang === "en"
+                      ? "Your registration will be placed on the waiting list. You'll be moved to the main list automatically if spots open up due to cancellations or a capacity increase."
+                      : "Sua inscrição será feita na lista de espera. Você será movido(a) para a lista principal automaticamente se houver vagas disponíveis por cancelamentos ou aumento de capacidade."}
+                  </p>
+                </div>
+              )}
+
               <div style={{ background: "var(--sidebar-active-bg,#fdf5f5)", borderRadius: 10, padding: "12px 14px", marginBottom: 14, fontSize: 13 }}>
                 <div style={{ fontWeight: 700, marginBottom: 6 }}>{lang === "en" ? "Registration Summary:" : "Resumo da Inscrição:"}</div>
                 <div>{primary?.name} {familyMembers.length > 0 && `+ ${familyMembers.length} ${t.familyMembers.toLowerCase()}`}</div>
-                <div style={{ marginTop: 4 }}>{t.totalFee}: <strong>{totalFee === 0 ? t.free : fmt(totalFee)}</strong></div>
-                <div style={{ marginTop: 4, color: "#6b7280" }}>{t.pendingPaymentNote}</div>
+                {!eventIsFull && <div style={{ marginTop: 4 }}>{t.totalFee}: <strong>{totalFee === 0 ? t.free : fmt(totalFee)}</strong></div>}
+                <div style={{ marginTop: 4, color: "#6b7280" }}>{eventIsFull ? (lang === "en" ? "Waitlist — no payment until moved to main list." : "Lista de espera — pagamento somente após transferência para a lista principal.") : t.pendingPaymentNote}</div>
               </div>
 
               {submitError && <p style={{ color: "#c0392b", fontSize: 13, marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={13} /> {submitError}</p>}
@@ -1141,7 +1198,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
               <div style={{ display: "flex", gap: 10 }}>
                 <button className="btn btn-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }} onClick={() => setStep(3)} disabled={submitting}><ArrowLeft size={14} /> {t.back}</button>
                 <button className="btn btn-accent" style={{ flex: 2, fontSize: 15 }} onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? (lang === "en" ? "Submitting…" : "Enviando…") : `${lang === "en" ? "Submit Registration" : "Confirmar Inscrição"} →`}
+                  {submitting ? (lang === "en" ? "Submitting…" : "Enviando…") : eventIsFull ? (lang === "en" ? "Join Waitlist →" : "Entrar na Lista de Espera →") : `${lang === "en" ? "Submit Registration" : "Confirmar Inscrição"} →`}
                 </button>
               </div>
             </div>
