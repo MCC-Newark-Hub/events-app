@@ -252,6 +252,11 @@ export function useAppData({ getUserRef, notify }) {
         const a = mapApproval(payload.new);
         setApprovals(function (p) { return p.map(function (x) { return x.id === a.id ? a : x; }); });
       })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "events" }, function (payload) {
+        const updated = payload.new;
+        setEvents(function (p) { return p.map(function (e) { return e.id === updated.id ? { ...e, capacity: updated.capacity } : e; }); });
+        setEventState(function (cur) { return cur && cur.id === updated.id ? { ...cur, capacity: updated.capacity } : cur; });
+      })
       .subscribe();
 
     return function () { sb.removeChannel(channel); };
@@ -721,6 +726,21 @@ export function useAppData({ getUserRef, notify }) {
         } else {
           notify("Não foi possível estender: inscrição não encontrada.");
         }
+      } else if (apr.type === "replacement_request") {
+        if (apr.regId) {
+          replaceReg({
+            oldRegId: apr.regId,
+            newMemberId: apr.memberId,
+            newMemberName: apr.memberName,
+            newBadgeName: apr.badgeName || apr.memberName,
+            newChurch: apr.church,
+            newCategory: apr.category,
+            newRole: apr.role || "",
+            silent: true,
+          });
+        } else {
+          notify("Não foi possível substituir: inscrição original não encontrada.");
+        }
       }
     } else {
       notify("Solicitacao negada.");
@@ -744,6 +764,58 @@ export function useAppData({ getUserRef, notify }) {
     logAudit("registration_checkin", "registration", regId, memberName, { presence, method });
   };
 
+  const replaceReg = function ({ oldRegId, newMemberId, newMemberName, newBadgeName, newChurch, newCategory, newRole, silent }) {
+    var today = new Date().toISOString().slice(0, 10);
+    var byName = getUser()?.name || "Sistema";
+    var currentRole = getUser()?.sysRole;
+    var oldReg = regs.find(function (r) { return r.id === oldRegId; });
+    if (!oldReg || oldReg.cancelled || oldReg.waitlisted) {
+      notify("Inscrição não encontrada ou não pode ser substituída.");
+      return null;
+    }
+    var alreadyReg = regs.find(function (r) {
+      return r.memberId === newMemberId && r.eventId === oldReg.eventId && !r.cancelled;
+    });
+    if (alreadyReg) {
+      notify("Este participante já está inscrito neste evento.");
+      return null;
+    }
+    updateReg(oldRegId, { cancelled: true, cancelReason: "replacement" },
+      { status: "Substituído", date: today, by: byName, note: "Substituído por " + newMemberName });
+    var newReg = addReg({
+      memberId: newMemberId,
+      memberName: newMemberName,
+      badgeName: newBadgeName || newMemberName,
+      category: newCategory || oldReg.category,
+      church: newChurch || oldReg.church,
+      role: newRole || "",
+      team: oldReg.team,
+      paid: oldReg.paid,
+      fee: oldReg.fee,
+      exempt: oldReg.exempt,
+      note: "Substitui " + oldReg.memberName + " (" + oldReg.regNumber + ")",
+    }, false);
+    if (!silent && currentRole !== "pastor") {
+      submitApproval({
+        type: "replacement",
+        eventId: oldReg.eventId,
+        memberId: newMemberId,
+        memberName: newMemberName,
+        regId: oldRegId,
+        category: newCategory || oldReg.category,
+        church: newChurch || oldReg.church,
+        reason: "Substitui " + oldReg.memberName + " (" + oldReg.regNumber + ")",
+      });
+    }
+    logAudit("registration_replaced", "registration", oldRegId, oldReg.memberName, {
+      replacedBy: newMemberName,
+      newMemberId: newMemberId,
+      oldRegNumber: oldReg.regNumber,
+    });
+    notify(newMemberName + " substituiu " + oldReg.memberName + ".");
+    return newReg;
+  };
+
   const promoteFromWaitlist = (regId) => {
     const today = new Date().toISOString().slice(0, 10);
     const byName = getUser()?.name || "Sistema";
@@ -765,6 +837,31 @@ export function useAppData({ getUserRef, notify }) {
         if (error) { console.error("promoteFromWaitlist DB error:", error); return; }
         logAudit("registration_promoted_from_waitlist", "registration", regId, memberName, null);
       });
+  };
+
+  const updateEventCapacity = function (newCapacity) {
+    if (!event) return;
+    if (newCapacity < activeCount) {
+      notify("A nova capacidade não pode ser menor que o número de inscritos ativos (" + activeCount + ").");
+      return;
+    }
+    var oldCapacity = event.capacity;
+    var byName = getUser()?.name || "Sistema";
+    setEventState(function (cur) { return cur ? { ...cur, capacity: newCapacity } : cur; });
+    setEvents(function (p) { return p.map(function (e) { return e.id === event.id ? { ...e, capacity: newCapacity } : e; }); });
+    sb.from("events")
+      .update({ capacity: newCapacity })
+      .eq("id", event.id)
+      .then(function (res) {
+        if (res.error) {
+          notify("Erro ao atualizar capacidade: " + res.error.message);
+          setEventState(function (cur) { return cur ? { ...cur, capacity: oldCapacity } : cur; });
+          setEvents(function (p) { return p.map(function (e) { return e.id === event.id ? { ...e, capacity: oldCapacity } : e; }); });
+        } else {
+          logAudit("event_capacity_changed", "event", event.id, event.name, { oldCapacity, newCapacity, by: byName });
+        }
+      });
+    notify("Capacidade atualizada para " + newCapacity + ".");
   };
 
   const updateSessionTtlHours = async (hours) => {
@@ -807,6 +904,7 @@ export function useAppData({ getUserRef, notify }) {
     dbTeams,
     setDbTeams,
     settings,
+    updateEventCapacity,
     updateSessionTtlHours,
     activeRegs,
     activeCount,
@@ -820,6 +918,7 @@ export function useAppData({ getUserRef, notify }) {
     updatePresence,
     submitApproval,
     resolveApproval,
+    replaceReg,
     promoteFromWaitlist,
     logAudit,
   };

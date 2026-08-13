@@ -28,6 +28,7 @@ export default function RegistrationsTab(props) {
     updateReg,
     reactivateReg,
     submitApproval,
+    replaceReg,
     promoteFromWaitlist,
     event,
     user,
@@ -39,6 +40,9 @@ export default function RegistrationsTab(props) {
   const [confirmDelete, setConfirmDelete] = useState(null); // single reg
   const [confirmBulkCancel, setConfirmBulkCancel] = useState(false);
   const [bulkSel, setBulkSel] = useState([]);
+  const [replaceTarget, setReplaceTarget] = useState(null);
+  const [replaceSearch, setReplaceSearch] = useState("");
+  const [replaceCandidate, setReplaceCandidate] = useState(null);
   const [badgeReg, setBadgeReg] = useState(null);
   const [resendingId, setResendingId] = useState(null);
 
@@ -218,6 +222,16 @@ export default function RegistrationsTab(props) {
                     <button className="btn btn-ghost btn-sm" style={{ marginLeft: 4 }} onClick={() => setBadgeReg(r)}>
                       🖨️
                     </button>
+                    {!r.cancelled && !r.waitlisted && (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ marginLeft: 4 }}
+                        title="Substituir inscrito"
+                        onClick={() => { setReplaceTarget(r); setReplaceSearch(""); setReplaceCandidate(null); }}
+                      >
+                        🔄
+                      </button>
+                    )}
                     <button
                       className="btn btn-ghost btn-sm"
                       style={{ marginLeft: 4 }}
@@ -292,6 +306,91 @@ export default function RegistrationsTab(props) {
           }}
         />
       )}
+      {replaceTarget && (() => {
+        const takenIds = new Set(all.filter((r) => !r.cancelled).map((r) => r.memberId));
+        const filtered = replaceSearch.length >= 2
+          ? (members || []).filter((m) => !takenIds.has(m.id) && norm(m.name).includes(norm(replaceSearch))).slice(0, 10)
+          : [];
+        return (
+          <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setReplaceTarget(null)}>
+            <div className="modal" style={{ maxWidth: 420 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18 }}>🔄 Substituir Inscrito</h3>
+                <button className="btn btn-ghost btn-sm" onClick={() => setReplaceTarget(null)}>✕</button>
+              </div>
+              <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: 13 }}>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{replaceTarget.memberName}</div>
+                <div style={{ color: "var(--muted)", fontFamily: "monospace", fontSize: 11 }}>{replaceTarget.regNumber}</div>
+                <div style={{ color: "var(--muted)", marginTop: 4 }}>
+                  {replaceTarget.fee ? `R$${replaceTarget.fee}` : "—"} · {replaceTarget.paid ? "✓ Pago" : "Não pago"}{replaceTarget.exempt ? " · Isento" : ""}
+                </div>
+              </div>
+              {!replaceCandidate ? (
+                <>
+                  <label style={{ fontWeight: 600, fontSize: 13, display: "block", marginBottom: 6 }}>Registrar em seu lugar:</label>
+                  <input
+                    value={replaceSearch}
+                    onChange={(e) => setReplaceSearch(e.target.value)}
+                    placeholder="Buscar participante..."
+                    autoFocus
+                    style={{ marginBottom: 4 }}
+                  />
+                  {filtered.length > 0 && (
+                    <div style={{ border: "1px solid var(--border)", borderRadius: 8, maxHeight: 220, overflowY: "auto", background: "var(--bg)", marginBottom: 8 }}>
+                      {filtered.map((m) => (
+                        <div
+                          key={m.id}
+                          onClick={() => setReplaceCandidate(m)}
+                          style={{ padding: "9px 14px", cursor: "pointer", fontSize: 13, borderBottom: "1px solid var(--border)" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg2)"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
+                        >
+                          <span style={{ fontWeight: 500 }}>{m.name}</span>
+                          {m.church && <span style={{ marginLeft: 8, fontSize: 11, color: "var(--muted)" }}>{m.church}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {replaceSearch.length >= 2 && filtered.length === 0 && (
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>Nenhum participante elegível encontrado</div>
+                  )}
+                  <button className="btn btn-ghost btn-sm" onClick={() => setReplaceTarget(null)}>{t.cancel}</button>
+                </>
+              ) : (
+                <>
+                  <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: 13 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: "#166534" }}>{replaceCandidate.name}</div>
+                    {replaceCandidate.church && <div style={{ color: "var(--muted)" }}>{replaceCandidate.church}</div>}
+                    <div style={{ color: "var(--muted)", marginTop: 4 }}>
+                      Recebe: {replaceTarget.fee ? `R$${replaceTarget.fee}` : "—"} · {replaceTarget.paid ? "✓ Pago" : "Não pago"}{replaceTarget.exempt ? " · Isento" : ""}
+                    </div>
+                  </div>
+                  <div className="fr">
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => {
+                        const newReg = replaceReg({
+                          oldRegId: replaceTarget.id,
+                          newMemberId: replaceCandidate.id,
+                          newMemberName: replaceCandidate.name,
+                          newBadgeName: replaceCandidate.badgeName || replaceCandidate.name,
+                          newChurch: replaceCandidate.church || replaceTarget.church,
+                          newCategory: replaceCandidate.category || replaceTarget.category,
+                        });
+                        setReplaceTarget(null);
+                        if (newReg) setBadgeReg(newReg);
+                      }}
+                    >
+                      Confirmar Substituição
+                    </button>
+                    <button className="btn btn-ghost" onClick={() => setReplaceCandidate(null)}>Voltar</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
       {badgeReg && (
         <Modal onClose={() => setBadgeReg(null)}>
           <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 4 }}>

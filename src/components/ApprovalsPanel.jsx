@@ -7,6 +7,8 @@ const typeLabel = (a, t) =>
   : a.type === "late_registration" ? t.lateRegistrationReq
   : a.type === "reactivation" ? t.reactivationReq
   : a.type === "deadline_extension" ? t.deadlineExtensionReq
+  : a.type === "replacement" ? "🔄 Substituição"
+  : a.type === "replacement_request" ? "🔄 Solicitação de Substituição"
   : t.exemptionReq;
 
 const historyTypeLabel = (a, t) =>
@@ -14,6 +16,7 @@ const historyTypeLabel = (a, t) =>
   : a.type === "late_registration" ? t.lateRegistrationReq
   : a.type === "reactivation" ? t.reactivationReq
   : a.type === "deadline_extension" ? t.deadlineExtensionReq
+  : a.type === "replacement" || a.type === "replacement_request" ? "🔄 Substituição"
   : t.exempt;
 
 export default function ApprovalsPanel({ approvals, resolveApproval, event, activeCount }) {
@@ -28,40 +31,63 @@ export default function ApprovalsPanel({ approvals, resolveApproval, event, acti
       {pending.length === 0 && (
         <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10, padding: "20px", textAlign: "center", color: "#166534", marginBottom: 14 }}>{t.noPending}</div>
       )}
-      {pending.map((a) => (
-        <div key={a.id} className={`apr-card ${a.type === "exemption" || a.type === "late_registration" || a.type === "reactivation" ? "danger" : ""}`}>
-          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-            <span style={{ fontWeight: 700, fontSize: 14 }}>{typeLabel(a, t)}</span>
-            <span style={{ fontSize: 12, color: "#6b7280" }}>{t.requestedBy} {a.requestedBy}</span>
-          </div>
-          <div style={{ background: "#fff", borderRadius: 8, padding: "10px 14px", marginBottom: 10, fontSize: 13 }}>
-            <div style={{ fontWeight: 700 }}>{a.memberName}</div>
-            <div style={{ color: "#6b7280", marginTop: 2 }}>{a.category} · {a.church}</div>
-            {a.type === "capacity_override" && <div style={{ color: "#c4390a", fontWeight: 600, marginTop: 4 }}>Registration #{activeCount + 1} — above capacity of {event?.capacity}</div>}
-            {a.type === "exemption" && <div style={{ color: "#7c3aed", fontWeight: 600, marginTop: 4 }}>{t.exempt}: {fmt(a.fee)}</div>}
-            {a.type === "late_registration" && <div style={{ color: "#b45309", fontWeight: 600, marginTop: 4 }}>{fmt(a.fee)}</div>}
-            {a.type === "reactivation" && <div style={{ color: "#0369a1", fontWeight: 600, marginTop: 4 }}>Inscrição cancelada — solicitação de reativação</div>}
-            {a.type === "deadline_extension" && <div style={{ color: "#0369a1", fontWeight: 600, marginTop: 4 }}>Solicitação de extensão de prazo</div>}
-          </div>
-          {a.note && <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 10, fontStyle: "italic", padding: "8px 12px", background: "#f9f9f9", borderRadius: 6 }}>"{a.note}"</p>}
-          {(a.type === "reactivation" || a.type === "deadline_extension") && (
-            <div style={{ marginBottom: 8 }}>
-              <label style={{ fontSize: 11, color: "#6b7280" }}>{t.customDeadlineOptional}</label>
-              <input
-                type="date"
-                value={customDate[a.id] || ""}
-                onChange={(e) => setCustomDate((p) => ({ ...p, [a.id]: e.target.value }))}
-                style={{ fontSize: 12 }}
-              />
+      {pending.map((a) => {
+        if (a.type === "replacement") {
+          return (
+            <div key={a.id} style={{ background: "#eff6ff", border: "1px solid #93c5fd", borderRadius: 10, padding: "14px 16px", marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                <span style={{ fontWeight: 700, fontSize: 14, color: "#1e40af" }}>🔄 Substituição Realizada</span>
+                <span style={{ fontSize: 12, color: "#6b7280" }}>{t.requestedBy} {a.requestedBy}</span>
+              </div>
+              <div style={{ background: "#fff", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
+                <div style={{ fontWeight: 700 }}>{a.memberName}</div>
+                <div style={{ color: "#6b7280", marginTop: 2 }}>{a.category} · {a.church}</div>
+                {a.reason && <div style={{ color: "#374151", marginTop: 4, fontStyle: "italic" }}>{a.reason}</div>}
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <button className="btn btn-ghost btn-sm" style={{ color: "#1e40af", borderColor: "#93c5fd" }} onClick={() => resolveApproval(a.id, true, "")}>
+                  ✓ Ciente
+                </button>
+              </div>
             </div>
-          )}
-          <textarea rows={1} value={note[a.id] || ""} onChange={(e) => setNote((p) => ({ ...p, [a.id]: e.target.value }))} placeholder={t.pastorNote} style={{ marginBottom: 8, fontSize: 12 }} />
-          <div className="fr">
-            <button className="btn btn-ok" onClick={() => resolveApproval(a.id, true, note[a.id] || "", customDate[a.id] || null)}>{t.approve}</button>
-            <button className="btn btn-danger" onClick={() => resolveApproval(a.id, false, note[a.id] || "")}>{t.deny}</button>
+          );
+        }
+        return (
+          <div key={a.id} className={`apr-card ${a.type === "exemption" || a.type === "late_registration" || a.type === "reactivation" ? "danger" : ""}`}>
+            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>{typeLabel(a, t)}</span>
+              <span style={{ fontSize: 12, color: "#6b7280" }}>{t.requestedBy} {a.requestedBy}</span>
+            </div>
+            <div style={{ background: "#fff", borderRadius: 8, padding: "10px 14px", marginBottom: 10, fontSize: 13 }}>
+              <div style={{ fontWeight: 700 }}>{a.memberName}</div>
+              <div style={{ color: "#6b7280", marginTop: 2 }}>{a.category} · {a.church}</div>
+              {a.type === "capacity_override" && <div style={{ color: "#c4390a", fontWeight: 600, marginTop: 4 }}>Registration #{activeCount + 1} — above capacity of {event?.capacity}</div>}
+              {a.type === "exemption" && <div style={{ color: "#7c3aed", fontWeight: 600, marginTop: 4 }}>{t.exempt}: {fmt(a.fee)}</div>}
+              {a.type === "late_registration" && <div style={{ color: "#b45309", fontWeight: 600, marginTop: 4 }}>{fmt(a.fee)}</div>}
+              {a.type === "reactivation" && <div style={{ color: "#0369a1", fontWeight: 600, marginTop: 4 }}>Inscrição cancelada — solicitação de reativação</div>}
+              {a.type === "deadline_extension" && <div style={{ color: "#0369a1", fontWeight: 600, marginTop: 4 }}>Solicitação de extensão de prazo</div>}
+              {a.type === "replacement_request" && a.reason && <div style={{ color: "#374151", fontWeight: 600, marginTop: 4 }}>{a.reason}</div>}
+            </div>
+            {a.note && <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 10, fontStyle: "italic", padding: "8px 12px", background: "#f9f9f9", borderRadius: 6 }}>"{a.note}"</p>}
+            {(a.type === "reactivation" || a.type === "deadline_extension") && (
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ fontSize: 11, color: "#6b7280" }}>{t.customDeadlineOptional}</label>
+                <input
+                  type="date"
+                  value={customDate[a.id] || ""}
+                  onChange={(e) => setCustomDate((p) => ({ ...p, [a.id]: e.target.value }))}
+                  style={{ fontSize: 12 }}
+                />
+              </div>
+            )}
+            <textarea rows={1} value={note[a.id] || ""} onChange={(e) => setNote((p) => ({ ...p, [a.id]: e.target.value }))} placeholder={t.pastorNote} style={{ marginBottom: 8, fontSize: 12 }} />
+            <div className="fr">
+              <button className="btn btn-ok" onClick={() => resolveApproval(a.id, true, note[a.id] || "", customDate[a.id] || null)}>{t.approve}</button>
+              <button className="btn btn-danger" onClick={() => resolveApproval(a.id, false, note[a.id] || "")}>{t.deny}</button>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       {resolved.length > 0 && (
         <div>
           <h4 style={{ fontWeight: 700, marginBottom: 10, color: "#6b7280", fontSize: 13, textTransform: "uppercase", letterSpacing: ".5px" }}>{t.history}</h4>

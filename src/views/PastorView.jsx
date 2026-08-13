@@ -1,4 +1,4 @@
-import { useState, Fragment } from "react";
+import { useState, Fragment, useRef } from "react";
 import { LayoutDashboard, ClipboardList, Clock, BarChart2 } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, fmt, deadlineStatus } from "@/constants";
@@ -26,9 +26,10 @@ function PaymentStatusStrip({ paid, exempt, pend, total, lang }) {
 }
 
 function PastorView(props) {
-  const { event, regs, approvals, resolveApproval, user, logout, activeCount, wlRegs, exRegs, pendingApprovals, lang, setLang, theme, toggleTheme, churches, members } = props;
+  const { event, regs, approvals, resolveApproval, updateEventCapacity, user, logout, activeCount, wlRegs, exRegs, pendingApprovals, lang, setLang, theme, toggleTheme, churches, members } = props;
   const t = useT();
   const [sec, setSec] = useState("dashboard");
+  const [capInput, setCapInput] = useState("");
   const [expandedCat, setExpandedCat] = useState({});
   const [expandedCh, setExpandedCh] = useState({});
   const [expandedHub, setExpandedHub] = useState({});
@@ -96,6 +97,41 @@ function PastorView(props) {
                   <p style={{ color: "#6b7280", fontSize: 13 }}>{event?.date} · {event?.location}</p>
                 </div>
                 <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} />
+                {event?.capacity && (
+                  <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 10, padding: "14px 16px", marginBottom: 18, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>
+                        📈 {lang === "en" ? "Increase Capacity" : "Aumentar Capacidade"}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                        {lang === "en" ? "Current" : "Atual"}: <strong>{event.capacity}</strong>
+                        {" · "}{lang === "en" ? "Active" : "Inscritos"}: <strong>{activeCount}</strong>
+                        {wlRegs.length > 0 && <> · {lang === "en" ? "Waitlist" : "Espera"}: <strong>{wlRegs.length}</strong></>}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input
+                        type="number"
+                        min={activeCount}
+                        step={1}
+                        value={capInput}
+                        onChange={(e) => setCapInput(e.target.value)}
+                        placeholder={String(event.capacity)}
+                        style={{ width: 90, textAlign: "center" }}
+                      />
+                      <button
+                        className="btn btn-primary btn-sm"
+                        disabled={!capInput || Number(capInput) <= event.capacity || Number(capInput) < activeCount}
+                        onClick={() => {
+                          updateEventCapacity(Number(capInput));
+                          setCapInput("");
+                        }}
+                      >
+                        {lang === "en" ? "Update" : "Confirmar"}
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="stat-grid-4" style={{ marginBottom: 18 }}>
                   {[
                     { label: t.registered, value: er.length, color: "#1a3a6b", detail: `${t.cia}:${er.filter((r)=>["0-3","Criança","Intermediário"].includes(r.category)).length} · ${t.ya}:${er.filter((r)=>["Adolescente","Jovem","Adulto"].includes(r.category)).length}` },
