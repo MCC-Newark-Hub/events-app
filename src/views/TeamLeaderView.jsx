@@ -27,6 +27,7 @@ function TeamLeaderView(props) {
     toggleTheme,
     submitApproval,
     updatePresence,
+    updateReg,
     churches,
   } = props;
   const t = useT();
@@ -56,7 +57,7 @@ function TeamLeaderView(props) {
   const [ciaTab, setCiaTab] = useState("cia");
   const [translationTab, setTranslationTab] = useState("traducao");
   const [praiseTab, setPraiseTab] = useState("louvor");
-  const [ciaExpanded, setCiaExpanded] = useState({ "0-3": true, "Criança": true, "Intermediário": true, "Adolescente": true });
+  const [ciaExpanded, setCiaExpanded] = useState({ "0-3": true, "Criança": true, "Intermediário": true, "Adolescente": true, "Acessibilidade": true });
   const [excModal, setExcModal] = useState(null); // { cat, name, church, note }
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
@@ -255,24 +256,46 @@ function TeamLeaderView(props) {
           {/* CIA Classes tab */}
           {isCIALeader && ciaTab === "cia" ? (() => {
             const CIA_CATS = [
-              { cat: "0-3",           label: "0-3",            color: "#be185d" },
-              { cat: "Criança",       label: "Crianças",       color: "#7c3aed" },
-              { cat: "Intermediário", label: "Intermediários",  color: "#2563eb" },
-              { cat: "Adolescente",   label: "Adolescentes",    color: "#0891b2" },
+              { cat: "0-3",            label: "0-3",             color: "#be185d" },
+              { cat: "Criança",        label: "Crianças",        color: "#7c3aed" },
+              { cat: "Intermediário",  label: "Intermediários",  color: "#2563eb" },
+              { cat: "Adolescente",    label: "Adolescentes",    color: "#0891b2" },
+              { cat: "Acessibilidade", label: "Acessibilidade",  color: "#d97706" },
             ];
-            const ciaRegs = eventRegs.filter((r) => CIA_CATS.some((c) => c.cat === r.category));
+            const baseCats = ["0-3", "Criança", "Intermediário", "Adolescente"];
+            // All CIA-age registrations (by category); ciaClassOverride determines actual class shown
+            const ciaRegs = eventRegs.filter((r) => baseCats.includes(r.category));
+            const classOf = (r) => r.ciaClassOverride || r.category;
             const totalConf = ciaRegs.filter((r) => r.paid || r.exempt).length;
             const totalPend = ciaRegs.filter((r) => !r.paid && !r.exempt).length;
+
+            // Teacher assignments from Professoras roster
+            const profRoster = rosters.find((r) => r.eventId === event?.id && r.team === "Professoras");
+            const profAssignments = profRoster?.assignments || {};
+            const profMids = profRoster?.memberIds || [];
+            const defaultTeacherClass = (m) => {
+              const roles = m?.roles || [];
+              if (roles.includes("Professor(a) de Crianças")) return "Criança";
+              if (roles.includes("Professor(a) de Intermediários")) return "Intermediário";
+              if (roles.includes("Professor(a) de Adolescentes")) return "Adolescente";
+              return "";
+            };
+            const teachersForCat = (cat) => profMids
+              .filter((mid) => (profAssignments[mid] || defaultTeacherClass(members.find((m) => m.id === mid))) === cat)
+              .map((mid) => members.find((m) => m.id === mid))
+              .filter(Boolean);
+
             return (
               <>
                 {/* Per-class totals */}
-                <div className="stat-grid-4" style={{ marginBottom: 10 }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
                   {CIA_CATS.map(({ cat, label, color }) => {
-                    const count = ciaRegs.filter((r) => r.category === cat).length;
+                    const count = ciaRegs.filter((r) => classOf(r) === cat).length;
+                    if (cat === "Acessibilidade" && count === 0) return null;
                     return (
-                      <div key={cat} className="card" style={{ textAlign: "center", borderTop: `3px solid ${color}`, padding: "14px 10px" }}>
-                        <div style={{ fontSize: 26, fontWeight: 700, color }}>{count}</div>
-                        <div style={{ fontSize: 12, color: "#6b7280" }}>{label}</div>
+                      <div key={cat} className="card" style={{ textAlign: "center", borderTop: `3px solid ${color}`, padding: "12px 10px", flex: "1 1 70px" }}>
+                        <div style={{ fontSize: 22, fontWeight: 700, color }}>{count}</div>
+                        <div style={{ fontSize: 11, color: "#6b7280" }}>{label}</div>
                       </div>
                     );
                   })}
@@ -282,7 +305,7 @@ function TeamLeaderView(props) {
                   {[
                     { label: "Total CIA", value: ciaRegs.length, color: "#1a3a6b" },
                     { label: "Confirmados", value: totalConf, color: "#16a34a" },
-                    { label: "Pendentes", value: totalPend, color: "#d97706" },
+                    { label: "Pendentes",   value: totalPend, color: "#d97706" },
                   ].map((s) => (
                     <div key={s.label} className="card" style={{ textAlign: "center", borderTop: `3px solid ${s.color}`, padding: "12px 10px" }}>
                       <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
@@ -293,42 +316,33 @@ function TeamLeaderView(props) {
 
                 {/* Per-category sections */}
                 {CIA_CATS.map(({ cat, label, color }) => {
-                  const rows = eventRegs.filter((r) => r.category === cat).sort((a, b) => norm(a.memberName).localeCompare(norm(b.memberName)));
+                  const rows = ciaRegs.filter((r) => classOf(r) === cat).sort((a, b) => norm(a.memberName).localeCompare(norm(b.memberName)));
+                  const teachers = teachersForCat(cat);
                   const conf = rows.filter((r) => r.paid || r.exempt).length;
-                  const pend = rows.filter((r) => !r.paid && !r.exempt).length;
-                  const open = ciaExpanded[cat];
+                  const open = ciaExpanded[cat] !== false;
+                  if (cat === "Acessibilidade" && rows.length === 0 && teachers.length === 0) return null;
                   return (
                     <div key={cat} className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 16 }}>
-                      <div
-                        style={{ padding: "12px 16px", background: "var(--bg2)", borderBottom: open ? "1px solid var(--border)" : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}
-                      >
-                        <div
-                          onClick={() => setCiaExpanded((p) => ({ ...p, [cat]: !p[cat] }))}
-                          style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flex: 1 }}
-                        >
-                          <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, display: "inline-block" }} />
+                      <div style={{ padding: "12px 16px", background: "var(--bg2)", borderBottom: open ? "1px solid var(--border)" : "none", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <div onClick={() => setCiaExpanded((p) => ({ ...p, [cat]: !open }))} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", flex: 1, flexWrap: "wrap" }}>
+                          <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, display: "inline-block", flexShrink: 0 }} />
                           <span style={{ fontWeight: 700, fontSize: 15 }}>{label}</span>
                           <span className="badge badge-blue" style={{ fontSize: 10 }}>{rows.length} total</span>
                           {conf > 0 && <span className="badge badge-green" style={{ fontSize: 10 }}>{conf}✓</span>}
-                          {pend > 0 && <span className="badge badge-yellow" style={{ fontSize: 10 }}>{pend}⏳</span>}
                           {rows.filter((r) => r.presence === "present").length > 0 && (
-                            <span className="badge badge-green" style={{ fontSize: 10 }}>
-                              {rows.filter((r) => r.presence === "present").length} presentes
+                            <span className="badge badge-green" style={{ fontSize: 10 }}>{rows.filter((r) => r.presence === "present").length} presentes</span>
+                          )}
+                          {teachers.length > 0 && (
+                            <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 4 }}>
+                              | Professores: {teachers.map((tc) => tc.firstName || tc.name.split(" ")[0]).join(", ")}
                             </span>
                           )}
                         </div>
                         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                          <button
-                            className="btn btn-ghost btn-xs"
-                            title="Adicionar participante excedente"
-                            onClick={() => setExcModal({ cat, name: "", church: "", note: "" })}
-                          >
-                            + Excedente
-                          </button>
-                          <span
-                            onClick={() => setCiaExpanded((p) => ({ ...p, [cat]: !p[cat] }))}
-                            style={{ color: "var(--muted)", fontSize: 13, cursor: "pointer" }}
-                          >{open ? "▲" : "▼"}</span>
+                          {cat !== "Acessibilidade" && (
+                            <button className="btn btn-ghost btn-xs" onClick={() => setExcModal({ cat, name: "", church: "", note: "" })}>+ Excedente</button>
+                          )}
+                          <span onClick={() => setCiaExpanded((p) => ({ ...p, [cat]: !open }))} style={{ color: "var(--muted)", fontSize: 13, cursor: "pointer" }}>{open ? "▲" : "▼"}</span>
                         </div>
                       </div>
                       {open && (
@@ -336,13 +350,14 @@ function TeamLeaderView(props) {
                           <p style={{ padding: "14px 16px", color: "var(--muted)", fontSize: 13 }}>Nenhum inscrito nesta classe.</p>
                         ) : (
                           <div style={{ overflowX: "auto" }}>
-                            <table className="table" style={{ minWidth: 480 }}>
+                            <table className="table" style={{ minWidth: 500 }}>
                               <thead>
                                 <tr>
                                   <th style={{ width: 44 }}>Presença</th>
                                   <th>Nome</th>
                                   <th>Igreja</th>
                                   <th>Status</th>
+                                  <th>Mover</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -352,15 +367,8 @@ function TeamLeaderView(props) {
                                   return (
                                     <tr key={r.id}>
                                       <td style={{ textAlign: "center" }}>
-                                        <button
-                                          onClick={() => updatePresence(r.id, present ? "unknown" : "present")}
-                                          title={present ? "Marcar ausente" : "Marcar presente"}
-                                          style={{
-                                            background: "none", border: "none", cursor: "pointer",
-                                            fontSize: 18, lineHeight: 1,
-                                            color: present ? "#16a34a" : "#d1d5db",
-                                          }}
-                                        >
+                                        <button onClick={() => updatePresence(r.id, present ? "unknown" : "present")}
+                                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, lineHeight: 1, color: present ? "#16a34a" : "#d1d5db" }}>
                                           {present ? "✓" : "○"}
                                         </button>
                                       </td>
@@ -370,6 +378,20 @@ function TeamLeaderView(props) {
                                         <span className={`badge ${paid ? "badge-green" : "badge-yellow"}`} style={{ fontSize: 10 }}>
                                           {paid ? "Confirmado" : "Pendente"}
                                         </span>
+                                      </td>
+                                      <td>
+                                        <select value="" onChange={(e) => {
+                                          const target = e.target.value;
+                                          if (!target) return;
+                                          updateReg(r.id, { ciaClassOverride: target === r.category ? null : target }, null, { silent: true });
+                                          e.target.value = "";
+                                        }} style={{ fontSize: 11, padding: "3px 6px", width: "auto" }}>
+                                          <option value="">Mover…</option>
+                                          {CIA_CATS.filter((c) => c.cat !== cat).map((c) => (
+                                            <option key={c.cat} value={c.cat}>{c.label}</option>
+                                          ))}
+                                          {r.ciaClassOverride && <option value={r.category}>↩ Restaurar</option>}
+                                        </select>
                                       </td>
                                     </tr>
                                   );
@@ -632,6 +654,86 @@ function TeamLeaderView(props) {
               .sort((a, b) => norm(a.name).localeCompare(norm(b.name)));
             const counts = { confirmed: 0, pending: 0, not_registered: 0 };
             teamMembers.forEach((m) => counts[getStatus(m.id)]++);
+
+            // Professoras team: grouped-by-class view for CIA leader
+            if (team === "Professoras" && isCIALeader) {
+              const CIA_CLASS_OPTIONS = ["0-3", "Criança", "Intermediário", "Adolescente", "Acessibilidade"];
+              const CIA_CLASS_COLORS = { "0-3": "#be185d", "Criança": "#7c3aed", "Intermediário": "#2563eb", "Adolescente": "#0891b2", "Acessibilidade": "#d97706", "Sem atribuição": "#9ca3af" };
+              const assignments = roster?.assignments || {};
+              const defaultTeacherClass = (m) => {
+                const roles = m?.roles || [];
+                if (roles.includes("Professor(a) de Crianças")) return "Criança";
+                if (roles.includes("Professor(a) de Intermediários")) return "Intermediário";
+                if (roles.includes("Professor(a) de Adolescentes")) return "Adolescente";
+                return "";
+              };
+              const effectiveClass = (m) => assignments[m.id] || defaultTeacherClass(m) || "Sem atribuição";
+              const grouped = {};
+              [...CIA_CLASS_OPTIONS, "Sem atribuição"].forEach((c) => { grouped[c] = []; });
+              teamMembers.forEach((m) => { const cls = effectiveClass(m); (grouped[cls] || grouped["Sem atribuição"]).push(m); });
+              const isEditing = editTeam === team;
+              return (
+                <div key={team} style={{ marginBottom: 24 }}>
+                  <div className="stat-grid-3" style={{ marginBottom: 12 }}>
+                    {[{ label: t.members, value: teamMembers.length, color: "#1a3a6b" }, { label: t.confirmed, value: counts.confirmed, color: "#2d8a4e" }, { label: t.notRegistered, value: counts.not_registered, color: "#d4820a" }].map((s) => (
+                      <div className="stat-card" key={s.label} style={{ textAlign: "center", borderTop: `3px solid ${s.color}` }}>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
+                        <div style={{ fontSize: 12, color: "#6b7280" }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {[...CIA_CLASS_OPTIONS, "Sem atribuição"].map((cls) => {
+                    const teachers = grouped[cls] || [];
+                    if (teachers.length === 0) return null;
+                    const clsColor = CIA_CLASS_COLORS[cls];
+                    return (
+                      <div key={cls} className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 10 }}>
+                        <div style={{ padding: "8px 14px", background: "var(--bg2)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: clsColor, display: "inline-block" }} />
+                          <span style={{ fontWeight: 700, fontSize: 13 }}>{cls}</span>
+                          <span className="badge badge-blue" style={{ fontSize: 10 }}>{teachers.length}</span>
+                        </div>
+                        {teachers.map((m) => {
+                          const cfg = STATUS_CFG[getStatus(m.id)];
+                          const assigned = assignments[m.id] || "";
+                          return (
+                            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", borderBottom: "1px solid var(--border)" }}>
+                              <span className={`dot ${cfg.dot}`} />
+                              <span style={{ flex: 1, fontWeight: 500, fontSize: 13 }}>{m.name}</span>
+                              <select value={assigned} onChange={(e) => setMemberAssignment("Professoras", m.id, e.target.value)} style={{ fontSize: 11, padding: "3px 6px", width: "auto" }}>
+                                <option value="">— Padrão ({defaultTeacherClass(m) || "—"}) —</option>
+                                {CIA_CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+                              </select>
+                              <button onClick={() => removeFromRoster(team, m.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 18, lineHeight: 1 }}>×</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                  <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { setEditTeam(isEditing ? null : team); setMsearch(""); }}>{isEditing ? t.close : "+ " + t.add}</button>
+                  </div>
+                  {isEditing && (
+                    <div style={{ padding: "10px 14px", background: "#fffbeb", border: "1px solid var(--border)", borderRadius: 8, marginTop: 8 }}>
+                      <input value={msearch} onChange={(e) => setMsearch(e.target.value)} placeholder={`${t.searchMember}...`} autoFocus style={{ marginBottom: 6 }} />
+                      {searchR.map((m) => {
+                        const already = mids.includes(m.id);
+                        const check = already ? null : canAssignToTeam({ rosters, eventId: event?.id, memberId: m.id, targetTeam: team, memberRoles: m.roles });
+                        return (
+                          <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderTop: "1px solid var(--border)", gap: 8 }}>
+                            <div style={{ fontSize: 13 }}>{m.name} <span style={{ color: "#6b7280", fontSize: 11 }}>({m.category})</span></div>
+                            {already ? <span className="badge badge-gray">Já na equipe</span>
+                              : !check.allowed ? <span style={{ fontSize: 11, color: "#9ca3af" }}>Equipe {check.conflictTeam}</span>
+                              : <button className="btn btn-ok btn-xs" onClick={() => { addToRoster(team, m.id); setMsearch(""); }}>+</button>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
             const notReg = teamMembers.filter((m) => getStatus(m.id) === "not_registered");
             const isEditing = editTeam === team;
             return (

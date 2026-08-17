@@ -35,6 +35,7 @@ export default function RegistrationsTab(props) {
     isFull,
     notify,
     lang,
+    initialFilter,
   } = props;
   const liveChurchOf = (r) => (members || []).find((m) => m.id === r.memberId)?.church || r.church || "—";
   const [confirmDelete, setConfirmDelete] = useState(null); // single reg
@@ -57,7 +58,7 @@ export default function RegistrationsTab(props) {
   const toggleBulk = (id) => setBulkSel((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
   const t = useT();
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState(initialFilter || "all");
   const [showReg, setShowReg] = useState(false);
   const [detail, setDetail] = useState(null);
   const all = regs.filter((r) => r.eventId === event?.id);

@@ -35,6 +35,8 @@ function AdminView(props) {
   const { event, user, logout, pendingApprovals, lang, setLang, theme, toggleTheme } = props;
   const t = useT();
   const [sec, setSec] = useState("overview");
+  const [regsInitialFilter, setRegsInitialFilter] = useState(null);
+  const navToRegs = (filter) => { setRegsInitialFilter(filter); setSec("regs"); };
   const navItems = [
     { id: "overview", icon: <LayoutDashboard size={16} />, label: t.overview },
     { id: "regs", icon: <ClipboardList size={16} />, label: t.registrations },
@@ -57,8 +59,8 @@ function AdminView(props) {
         <Sidebar navItems={navItems} activeId={sec} onSelect={setSec} />
         <div className="main-scroll">
           <div className="page-pad">
-            {sec === "overview" && <AdminOverview {...props} />}
-            {sec === "regs" && <RegistrationsTab {...props} />}
+            {sec === "overview" && <AdminOverview {...props} setSec={setSec} navToRegs={navToRegs} />}
+            {sec === "regs" && <RegistrationsTab {...props} initialFilter={regsInitialFilter} />}
             {sec === "teams" && <TeamsTab {...props} />}
             {sec === "ga" && <AdminGA {...props} />}
             {sec === "approvals" && <ApprovalsPanel {...props} />}
@@ -99,7 +101,7 @@ function PaymentStatusStrip({ paid, exempt, pend, total, lang }) {
   );
 }
 
-function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members, lang, toggleRegistrationPaused }) {
+function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members, lang, toggleRegistrationPaused, navToRegs }) {
   const t = useT();
   const [expandedCat, setExpandedCat] = useState({});
   const [expandedCh, setExpandedCh] = useState({});
@@ -145,9 +147,9 @@ function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members, lang
           { label: t.registered, value: er.length, sub: `${t.cia}:${er.filter((r) => ["0-3","Criança","Intermediário"].includes(r.category)).length} · ${t.ya}:${er.filter((r) => ["Adolescente","Jovem","Adulto"].includes(r.category)).length}`, color: "#1a3a6b", icon: <Users size={22} /> },
           { label: t.collected, value: fmt(coll), sub: `${paid.length} ${t.payers}`, color: "#2d8a4e", icon: "💵" },
           { label: t.pendingAmt, value: fmt(pendA), sub: `${pend.length} ${t.people}`, color: "#d4820a", icon: <Clock size={22} /> },
-          { label: t.waitlist, value: wlRegs.length, sub: `${exRegs.length} ${t.overCapacity}`, color: "#92400e", icon: "🎫" },
+          { label: t.waitlist, value: wlRegs.length, sub: `${exRegs.length} ${t.overCapacity}`, color: "#92400e", icon: "🎫", onClick: () => navToRegs?.("waitlist") },
         ].map((s) => (
-          <div className="stat-card" key={s.label} style={{ borderTop: `3px solid ${s.color}` }}>
+          <div className="stat-card" key={s.label} style={{ borderTop: `3px solid ${s.color}`, cursor: s.onClick ? "pointer" : "default" }} onClick={s.onClick}>
             <div style={{ fontSize: 22, marginBottom: 4 }}>{s.icon}</div>
             <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{s.label}</div>

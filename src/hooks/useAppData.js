@@ -72,6 +72,7 @@ export function mapReg(r) {
     checkinMethod: r.checkin_method || null,
     cancelReason: r.cancel_reason || null,
     deadlineExtendedTo: r.deadline_extended_to || null,
+    ciaClassOverride: r.cia_class_override || null,
   };
 }
 export function mapApproval(a) {
@@ -518,6 +519,7 @@ export function useAppData({ getUserRef, notify }) {
     // valid write, unlike the `!= null` fields above — hence `!== undefined` here.
     if (upd.deadlineExtendedTo !== undefined) dbUpd.deadline_extended_to = upd.deadlineExtendedTo;
     if (upd.cancelReason !== undefined) dbUpd.cancel_reason = upd.cancelReason;
+    if (upd.ciaClassOverride !== undefined) dbUpd.cia_class_override = upd.ciaClassOverride || null;
     if (timelineEntry && updatedReg) dbUpd.timeline = updatedReg.timeline;
     if (Object.keys(dbUpd).length > 0) {
       sb.from("registrations")
