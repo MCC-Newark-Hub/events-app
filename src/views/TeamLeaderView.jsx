@@ -188,7 +188,7 @@ function TeamLeaderView(props) {
           {(isCozinhaLeader || isCIALeader || isTranslationLeader || isPraiseLeader) && (
             <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: "2px solid var(--border)", paddingBottom: 0 }}>
               {(isCIALeader
-                ? [{ id: "cia", label: "📚 CIA — Classes" }, { id: "equipe", label: "Equipe" }]
+                ? [{ id: "cia", label: "📚 CIA — Classes" }, { id: "equipe", label: "Equipe" }, { id: "professores", label: "Professores" }]
                 : isCozinhaLeader
                   ? [{ id: "equipe", label: "Equipe" }, { id: "planejamento", label: "🍽️ Planejamento" }]
                   : isTranslationLeader
@@ -520,6 +520,80 @@ function TeamLeaderView(props) {
             );
           })() : null}
 
+          {/* Professores hub tab */}
+          {isCIALeader && ciaTab === "professores" && (() => {
+            const CIA_ROLE_CLASSES = [
+              { role: "Professor(a) de Crianças",       cat: "Criança",       color: "#dc2626", label: "Crianças" },
+              { role: "Professor(a) de Intermediários", cat: "Intermediário", color: "#2563eb", label: "Intermediários" },
+              { role: "Professor(a) de Adolescentes",   cat: "Adolescente",   color: "#ca8a04", label: "Adolescentes" },
+            ];
+            const ACC_COLOR = "#0891b2";
+            const profRoster = rosters.find((r) => r.eventId === event?.id && r.team === "Professoras");
+            const profMids = profRoster?.memberIds || [];
+            const profAssignments = profRoster?.assignments || {};
+
+            const allTeachers = members.filter((m) =>
+              (m.roles || []).some((r) => CIA_ROLE_CLASSES.some((c) => c.role === r))
+            ).sort((a, b) => norm(a.name).localeCompare(norm(b.name)));
+
+            const effectiveClass = (m) => {
+              if (profMids.includes(m.id) && profAssignments[m.id]) return profAssignments[m.id];
+              const match = CIA_ROLE_CLASSES.find((c) => (m.roles || []).includes(c.role));
+              return match?.cat || "";
+            };
+
+            return (
+              <div>
+                <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
+                  Todos os professores CIA cadastrados no sistema — independente de estarem no seminário.
+                </p>
+                {[...CIA_ROLE_CLASSES, { cat: "Acessibilidade", color: ACC_COLOR, label: "Acessibilidade" }].map(({ cat, color, label }) => {
+                  const group = allTeachers.filter((m) => effectiveClass(m) === cat);
+                  if (group.length === 0) return null;
+                  return (
+                    <div key={cat} className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 14 }}>
+                      <div style={{ padding: "10px 14px", background: "var(--bg2)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ width: 9, height: 9, borderRadius: "50%", background: color, display: "inline-block" }} />
+                        <span style={{ fontWeight: 700, fontSize: 14 }}>{label}</span>
+                        <span style={{ fontSize: 11, padding: "1px 7px", borderRadius: 10, background: color + "22", color, border: `1px solid ${color}44`, fontWeight: 700 }}>{group.length}</span>
+                      </div>
+                      {group.map((m) => {
+                        const inRoster = profMids.includes(m.id);
+                        const regStatus = getStatus(m.id);
+                        const statusCfg = STATUS_CFG[regStatus];
+                        return (
+                          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", borderBottom: "1px solid var(--border)" }}>
+                            <span className={`dot ${statusCfg.dot}`} title={statusCfg.label} />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 500, fontSize: 13 }}>{m.name}</div>
+                              <div style={{ fontSize: 11, color: "var(--muted)" }}>{m.church || "—"}</div>
+                            </div>
+                            {inRoster
+                              ? <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: color + "22", color, border: `1px solid ${color}55`, fontWeight: 700 }}>No seminário</span>
+                              : (
+                                <button className="btn btn-ghost btn-xs" onClick={() => {
+                                  addToRoster("Professoras", m.id);
+                                  if (cat !== "Acessibilidade") {
+                                    setTimeout(() => setMemberAssignment("Professoras", m.id, cat), 300);
+                                  }
+                                }}>
+                                  + Adicionar
+                                </button>
+                              )
+                            }
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+                {allTeachers.length === 0 && (
+                  <p style={{ color: "var(--muted)", fontSize: 13 }}>Nenhum professor cadastrado no sistema.</p>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Louvor tab */}
           {isPraiseLeader && praiseTab === "louvor" ? (() => {
             const VOICE_TYPES = ["Soprano", "Mezzo-Soprano", "Contralto", "Tenor", "Barítono", "Baixo"];
@@ -750,7 +824,7 @@ function TeamLeaderView(props) {
               </div>
               <KitchenPlanningTab regs={regs} event={event} events={props.events} notify={notify} />
             </>
-          ) : (!isCIALeader || ciaTab !== "cia") && (!isTranslationLeader || translationTab !== "traducao") && (!isPraiseLeader || praiseTab !== "louvor") ? (
+          ) : (!isCIALeader || (ciaTab !== "cia" && ciaTab !== "professores")) && (!isTranslationLeader || translationTab !== "traducao") && (!isPraiseLeader || praiseTab !== "louvor") ? (
             <>
               {myTeams.length === 0 && (
                 <div style={{ padding: "24px", background: "var(--card)", borderRadius: 10, border: "1px solid var(--border)", color: "var(--muted)", textAlign: "center" }}>
