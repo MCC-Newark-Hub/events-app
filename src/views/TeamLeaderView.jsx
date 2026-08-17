@@ -49,9 +49,11 @@ function TeamLeaderView(props) {
   const isCozinhaLeader = myTeams.includes("Cozinha");
   const isCIALeader = myTeams.includes("Professoras");
   const isTranslationLeader = myTeams.includes("Tradução");
+  const isPraiseLeader = myTeams.includes("Grupo de Louvor");
   const [kitchenView, setKitchenView] = useState("equipe");
   const [ciaTab, setCiaTab] = useState("cia");
   const [translationTab, setTranslationTab] = useState("traducao");
+  const [praiseTab, setPraiseTab] = useState("louvor");
   const [ciaExpanded, setCiaExpanded] = useState({ "0-3": true, "Criança": true, "Intermediário": true, "Adolescente": true });
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
@@ -155,17 +157,19 @@ function TeamLeaderView(props) {
             <p style={{ color: "#6b7280", fontSize: 13 }}>{t.teamReadOnly}</p>
           </div>
 
-          {/* Tab bar — Cozinha / CIA / Tradução leaders */}
-          {(isCozinhaLeader || isCIALeader || isTranslationLeader) && (
+          {/* Tab bar — Cozinha / CIA / Tradução / Louvor leaders */}
+          {(isCozinhaLeader || isCIALeader || isTranslationLeader || isPraiseLeader) && (
             <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: "2px solid var(--border)", paddingBottom: 0 }}>
               {(isCIALeader
                 ? [{ id: "cia", label: "📚 CIA — Classes" }, { id: "equipe", label: "Equipe" }]
                 : isCozinhaLeader
                   ? [{ id: "equipe", label: "Equipe" }, { id: "planejamento", label: "🍽️ Planejamento" }]
-                  : [{ id: "traducao", label: "🌐 Tradução" }, { id: "equipe", label: "Equipe" }]
+                  : isTranslationLeader
+                    ? [{ id: "traducao", label: "🌐 Tradução" }, { id: "equipe", label: "Equipe" }]
+                    : [{ id: "louvor", label: "🎵 Louvor" }, { id: "equipe", label: "Equipe" }]
               ).map(({ id, label }) => {
-                const activeTab = isCIALeader ? ciaTab : isCozinhaLeader ? kitchenView : translationTab;
-                const setTab = isCIALeader ? setCiaTab : isCozinhaLeader ? setKitchenView : setTranslationTab;
+                const activeTab = isCIALeader ? ciaTab : isCozinhaLeader ? kitchenView : isTranslationLeader ? translationTab : praiseTab;
+                const setTab = isCIALeader ? setCiaTab : isCozinhaLeader ? setKitchenView : isTranslationLeader ? setTranslationTab : setPraiseTab;
                 return (
                   <button
                     key={id}
@@ -285,6 +289,121 @@ function TeamLeaderView(props) {
             );
           })() : null}
 
+          {/* Louvor tab */}
+          {isPraiseLeader && praiseTab === "louvor" ? (() => {
+            const VOICE_TYPES = ["Soprano", "Mezzo-Soprano", "Contralto", "Tenor", "Barítono", "Baixo"];
+            const INSTRUMENTS = ["Violão", "Guitarra", "Contrabaixo", "Teclado", "Bateria", "Percussão", "Flauta", "Violino", "Trompete", "Saxofone"];
+            const roster = rosters.find((r) => r.eventId === event?.id && r.team === "Grupo de Louvor");
+            const assignments = roster?.assignments || {};
+            const mids = roster?.memberIds || [];
+            const teamMembers = mids
+              .map((mid) => members.find((m) => m.id === mid))
+              .filter(Boolean)
+              .sort((a, b) => norm(a.name).localeCompare(norm(b.name)));
+
+            // Coverage summary: count by assigned role
+            const byRole = {};
+            teamMembers.forEach((m) => {
+              const role = assignments[m.id] || "—";
+              byRole[role] = (byRole[role] || 0) + 1;
+            });
+            const assignedRoles = Object.entries(byRole).filter(([k]) => k !== "—");
+
+            return (
+              <>
+                {/* Summary cards: voice types and instruments covered */}
+                {assignedRoles.length > 0 && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+                    {assignedRoles.map(([role, count]) => (
+                      <div key={role} className="card" style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontWeight: 700, fontSize: 13 }}>{role}</span>
+                        <span className="badge badge-blue" style={{ fontSize: 11 }}>{count}</span>
+                      </div>
+                    ))}
+                    {byRole["—"] > 0 && (
+                      <div className="card" style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 8, opacity: 0.6 }}>
+                        <span style={{ fontSize: 13, color: "var(--muted)" }}>Sem atribuição</span>
+                        <span className="badge badge-gray" style={{ fontSize: 11 }}>{byRole["—"]}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Member list with voice, instruments and assignment */}
+                <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+                  {teamMembers.length === 0 ? (
+                    <p style={{ padding: 24, color: "var(--muted)", textAlign: "center", fontSize: 13 }}>Nenhum músico na equipe ainda.</p>
+                  ) : (
+                    <div style={{ overflowX: "auto" }}>
+                      <table className="table" style={{ minWidth: 520 }}>
+                        <thead>
+                          <tr>
+                            <th>Nome</th>
+                            <th>Voz</th>
+                            <th>Instrumentos</th>
+                            <th>Atribuição — {event?.name || "este evento"}</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teamMembers.map((m) => {
+                            const assigned = assignments[m.id] || "";
+                            // Options: their voice type + their instruments
+                            const options = [
+                              ...(m.voiceType ? [`Voz — ${m.voiceType}`] : []),
+                              ...(m.instruments || []),
+                            ];
+                            const regStatus = getStatus(m.id);
+                            const statusColor = regStatus === "confirmed" ? "#2d8a4e" : regStatus === "pending" ? "#d4820a" : "#9ca3af";
+                            const statusLabel = regStatus === "confirmed" ? t.confirmed : regStatus === "pending" ? t.pendPayment : t.notRegistered;
+                            return (
+                              <tr key={m.id}>
+                                <td style={{ fontWeight: 600 }}>{m.name}</td>
+                                <td>
+                                  {m.voiceType ? (
+                                    <span className="badge" style={{ fontSize: 10, background: "#fdf4ff", color: "#7e22ce", border: "1px solid #e9d5ff" }}>{m.voiceType}</span>
+                                  ) : (
+                                    <span style={{ color: "var(--muted)", fontSize: 11 }}>—</span>
+                                  )}
+                                </td>
+                                <td>
+                                  {(m.instruments || []).length === 0 ? (
+                                    <span style={{ color: "var(--muted)", fontSize: 11 }}>—</span>
+                                  ) : (
+                                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                                      {(m.instruments || []).map((inst) => (
+                                        <span key={inst} className="badge badge-blue" style={{ fontSize: 10 }}>{inst}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </td>
+                                <td>
+                                  <select
+                                    value={assigned}
+                                    onChange={(e) => setMemberAssignment("Grupo de Louvor", m.id, e.target.value)}
+                                    style={{ fontSize: 12, padding: "3px 6px", width: "auto" }}
+                                  >
+                                    <option value="">— Não atribuído —</option>
+                                    {(options.length > 0 ? options : [...VOICE_TYPES.map((v) => `Voz — ${v}`), ...INSTRUMENTS]).map((o) => (
+                                      <option key={o} value={o}>{o}</option>
+                                    ))}
+                                  </select>
+                                </td>
+                                <td>
+                                  <span style={{ fontSize: 11, color: statusColor }}>● {statusLabel}</span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })() : null}
+
           {/* Tradução tab */}
           {isTranslationLeader && translationTab === "traducao" ? (() => {
             const LANGS = ["Inglês", "Espanhol", "Francês", "Mandarim", "Italiano", "Alemão"];
@@ -400,7 +519,7 @@ function TeamLeaderView(props) {
               </div>
               <KitchenPlanningTab regs={regs} event={event} events={props.events} notify={notify} />
             </>
-          ) : (!isCIALeader || ciaTab !== "cia") && (!isTranslationLeader || translationTab !== "traducao") ? (
+          ) : (!isCIALeader || ciaTab !== "cia") && (!isTranslationLeader || translationTab !== "traducao") && (!isPraiseLeader || praiseTab !== "louvor") ? (
             <>
               {myTeams.length === 0 && (
                 <div style={{ padding: "24px", background: "var(--card)", borderRadius: 10, border: "1px solid var(--border)", color: "var(--muted)", textAlign: "center" }}>

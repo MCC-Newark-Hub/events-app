@@ -61,6 +61,8 @@ export default function MemberEditModal({
         is_guest: editingMember.isGuest || false,
         invited_by: editingMember.isGuest ? (editingMember.invitedBy || null) : null,
         translation_languages: editingMember.translationLanguages || [],
+        voice_type: editingMember.voiceType || null,
+        instruments: editingMember.instruments || [],
       };
       let memberId = editingMember.id;
       if (editingMember.id) {
@@ -178,6 +180,32 @@ export default function MemberEditModal({
               })}
             </div>
           </div>
+        )}
+        {(editingMember.roles || []).some((r) => ["Grupo de Louvor", "Instrumentista", "Instrumentista Aprendiz", "Responsável - Grupo de Louvor"].includes(r)) && (
+          <>
+            <div>
+              <label>Tipo de Voz</label>
+              <select value={editingMember.voiceType || ""} onChange={(e) => setEditingMember({ ...editingMember, voiceType: e.target.value })}>
+                <option value="">— Nenhum —</option>
+                {["Soprano", "Mezzo-Soprano", "Contralto", "Tenor", "Barítono", "Baixo"].map((v) => <option key={v}>{v}</option>)}
+              </select>
+            </div>
+            <div>
+              <label>Instrumentos</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                {["Violão", "Guitarra", "Contrabaixo", "Teclado", "Bateria", "Percussão", "Flauta", "Violino", "Trompete", "Saxofone"].map((inst) => {
+                  const checked = (editingMember.instruments || []).includes(inst);
+                  return (
+                    <label key={inst} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, cursor: "pointer", userSelect: "none" }}>
+                      <input type="checkbox" checked={checked}
+                        onChange={() => setEditingMember({ ...editingMember, instruments: checked ? (editingMember.instruments || []).filter((i) => i !== inst) : [...(editingMember.instruments || []), inst] })} />
+                      {inst}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </>
         )}
         <div>
           <label>Família</label>

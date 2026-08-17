@@ -588,6 +588,21 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
                             ✓ {(roster.assignments)[mid]}
                           </span>
                         )}
+                        {team === "Grupo de Louvor" && m.voiceType && (
+                          <span className="badge" style={{ fontSize: 9, marginLeft: 4, verticalAlign: "middle", background: "#fdf4ff", color: "#7e22ce", border: "1px solid #e9d5ff" }} title="Tipo de voz">
+                            {m.voiceType}
+                          </span>
+                        )}
+                        {team === "Grupo de Louvor" && (m.instruments || []).map((inst) => (
+                          <span key={inst} className="badge badge-blue" style={{ fontSize: 9, marginLeft: 4, verticalAlign: "middle" }} title={inst}>
+                            {inst.slice(0, 3).toUpperCase()}
+                          </span>
+                        ))}
+                        {team === "Grupo de Louvor" && (roster?.assignments || {})[mid] && (
+                          <span className="badge badge-green" style={{ fontSize: 9, marginLeft: 4, verticalAlign: "middle" }} title="Atribuição neste evento">
+                            ✓ {(roster.assignments)[mid]}
+                          </span>
+                        )}
                       </span>
                       <span className={`badge ${cfg.badge}`} style={{ fontSize: 10 }}>
                         {

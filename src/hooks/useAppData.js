@@ -23,6 +23,8 @@ export function mapMember(m) {
     isGuest: m.is_guest || false,
     invitedBy: m.invited_by || '',
     translationLanguages: m.translation_languages || [],
+    voiceType: m.voice_type || '',
+    instruments: m.instruments || [],
   };
 }
 export function mapFamily(f) {
