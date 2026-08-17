@@ -9,6 +9,7 @@ const typeLabel = (a, t) =>
   : a.type === "deadline_extension" ? t.deadlineExtensionReq
   : a.type === "replacement" ? "🔄 Substituição"
   : a.type === "replacement_request" ? "🔄 Solicitação de Substituição"
+  : a.type === "cia_excedente" ? "📚 CIA — Participante Excedente"
   : t.exemptionReq;
 
 const historyTypeLabel = (a, t) =>
@@ -17,6 +18,7 @@ const historyTypeLabel = (a, t) =>
   : a.type === "reactivation" ? t.reactivationReq
   : a.type === "deadline_extension" ? t.deadlineExtensionReq
   : a.type === "replacement" || a.type === "replacement_request" ? "🔄 Substituição"
+  : a.type === "cia_excedente" ? "📚 CIA — Excedente"
   : t.exempt;
 
 export default function ApprovalsPanel({ approvals, resolveApproval, event, activeCount }) {
@@ -67,6 +69,7 @@ export default function ApprovalsPanel({ approvals, resolveApproval, event, acti
               {a.type === "reactivation" && <div style={{ color: "#0369a1", fontWeight: 600, marginTop: 4 }}>Inscrição cancelada — solicitação de reativação</div>}
               {a.type === "deadline_extension" && <div style={{ color: "#0369a1", fontWeight: 600, marginTop: 4 }}>Solicitação de extensão de prazo</div>}
               {a.type === "replacement_request" && a.reason && <div style={{ color: "#374151", fontWeight: 600, marginTop: 4 }}>{a.reason}</div>}
+              {a.type === "cia_excedente" && <div style={{ color: "#7c3aed", fontWeight: 600, marginTop: 4 }}>Participante não inscrito — classe: {a.category}</div>}
             </div>
             {a.note && <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 10, fontStyle: "italic", padding: "8px 12px", background: "#f9f9f9", borderRadius: 6 }}>"{a.note}"</p>}
             {(a.type === "reactivation" || a.type === "deadline_extension") && (

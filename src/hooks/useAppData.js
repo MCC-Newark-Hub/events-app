@@ -614,7 +614,7 @@ export function useAppData({ getUserRef, notify }) {
     setApprovals(function (p) {
       return [...p, tmp];
     });
-    notify("Solicitacao enviada ao pastor!");
+    notify("Solicitação enviada para aprovação!");
     sb.from("approvals")
       .insert(dbRow)
       .select()
@@ -732,6 +732,21 @@ export function useAppData({ getUserRef, notify }) {
         } else {
           notify("Não foi possível estender: inscrição não encontrada.");
         }
+      } else if (apr.type === "cia_excedente") {
+        addReg({
+          memberId: apr.memberId || null,
+          memberName: apr.memberName,
+          badgeName: apr.memberName,
+          category: apr.category,
+          church: apr.church,
+          role: "",
+          team: "Participante",
+          fee: 0,
+          paid: false,
+          exempt: true,
+          note: apr.note,
+        }, true);
+        notify("Participante CIA excedente aprovado: " + apr.memberName + ".");
       } else if (apr.type === "replacement_request") {
         if (apr.regId) {
           replaceReg({

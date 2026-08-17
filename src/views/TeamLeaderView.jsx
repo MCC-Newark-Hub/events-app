@@ -26,6 +26,8 @@ function TeamLeaderView(props) {
     theme,
     toggleTheme,
     submitApproval,
+    updatePresence,
+    churches,
   } = props;
   const t = useT();
   const myTeams = user?.teamLeads || [];
@@ -55,6 +57,7 @@ function TeamLeaderView(props) {
   const [translationTab, setTranslationTab] = useState("traducao");
   const [praiseTab, setPraiseTab] = useState("louvor");
   const [ciaExpanded, setCiaExpanded] = useState({ "0-3": true, "Criança": true, "Intermediário": true, "Adolescente": true });
+  const [excModal, setExcModal] = useState(null); // { cat, name, church, note }
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
   const [requestTarget, setRequestTarget] = useState(null); // { reg, type: "reactivation" | "deadline_extension" }
@@ -189,6 +192,66 @@ function TeamLeaderView(props) {
             </div>
           )}
 
+          {/* CIA — Excedente modal */}
+          {excModal && (
+            <Modal onClose={() => setExcModal(null)} maxWidth={380}>
+              <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, marginBottom: 6 }}>Participante Excedente — CIA</h3>
+              <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 14 }}>
+                O pedido será enviado para aprovação da secretaria e do administrador.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div>
+                  <label>Nome *</label>
+                  <input value={excModal.name} onChange={(e) => setExcModal({ ...excModal, name: e.target.value })} placeholder="Nome do participante" autoFocus />
+                </div>
+                <div>
+                  <label>Igreja *</label>
+                  <select value={excModal.church} onChange={(e) => setExcModal({ ...excModal, church: e.target.value })}>
+                    <option value="">— Selecione —</option>
+                    {(churches || []).map((c) => <option key={c.display} value={c.display}>{c.display}</option>)}
+                    <option value="Outra / Não Listada">Outra / Não Listada</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Classe</label>
+                  <select value={excModal.cat} onChange={(e) => setExcModal({ ...excModal, cat: e.target.value })}>
+                    {[{ cat: "0-3", label: "0-3" }, { cat: "Criança", label: "Crianças" }, { cat: "Intermediário", label: "Intermediários" }, { cat: "Adolescente", label: "Adolescentes" }].map(({ cat, label }) => (
+                      <option key={cat} value={cat}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label>Observação</label>
+                  <textarea rows={2} value={excModal.note} onChange={(e) => setExcModal({ ...excModal, note: e.target.value })} placeholder="Ex: filho de membro, esqueceu de se inscrever…" style={{ resize: "vertical" }} />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setExcModal(null)}>Cancelar</button>
+                <button
+                  className="btn btn-primary"
+                  style={{ flex: 2 }}
+                  onClick={() => {
+                    if (!excModal.name.trim()) { notify("Nome é obrigatório."); return; }
+                    if (!excModal.church) { notify("Igreja é obrigatória."); return; }
+                    submitApproval({
+                      eventId: event.id,
+                      memberId: null,
+                      memberName: excModal.name.trim(),
+                      type: "cia_excedente",
+                      category: excModal.cat,
+                      church: excModal.church,
+                      note: excModal.note || null,
+                      requestedBy: user?.name,
+                    });
+                    setExcModal(null);
+                  }}
+                >
+                  Enviar para Aprovação
+                </button>
+              </div>
+            </Modal>
+          )}
+
           {/* CIA Classes tab */}
           {isCIALeader && ciaTab === "cia" ? (() => {
             const CIA_CATS = [
@@ -237,17 +300,36 @@ function TeamLeaderView(props) {
                   return (
                     <div key={cat} className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 16 }}>
                       <div
-                        onClick={() => setCiaExpanded((p) => ({ ...p, [cat]: !p[cat] }))}
-                        style={{ padding: "12px 16px", background: "var(--bg2)", borderBottom: open ? "1px solid var(--border)" : "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                        style={{ padding: "12px 16px", background: "var(--bg2)", borderBottom: open ? "1px solid var(--border)" : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div
+                          onClick={() => setCiaExpanded((p) => ({ ...p, [cat]: !p[cat] }))}
+                          style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flex: 1 }}
+                        >
                           <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, display: "inline-block" }} />
                           <span style={{ fontWeight: 700, fontSize: 15 }}>{label}</span>
                           <span className="badge badge-blue" style={{ fontSize: 10 }}>{rows.length} total</span>
                           {conf > 0 && <span className="badge badge-green" style={{ fontSize: 10 }}>{conf}✓</span>}
                           {pend > 0 && <span className="badge badge-yellow" style={{ fontSize: 10 }}>{pend}⏳</span>}
+                          {rows.filter((r) => r.presence === "present").length > 0 && (
+                            <span className="badge badge-green" style={{ fontSize: 10 }}>
+                              {rows.filter((r) => r.presence === "present").length} presentes
+                            </span>
+                          )}
                         </div>
-                        <span style={{ color: "var(--muted)", fontSize: 13 }}>{open ? "▲" : "▼"}</span>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <button
+                            className="btn btn-ghost btn-xs"
+                            title="Adicionar participante excedente"
+                            onClick={() => setExcModal({ cat, name: "", church: "", note: "" })}
+                          >
+                            + Excedente
+                          </button>
+                          <span
+                            onClick={() => setCiaExpanded((p) => ({ ...p, [cat]: !p[cat] }))}
+                            style={{ color: "var(--muted)", fontSize: 13, cursor: "pointer" }}
+                          >{open ? "▲" : "▼"}</span>
+                        </div>
                       </div>
                       {open && (
                         rows.length === 0 ? (
@@ -257,6 +339,7 @@ function TeamLeaderView(props) {
                             <table className="table" style={{ minWidth: 480 }}>
                               <thead>
                                 <tr>
+                                  <th style={{ width: 44 }}>Presença</th>
                                   <th>Nome</th>
                                   <th>Igreja</th>
                                   <th>Status</th>
@@ -265,8 +348,22 @@ function TeamLeaderView(props) {
                               <tbody>
                                 {rows.map((r) => {
                                   const paid = r.paid || r.exempt;
+                                  const present = r.presence === "present";
                                   return (
                                     <tr key={r.id}>
+                                      <td style={{ textAlign: "center" }}>
+                                        <button
+                                          onClick={() => updatePresence(r.id, present ? "unknown" : "present")}
+                                          title={present ? "Marcar ausente" : "Marcar presente"}
+                                          style={{
+                                            background: "none", border: "none", cursor: "pointer",
+                                            fontSize: 18, lineHeight: 1,
+                                            color: present ? "#16a34a" : "#d1d5db",
+                                          }}
+                                        >
+                                          {present ? "✓" : "○"}
+                                        </button>
+                                      </td>
                                       <td style={{ fontWeight: 500 }}>{r.memberName}</td>
                                       <td style={{ fontSize: 12, color: "#6b7280" }}>{r.church || "—"}</td>
                                       <td>
