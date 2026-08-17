@@ -194,10 +194,12 @@ function TeamLeaderView(props) {
               { cat: "Adolescente",   label: "Adolescentes",    color: "#0891b2" },
             ];
             const ciaRegs = eventRegs.filter((r) => CIA_CATS.some((c) => c.cat === r.category));
+            const totalConf = ciaRegs.filter((r) => r.paid || r.exempt).length;
+            const totalPend = ciaRegs.filter((r) => !r.paid && !r.exempt).length;
             return (
               <>
                 {/* Per-class totals */}
-                <div className="stat-grid-4" style={{ marginBottom: 20 }}>
+                <div className="stat-grid-4" style={{ marginBottom: 10 }}>
                   {CIA_CATS.map(({ cat, label, color }) => {
                     const count = ciaRegs.filter((r) => r.category === cat).length;
                     return (
@@ -207,6 +209,19 @@ function TeamLeaderView(props) {
                       </div>
                     );
                   })}
+                </div>
+                {/* Overall summary */}
+                <div className="stat-grid-3" style={{ marginBottom: 20 }}>
+                  {[
+                    { label: "Total CIA", value: ciaRegs.length, color: "#1a3a6b" },
+                    { label: "Confirmados", value: totalConf, color: "#16a34a" },
+                    { label: "Pendentes", value: totalPend, color: "#d97706" },
+                  ].map((s) => (
+                    <div key={s.label} className="card" style={{ textAlign: "center", borderTop: `3px solid ${s.color}`, padding: "12px 10px" }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
+                      <div style={{ fontSize: 12, color: "#6b7280" }}>{s.label}</div>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Per-category sections */}
