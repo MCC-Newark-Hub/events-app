@@ -853,10 +853,16 @@ function TeamLeaderView(props) {
                 if (roles.includes("Professor(a) de Adolescentes")) return "Adolescente";
                 return "";
               };
+              const isTeacher = (m) => CIA_CLASS_OPTIONS.slice(0, 4).some((cat) => {
+                const roleMap = { "Criança": "Professor(a) de Crianças", "Intermediário": "Professor(a) de Intermediários", "Adolescente": "Professor(a) de Adolescentes" };
+                return (m.roles || []).includes(roleMap[cat]);
+              });
+              const coordenacao = teamMembers.filter((m) => !isTeacher(m));
+              const teacherMembers = teamMembers.filter((m) => isTeacher(m));
               const effectiveClass = (m) => assignments[m.id] || defaultTeacherClass(m) || "Sem atribuição";
               const grouped = {};
               [...CIA_CLASS_OPTIONS, "Sem atribuição"].forEach((c) => { grouped[c] = []; });
-              teamMembers.forEach((m) => { const cls = effectiveClass(m); (grouped[cls] || grouped["Sem atribuição"]).push(m); });
+              teacherMembers.forEach((m) => { const cls = effectiveClass(m); (grouped[cls] || grouped["Sem atribuição"]).push(m); });
               const isEditing = editTeam === team;
               return (
                 <div key={team} style={{ marginBottom: 24 }}>
@@ -868,6 +874,26 @@ function TeamLeaderView(props) {
                       </div>
                     ))}
                   </div>
+                  {coordenacao.length > 0 && (
+                    <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 10 }}>
+                      <div style={{ padding: "8px 14px", background: "var(--bg2)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#6b7280", display: "inline-block" }} />
+                        <span style={{ fontWeight: 700, fontSize: 13, color: "#6b7280" }}>Coordenação</span>
+                        <span className="badge badge-gray" style={{ fontSize: 10 }}>{coordenacao.length}</span>
+                      </div>
+                      {coordenacao.map((m) => {
+                        const cfg = STATUS_CFG[getStatus(m.id)];
+                        return (
+                          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", borderBottom: "1px solid var(--border)" }}>
+                            <span className={`dot ${cfg.dot}`} />
+                            <span style={{ flex: 1, fontWeight: 500, fontSize: 13 }}>{m.name}</span>
+                            <span style={{ fontSize: 11, color: "var(--muted)" }}>Coordenação</span>
+                            <button onClick={() => removeFromRoster(team, m.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 18, lineHeight: 1 }}>×</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                   {[...CIA_CLASS_OPTIONS, "Sem atribuição"].map((cls) => {
                     const teachers = grouped[cls] || [];
                     if (teachers.length === 0) return null;
