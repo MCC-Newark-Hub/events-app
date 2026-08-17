@@ -73,6 +73,7 @@ export function mapReg(r) {
     cancelReason: r.cancel_reason || null,
     deadlineExtendedTo: r.deadline_extended_to || null,
     ciaClassOverride: r.cia_class_override || null,
+    acessibilidade: !!r.acessibilidade,
   };
 }
 export function mapApproval(a) {
@@ -520,6 +521,7 @@ export function useAppData({ getUserRef, notify }) {
     if (upd.deadlineExtendedTo !== undefined) dbUpd.deadline_extended_to = upd.deadlineExtendedTo;
     if (upd.cancelReason !== undefined) dbUpd.cancel_reason = upd.cancelReason;
     if (upd.ciaClassOverride !== undefined) dbUpd.cia_class_override = upd.ciaClassOverride || null;
+    if (upd.acessibilidade !== undefined) dbUpd.acessibilidade = !!upd.acessibilidade;
     if (timelineEntry && updatedReg) dbUpd.timeline = updatedReg.timeline;
     if (Object.keys(dbUpd).length > 0) {
       sb.from("registrations")

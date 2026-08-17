@@ -16,6 +16,7 @@ function TeamLeaderView(props) {
     event,
     regs,
     members,
+    setMembers,
     rosters,
     setRosters,
     user,
@@ -59,6 +60,22 @@ function TeamLeaderView(props) {
   const [praiseTab, setPraiseTab] = useState("louvor");
   const [ciaExpanded, setCiaExpanded] = useState({ "0-3": true, "Criança": true, "Intermediário": true, "Adolescente": true, "Acessibilidade": true });
   const [excModal, setExcModal] = useState(null); // { cat, name, church, note }
+  const [editingTeacher, setEditingTeacher] = useState(null); // memberId being edited
+  const CIA_ROLE_OPTIONS = [
+    { role: "Professor(a) de Crianças",      cat: "Criança" },
+    { role: "Professor(a) de Intermediários", cat: "Intermediário" },
+    { role: "Professor(a) de Adolescentes",  cat: "Adolescente" },
+  ];
+  const updateTeacherClass = (member, newCat) => {
+    const oldRoles = member.roles || [];
+    const filtered = oldRoles.filter((r) => !CIA_ROLE_OPTIONS.some((o) => o.role === r));
+    const newRole = CIA_ROLE_OPTIONS.find((o) => o.cat === newCat)?.role;
+    const newRoles = newRole ? [...filtered, newRole] : filtered;
+    setMembers((prev) => prev.map((m) => m.id === member.id ? { ...m, roles: newRoles } : m));
+    sb.from("members").update({ roles: newRoles }).eq("id", member.id)
+      .then(({ error }) => { if (error) notify("Erro ao atualizar função do professor."); });
+    setEditingTeacher(null);
+  };
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
   const [requestTarget, setRequestTarget] = useState(null); // { reg, type: "reactivation" | "deadline_extension" }
@@ -115,16 +132,22 @@ function TeamLeaderView(props) {
     if (roster.id) sb.from("rosters").update({ member_ids: updatedIds }).eq("id", roster.id);
     if (!silent) notify("Removed.");
   };
-  const setMemberAssignment = (team, memberId, language) => {
+  const setMemberAssignment = (team, memberId, value) => {
     const roster = rosters.find((r) => r.eventId === event?.id && r.team === team);
-    if (!roster?.id) return;
-    const updated = { ...(roster.assignments || {}), [memberId]: language || null };
-    if (!language) delete updated[memberId];
+    if (!roster?.id) {
+      notify("Aguarde — equipe ainda sendo criada. Tente novamente.");
+      return;
+    }
+    const updated = { ...(roster.assignments || {}), [memberId]: value || null };
+    if (!value) delete updated[memberId];
     setRosters((prev) => prev.map((r) =>
       r.id === roster.id ? { ...r, assignments: updated } : r
     ));
-    sb.from("rosters").update({ assignments: updated }).eq("id", roster.id)
-      .then((res) => { if (res.error) notify("Erro ao salvar atribuição."); });
+    sb.from("rosters").update({ assignments: updated }).eq("id", roster.id).select()
+      .then(({ data, error }) => {
+        if (error) notify("Erro ao salvar atribuição: " + error.message);
+        else if (!data?.length) notify("Erro: registro não encontrado ao salvar atribuição.");
+      });
   };
   const transferMember = (fromTeam, member, toTeam) => {
     const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: member.id, targetTeam: toTeam, memberRoles: member.roles, ignoreTeam: fromTeam });
@@ -256,18 +279,19 @@ function TeamLeaderView(props) {
           {/* CIA Classes tab */}
           {isCIALeader && ciaTab === "cia" ? (() => {
             const CIA_CATS = [
-              { cat: "0-3",            label: "0-3",             color: "#be185d" },
-              { cat: "Criança",        label: "Crianças",        color: "#7c3aed" },
-              { cat: "Intermediário",  label: "Intermediários",  color: "#2563eb" },
-              { cat: "Adolescente",    label: "Adolescentes",    color: "#0891b2" },
-              { cat: "Acessibilidade", label: "Acessibilidade",  color: "#d97706" },
+              { cat: "0-3",           label: "0-3",            color: "#db2777" },
+              { cat: "Criança",       label: "Crianças",       color: "#dc2626" },
+              { cat: "Intermediário", label: "Intermediários", color: "#2563eb" },
+              { cat: "Adolescente",   label: "Adolescentes",   color: "#ca8a04" },
             ];
-            const baseCats = ["0-3", "Criança", "Intermediário", "Adolescente"];
-            // All CIA-age registrations (by category); ciaClassOverride determines actual class shown
+            const ACC_COLOR = "#0891b2";
+            const baseCats = CIA_CATS.map((c) => c.cat);
             const ciaRegs = eventRegs.filter((r) => baseCats.includes(r.category));
+            // ciaClassOverride only moves between age classes now (not to Acessibilidade)
             const classOf = (r) => r.ciaClassOverride || r.category;
             const totalConf = ciaRegs.filter((r) => r.paid || r.exempt).length;
             const totalPend = ciaRegs.filter((r) => !r.paid && !r.exempt).length;
+            const accRegs = ciaRegs.filter((r) => r.acessibilidade);
 
             // Teacher assignments from Professoras roster
             const profRoster = rosters.find((r) => r.eventId === event?.id && r.team === "Professoras");
@@ -287,11 +311,10 @@ function TeamLeaderView(props) {
 
             return (
               <>
-                {/* Per-class totals */}
+                {/* Per-class summary cards */}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
                   {CIA_CATS.map(({ cat, label, color }) => {
                     const count = ciaRegs.filter((r) => classOf(r) === cat).length;
-                    if (cat === "Acessibilidade" && count === 0) return null;
                     return (
                       <div key={cat} className="card" style={{ textAlign: "center", borderTop: `3px solid ${color}`, padding: "12px 10px", flex: "1 1 70px" }}>
                         <div style={{ fontSize: 22, fontWeight: 700, color }}>{count}</div>
@@ -299,6 +322,12 @@ function TeamLeaderView(props) {
                       </div>
                     );
                   })}
+                  {accRegs.length > 0 && (
+                    <div className="card" style={{ textAlign: "center", borderTop: `3px solid ${ACC_COLOR}`, padding: "12px 10px", flex: "1 1 70px" }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: ACC_COLOR }}>♾ {accRegs.length}</div>
+                      <div style={{ fontSize: 11, color: "#6b7280" }}>Acessibilidade</div>
+                    </div>
+                  )}
                 </div>
                 {/* Overall summary */}
                 <div className="stat-grid-3" style={{ marginBottom: 20 }}>
@@ -319,8 +348,8 @@ function TeamLeaderView(props) {
                   const rows = ciaRegs.filter((r) => classOf(r) === cat).sort((a, b) => norm(a.memberName).localeCompare(norm(b.memberName)));
                   const teachers = teachersForCat(cat);
                   const conf = rows.filter((r) => r.paid || r.exempt).length;
+                  const accCount = rows.filter((r) => r.acessibilidade).length;
                   const open = ciaExpanded[cat] !== false;
-                  if (cat === "Acessibilidade" && rows.length === 0 && teachers.length === 0) return null;
                   return (
                     <div key={cat} className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 16 }}>
                       <div style={{ padding: "12px 16px", background: "var(--bg2)", borderBottom: open ? "1px solid var(--border)" : "none", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -332,16 +361,22 @@ function TeamLeaderView(props) {
                           {rows.filter((r) => r.presence === "present").length > 0 && (
                             <span className="badge badge-green" style={{ fontSize: 10 }}>{rows.filter((r) => r.presence === "present").length} presentes</span>
                           )}
+                          {accCount > 0 && (
+                            <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: ACC_COLOR + "22", color: ACC_COLOR, border: `1px solid ${ACC_COLOR}55`, fontWeight: 700 }}>♾ {accCount}</span>
+                          )}
                           {teachers.length > 0 && (
-                            <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 4 }}>
-                              | Professores: {teachers.map((tc) => tc.firstName || tc.name.split(" ")[0]).join(", ")}
+                            <span style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 10, color: "var(--muted)" }}>|</span>
+                              {teachers.map((tc) => (
+                                <span key={tc.id} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 10, background: color + "22", color, border: `1px solid ${color}55`, fontWeight: 700 }}>
+                                  {tc.firstName || tc.name.split(" ")[0]}
+                                </span>
+                              ))}
                             </span>
                           )}
                         </div>
                         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                          {cat !== "Acessibilidade" && (
-                            <button className="btn btn-ghost btn-xs" onClick={() => setExcModal({ cat, name: "", church: "", note: "" })}>+ Excedente</button>
-                          )}
+                          <button className="btn btn-ghost btn-xs" onClick={() => setExcModal({ cat, name: "", church: "", note: "" })}>+ Excedente</button>
                           <span onClick={() => setCiaExpanded((p) => ({ ...p, [cat]: !open }))} style={{ color: "var(--muted)", fontSize: 13, cursor: "pointer" }}>{open ? "▲" : "▼"}</span>
                         </div>
                       </div>
@@ -350,13 +385,14 @@ function TeamLeaderView(props) {
                           <p style={{ padding: "14px 16px", color: "var(--muted)", fontSize: 13 }}>Nenhum inscrito nesta classe.</p>
                         ) : (
                           <div style={{ overflowX: "auto" }}>
-                            <table className="table" style={{ minWidth: 500 }}>
+                            <table className="table" style={{ minWidth: 520 }}>
                               <thead>
                                 <tr>
                                   <th style={{ width: 44 }}>Presença</th>
                                   <th>Nome</th>
                                   <th>Igreja</th>
                                   <th>Status</th>
+                                  <th style={{ width: 44, textAlign: "center" }}>♾</th>
                                   <th>Mover</th>
                                 </tr>
                               </thead>
@@ -372,12 +408,23 @@ function TeamLeaderView(props) {
                                           {present ? "✓" : "○"}
                                         </button>
                                       </td>
-                                      <td style={{ fontWeight: 500 }}>{r.memberName}</td>
+                                      <td style={{ fontWeight: 500 }}>
+                                        {r.memberName}
+                                        {r.acessibilidade && <span style={{ marginLeft: 5, fontSize: 12, color: ACC_COLOR }}>♾</span>}
+                                      </td>
                                       <td style={{ fontSize: 12, color: "#6b7280" }}>{r.church || "—"}</td>
                                       <td>
                                         <span className={`badge ${paid ? "badge-green" : "badge-yellow"}`} style={{ fontSize: 10 }}>
                                           {paid ? "Confirmado" : "Pendente"}
                                         </span>
+                                      </td>
+                                      <td style={{ textAlign: "center" }}>
+                                        <button
+                                          title={r.acessibilidade ? "Remover tag Acessibilidade" : "Marcar como Acessibilidade"}
+                                          onClick={() => updateReg(r.id, { acessibilidade: !r.acessibilidade }, null, { silent: true })}
+                                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, lineHeight: 1, color: r.acessibilidade ? ACC_COLOR : "#d1d5db" }}>
+                                          ♾
+                                        </button>
                                       </td>
                                       <td>
                                         <select value="" onChange={(e) => {
@@ -404,6 +451,71 @@ function TeamLeaderView(props) {
                     </div>
                   );
                 })}
+
+                {/* Acessibilidade cross-class view */}
+                {accRegs.length > 0 && (() => {
+                  const open = ciaExpanded["Acessibilidade"] !== false;
+                  const accTeachers = teachersForCat("Acessibilidade");
+                  return (
+                    <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 16, borderTop: `3px solid ${ACC_COLOR}` }}>
+                      <div style={{ padding: "12px 16px", background: "var(--bg2)", borderBottom: open ? "1px solid var(--border)" : "none", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <div onClick={() => setCiaExpanded((p) => ({ ...p, Acessibilidade: !open }))} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", flex: 1, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 16, color: ACC_COLOR }}>♾</span>
+                          <span style={{ fontWeight: 700, fontSize: 15, color: ACC_COLOR }}>Acessibilidade</span>
+                          <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: ACC_COLOR + "22", color: ACC_COLOR, border: `1px solid ${ACC_COLOR}55`, fontWeight: 700 }}>{accRegs.length} crianças</span>
+                          {accTeachers.length > 0 && (
+                            <span style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 10, color: "var(--muted)" }}>|</span>
+                              {accTeachers.map((tc) => (
+                                <span key={tc.id} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 10, background: ACC_COLOR + "22", color: ACC_COLOR, border: `1px solid ${ACC_COLOR}55`, fontWeight: 700 }}>
+                                  {tc.firstName || tc.name.split(" ")[0]}
+                                </span>
+                              ))}
+                            </span>
+                          )}
+                        </div>
+                        <span onClick={() => setCiaExpanded((p) => ({ ...p, Acessibilidade: !open }))} style={{ color: "var(--muted)", fontSize: 13, cursor: "pointer" }}>{open ? "▲" : "▼"}</span>
+                      </div>
+                      {open && (
+                        <div style={{ overflowX: "auto" }}>
+                          <table className="table" style={{ minWidth: 420 }}>
+                            <thead>
+                              <tr>
+                                <th style={{ width: 44 }}>Presença</th>
+                                <th>Nome</th>
+                                <th>Classe</th>
+                                <th>Igreja</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {CIA_CATS.map(({ cat, label, color }) => {
+                                const catAcc = accRegs.filter((r) => classOf(r) === cat).sort((a, b) => norm(a.memberName).localeCompare(norm(b.memberName)));
+                                return catAcc.map((r) => {
+                                  const present = r.presence === "present";
+                                  return (
+                                    <tr key={r.id}>
+                                      <td style={{ textAlign: "center" }}>
+                                        <button onClick={() => updatePresence(r.id, present ? "unknown" : "present")}
+                                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, lineHeight: 1, color: present ? "#16a34a" : "#d1d5db" }}>
+                                          {present ? "✓" : "○"}
+                                        </button>
+                                      </td>
+                                      <td style={{ fontWeight: 500 }}>{r.memberName}</td>
+                                      <td>
+                                        <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: color + "22", color, border: `1px solid ${color}55`, fontWeight: 700 }}>{label}</span>
+                                      </td>
+                                      <td style={{ fontSize: 12, color: "#6b7280" }}>{r.church || "—"}</td>
+                                    </tr>
+                                  );
+                                });
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </>
             );
           })() : null}
@@ -658,7 +770,7 @@ function TeamLeaderView(props) {
             // Professoras team: grouped-by-class view for CIA leader
             if (team === "Professoras" && isCIALeader) {
               const CIA_CLASS_OPTIONS = ["0-3", "Criança", "Intermediário", "Adolescente", "Acessibilidade"];
-              const CIA_CLASS_COLORS = { "0-3": "#be185d", "Criança": "#7c3aed", "Intermediário": "#2563eb", "Adolescente": "#0891b2", "Acessibilidade": "#d97706", "Sem atribuição": "#9ca3af" };
+              const CIA_CLASS_COLORS = { "0-3": "#db2777", "Criança": "#dc2626", "Intermediário": "#2563eb", "Adolescente": "#ca8a04", "Acessibilidade": "#0891b2", "Sem atribuição": "#9ca3af" };
               const assignments = roster?.assignments || {};
               const defaultTeacherClass = (m) => {
                 const roles = m?.roles || [];
@@ -696,15 +808,36 @@ function TeamLeaderView(props) {
                         {teachers.map((m) => {
                           const cfg = STATUS_CFG[getStatus(m.id)];
                           const assigned = assignments[m.id] || "";
+                          const permClass = defaultTeacherClass(m);
+                          const isEditingThis = editingTeacher === m.id;
                           return (
-                            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", borderBottom: "1px solid var(--border)" }}>
-                              <span className={`dot ${cfg.dot}`} />
-                              <span style={{ flex: 1, fontWeight: 500, fontSize: 13 }}>{m.name}</span>
-                              <select value={assigned} onChange={(e) => setMemberAssignment("Professoras", m.id, e.target.value)} style={{ fontSize: 11, padding: "3px 6px", width: "auto" }}>
-                                <option value="">— Padrão ({defaultTeacherClass(m) || "—"}) —</option>
-                                {CIA_CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-                              </select>
-                              <button onClick={() => removeFromRoster(team, m.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 18, lineHeight: 1 }}>×</button>
+                            <div key={m.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px" }}>
+                                <span className={`dot ${cfg.dot}`} />
+                                <span style={{ flex: 1, fontWeight: 500, fontSize: 13 }}>{m.name}</span>
+                                <select value={assigned} onChange={(e) => setMemberAssignment("Professoras", m.id, e.target.value)} style={{ fontSize: 11, padding: "3px 6px", width: "auto" }}>
+                                  <option value="">— Padrão ({permClass || "—"}) —</option>
+                                  {CIA_CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                                <button title="Editar classe permanente" onClick={() => setEditingTeacher(isEditingThis ? null : m.id)} style={{ background: "none", border: "none", cursor: "pointer", color: isEditingThis ? clsColor : "#9ca3af", fontSize: 14, lineHeight: 1, padding: "0 2px" }}>✏</button>
+                                <button onClick={() => removeFromRoster(team, m.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 18, lineHeight: 1 }}>×</button>
+                              </div>
+                              {isEditingThis && (
+                                <div style={{ padding: "8px 14px 10px", background: "#f0f9ff", borderTop: "1px solid #bae6fd", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                  <span style={{ fontSize: 11, color: "#0369a1", fontWeight: 600 }}>Classe permanente (Igreja):</span>
+                                  {CIA_ROLE_OPTIONS.map((o) => (
+                                    <button
+                                      key={o.cat}
+                                      className="btn btn-xs"
+                                      style={{ background: permClass === o.cat ? CIA_CLASS_COLORS[o.cat] : "var(--bg2)", color: permClass === o.cat ? "#fff" : "var(--text)", border: `1px solid ${CIA_CLASS_COLORS[o.cat]}`, fontWeight: 600 }}
+                                      onClick={() => updateTeacherClass(m, o.cat)}
+                                    >
+                                      {o.cat}
+                                    </button>
+                                  ))}
+                                  <button className="btn btn-ghost btn-xs" onClick={() => setEditingTeacher(null)}>Cancelar</button>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
