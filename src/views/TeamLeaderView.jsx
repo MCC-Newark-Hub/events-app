@@ -50,7 +50,7 @@ function TeamLeaderView(props) {
   const isCIALeader = myTeams.includes("Professoras");
   const [kitchenView, setKitchenView] = useState("equipe");
   const [ciaTab, setCiaTab] = useState("cia");
-  const [ciaExpanded, setCiaExpanded] = useState({ "Criança": true, "Intermediário": true, "Adolescente": true });
+  const [ciaExpanded, setCiaExpanded] = useState({ "0-3": true, "Criança": true, "Intermediário": true, "Adolescente": true });
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
   const [requestTarget, setRequestTarget] = useState(null); // { reg, type: "reactivation" | "deadline_extension" }
@@ -169,28 +169,25 @@ function TeamLeaderView(props) {
           {/* CIA Classes tab */}
           {isCIALeader && ciaTab === "cia" ? (() => {
             const CIA_CATS = [
-              { cat: "Criança",      label: "Crianças",      color: "#7c3aed" },
-              { cat: "Intermediário", label: "Intermediários", color: "#2563eb" },
-              { cat: "Adolescente",  label: "Adolescentes",   color: "#0891b2" },
+              { cat: "0-3",           label: "0-3",            color: "#be185d" },
+              { cat: "Criança",       label: "Crianças",       color: "#7c3aed" },
+              { cat: "Intermediário", label: "Intermediários",  color: "#2563eb" },
+              { cat: "Adolescente",   label: "Adolescentes",    color: "#0891b2" },
             ];
             const ciaRegs = eventRegs.filter((r) => CIA_CATS.some((c) => c.cat === r.category));
-            const total = ciaRegs.length;
-            const totalConf = ciaRegs.filter((r) => r.paid || r.exempt).length;
-            const totalPend = ciaRegs.filter((r) => !r.paid && !r.exempt).length;
             return (
               <>
-                {/* Overall summary */}
-                <div className="stat-grid-3" style={{ marginBottom: 20 }}>
-                  {[
-                    { label: "Total CIA", value: total, color: "#1a3a6b" },
-                    { label: "Confirmados", value: totalConf, color: "#16a34a" },
-                    { label: "Pendentes", value: totalPend, color: "#d97706" },
-                  ].map((s) => (
-                    <div key={s.label} className="card" style={{ textAlign: "center", borderTop: `3px solid ${s.color}`, padding: "14px 10px" }}>
-                      <div style={{ fontSize: 26, fontWeight: 700, color: s.color }}>{s.value}</div>
-                      <div style={{ fontSize: 12, color: "#6b7280" }}>{s.label}</div>
-                    </div>
-                  ))}
+                {/* Per-class totals */}
+                <div className="stat-grid-4" style={{ marginBottom: 20 }}>
+                  {CIA_CATS.map(({ cat, label, color }) => {
+                    const count = ciaRegs.filter((r) => r.category === cat).length;
+                    return (
+                      <div key={cat} className="card" style={{ textAlign: "center", borderTop: `3px solid ${color}`, padding: "14px 10px" }}>
+                        <div style={{ fontSize: 26, fontWeight: 700, color }}>{count}</div>
+                        <div style={{ fontSize: 12, color: "#6b7280" }}>{label}</div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Per-category sections */}
