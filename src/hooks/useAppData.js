@@ -22,6 +22,7 @@ export function mapMember(m) {
     notes: m.notes || '',
     isGuest: m.is_guest || false,
     invitedBy: m.invited_by || '',
+    translationLanguages: m.translation_languages || [],
   };
 }
 export function mapFamily(f) {

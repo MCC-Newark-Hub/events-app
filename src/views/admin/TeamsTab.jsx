@@ -578,6 +578,11 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
                         {(m.roles || []).includes("Professor de Seminário") && (
                           <span className="badge badge-purple" style={{ fontSize: 9, marginLeft: 5, verticalAlign: "middle" }} title="Professor de Seminário">Prof</span>
                         )}
+                        {(m.translationLanguages || []).map((lang) => (
+                          <span key={lang} className="badge badge-blue" style={{ fontSize: 9, marginLeft: 4, verticalAlign: "middle" }} title={lang}>
+                            {lang.slice(0, 3).toUpperCase()}
+                          </span>
+                        ))}
                       </span>
                       <span className={`badge ${cfg.badge}`} style={{ fontSize: 10 }}>
                         {

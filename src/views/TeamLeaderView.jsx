@@ -8,7 +8,6 @@ import { canAssignToTeam } from "@/lib/teamAssignment";
 import { eventSubtitle } from "@/lib/registrationDeadline";
 import Topbar from "@/components/Topbar";
 import Modal from "@/components/Modal";
-import ReportsTab from "./admin/ReportsTab";
 import KitchenTab from "./admin/KitchenTab";
 import KitchenPlanningTab from "./admin/KitchenPlanningTab";
 
@@ -47,20 +46,13 @@ function TeamLeaderView(props) {
   const getReg = (mid) => eventRegs.find((x) => x.memberId === mid);
   const getCancelledReg = (mid) => allEventRegs.find((x) => x.memberId === mid && x.cancelled);
   // Flat pool of everyone on any of this leader's teams, for the scoped reports view.
-  const myTeamMemberIds = new Set(
-    myTeams.flatMap((team) => {
-      const roster = rosters.find((r) => r.eventId === event?.id && r.team === team);
-      return roster?.memberIds || [];
-    })
-  );
-  const myEventRegs = allEventRegs.filter((r) => myTeamMemberIds.has(r.memberId));
-  const myWlRegsForReports = myEventRegs.filter((r) => r.waitlisted && !r.cancelled);
-  const myExRegsForReports = myEventRegs.filter((r) => r.excedente && !r.cancelled && !r.waitlisted);
   const isCozinhaLeader = myTeams.includes("Cozinha");
+  const isCIALeader = myTeams.includes("Professoras");
   const [kitchenView, setKitchenView] = useState("equipe");
+  const [ciaTab, setCiaTab] = useState("cia");
+  const [ciaExpanded, setCiaExpanded] = useState({ "Criança": true, "Intermediário": true, "Adolescente": true });
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
-  const [showReports, setShowReports] = useState(false);
   const [requestTarget, setRequestTarget] = useState(null); // { reg, type: "reactivation" | "deadline_extension" }
   const [requestNote, setRequestNote] = useState("");
   const submitRequest = () => {
@@ -150,18 +142,21 @@ function TeamLeaderView(props) {
             <p style={{ color: "#6b7280", fontSize: 13 }}>{t.teamReadOnly}</p>
           </div>
 
-          {/* Tab bar — only for Cozinha leaders */}
-          {isCozinhaLeader && (
+          {/* Tab bar — Cozinha and/or CIA leaders */}
+          {(isCozinhaLeader || isCIALeader) && (
             <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: "2px solid var(--border)", paddingBottom: 0 }}>
-              {[{ id: "equipe", label: "Equipe" }, { id: "planejamento", label: "🍽️ Planejamento" }].map(({ id, label }) => (
+              {(isCIALeader
+                ? [{ id: "cia", label: "📚 CIA — Classes" }, { id: "equipe", label: "Equipe" }]
+                : [{ id: "equipe", label: "Equipe" }, { id: "planejamento", label: "🍽️ Planejamento" }]
+              ).map(({ id, label }) => (
                 <button
                   key={id}
-                  onClick={() => setKitchenView(id)}
+                  onClick={() => isCIALeader ? setCiaTab(id) : setKitchenView(id)}
                   style={{
                     background: "none", border: "none", cursor: "pointer", padding: "6px 14px",
-                    fontWeight: kitchenView === id ? 700 : 400,
-                    color: kitchenView === id ? "var(--primary)" : "var(--muted)",
-                    borderBottom: kitchenView === id ? "2px solid var(--primary)" : "2px solid transparent",
+                    fontWeight: (isCIALeader ? ciaTab : kitchenView) === id ? 700 : 400,
+                    color: (isCIALeader ? ciaTab : kitchenView) === id ? "var(--primary)" : "var(--muted)",
+                    borderBottom: (isCIALeader ? ciaTab : kitchenView) === id ? "2px solid var(--primary)" : "2px solid transparent",
                     marginBottom: -2, fontSize: 14,
                   }}
                 >
@@ -171,6 +166,94 @@ function TeamLeaderView(props) {
             </div>
           )}
 
+          {/* CIA Classes tab */}
+          {isCIALeader && ciaTab === "cia" ? (() => {
+            const CIA_CATS = [
+              { cat: "Criança",      label: "Crianças",      color: "#7c3aed" },
+              { cat: "Intermediário", label: "Intermediários", color: "#2563eb" },
+              { cat: "Adolescente",  label: "Adolescentes",   color: "#0891b2" },
+            ];
+            const ciaRegs = eventRegs.filter((r) => CIA_CATS.some((c) => c.cat === r.category));
+            const total = ciaRegs.length;
+            const totalConf = ciaRegs.filter((r) => r.paid || r.exempt).length;
+            const totalPend = ciaRegs.filter((r) => !r.paid && !r.exempt).length;
+            return (
+              <>
+                {/* Overall summary */}
+                <div className="stat-grid-3" style={{ marginBottom: 20 }}>
+                  {[
+                    { label: "Total CIA", value: total, color: "#1a3a6b" },
+                    { label: "Confirmados", value: totalConf, color: "#16a34a" },
+                    { label: "Pendentes", value: totalPend, color: "#d97706" },
+                  ].map((s) => (
+                    <div key={s.label} className="card" style={{ textAlign: "center", borderTop: `3px solid ${s.color}`, padding: "14px 10px" }}>
+                      <div style={{ fontSize: 26, fontWeight: 700, color: s.color }}>{s.value}</div>
+                      <div style={{ fontSize: 12, color: "#6b7280" }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Per-category sections */}
+                {CIA_CATS.map(({ cat, label, color }) => {
+                  const rows = eventRegs.filter((r) => r.category === cat).sort((a, b) => norm(a.memberName).localeCompare(norm(b.memberName)));
+                  const conf = rows.filter((r) => r.paid || r.exempt).length;
+                  const pend = rows.filter((r) => !r.paid && !r.exempt).length;
+                  const open = ciaExpanded[cat];
+                  return (
+                    <div key={cat} className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 16 }}>
+                      <div
+                        onClick={() => setCiaExpanded((p) => ({ ...p, [cat]: !p[cat] }))}
+                        style={{ padding: "12px 16px", background: "var(--bg2)", borderBottom: open ? "1px solid var(--border)" : "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, display: "inline-block" }} />
+                          <span style={{ fontWeight: 700, fontSize: 15 }}>{label}</span>
+                          <span className="badge badge-blue" style={{ fontSize: 10 }}>{rows.length} total</span>
+                          {conf > 0 && <span className="badge badge-green" style={{ fontSize: 10 }}>{conf}✓</span>}
+                          {pend > 0 && <span className="badge badge-yellow" style={{ fontSize: 10 }}>{pend}⏳</span>}
+                        </div>
+                        <span style={{ color: "var(--muted)", fontSize: 13 }}>{open ? "▲" : "▼"}</span>
+                      </div>
+                      {open && (
+                        rows.length === 0 ? (
+                          <p style={{ padding: "14px 16px", color: "var(--muted)", fontSize: 13 }}>Nenhum inscrito nesta classe.</p>
+                        ) : (
+                          <div style={{ overflowX: "auto" }}>
+                            <table className="table" style={{ minWidth: 480 }}>
+                              <thead>
+                                <tr>
+                                  <th>Nome</th>
+                                  <th>Igreja</th>
+                                  <th>Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rows.map((r) => {
+                                  const paid = r.paid || r.exempt;
+                                  return (
+                                    <tr key={r.id}>
+                                      <td style={{ fontWeight: 500 }}>{r.memberName}</td>
+                                      <td style={{ fontSize: 12, color: "#6b7280" }}>{r.church || "—"}</td>
+                                      <td>
+                                        <span className={`badge ${paid ? "badge-green" : "badge-yellow"}`} style={{ fontSize: 10 }}>
+                                          {paid ? "Confirmado" : "Pendente"}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            );
+          })() : null}
+
           {/* Planejamento tab */}
           {isCozinhaLeader && kitchenView === "planejamento" ? (
             <>
@@ -179,18 +262,8 @@ function TeamLeaderView(props) {
               </div>
               <KitchenPlanningTab regs={regs} event={event} events={props.events} notify={notify} />
             </>
-          ) : (
+          ) : (!isCIALeader || ciaTab !== "cia") ? (
             <>
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-                <button className="btn btn-ghost btn-sm" onClick={() => setShowReports((v) => !v)}>
-                  {showReports ? "Ocultar Relatórios" : "📊 Relatórios"}
-                </button>
-              </div>
-              {showReports && (
-                <div style={{ marginBottom: 20 }}>
-                  <ReportsTab regs={myEventRegs} event={event} wlRegs={myWlRegsForReports} exRegs={myExRegsForReports} lang={lang} />
-                </div>
-              )}
               {myTeams.length === 0 && (
                 <div style={{ padding: "24px", background: "var(--card)", borderRadius: 10, border: "1px solid var(--border)", color: "var(--muted)", textAlign: "center" }}>
                   Nenhuma equipe cadastrada para este evento.
@@ -360,6 +433,11 @@ function TeamLeaderView(props) {
                                   {(m.roles || []).includes("Professor de Seminário") && (
                                     <span className="badge badge-purple" style={{ fontSize: 9, marginLeft: 5, verticalAlign: "middle" }} title="Professor de Seminário">Prof</span>
                                   )}
+                                  {(m.translationLanguages || []).map((lang) => (
+                                    <span key={lang} className="badge badge-blue" style={{ fontSize: 9, marginLeft: 4, verticalAlign: "middle" }} title={lang}>
+                                      {lang.slice(0, 3).toUpperCase()}
+                                    </span>
+                                  ))}
                                 </td>
                                 <td>
                                   <span className="badge badge-blue">{m.category}</span>
@@ -485,7 +563,7 @@ function TeamLeaderView(props) {
             </span>
           </div>
             </>
-          )}
+          ) : null}
         </div>
       </div>
       {requestTarget && (

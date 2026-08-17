@@ -60,6 +60,7 @@ export default function MemberEditModal({
         notes: editingMember.notes || null,
         is_guest: editingMember.isGuest || false,
         invited_by: editingMember.isGuest ? (editingMember.invitedBy || null) : null,
+        translation_languages: editingMember.translationLanguages || [],
       };
       let memberId = editingMember.id;
       if (editingMember.id) {
@@ -161,6 +162,23 @@ export default function MemberEditModal({
           roles={editingMember.roles}
           onChange={(roles) => setEditingMember({ ...editingMember, roles })}
         />
+        {(editingMember.roles || []).includes("Tradutor") && (
+          <div>
+            <label>Idiomas de Tradução</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+              {["Inglês", "Espanhol", "Francês", "Mandarim", "Italiano", "Alemão"].map((lang) => {
+                const checked = (editingMember.translationLanguages || []).includes(lang);
+                return (
+                  <label key={lang} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, cursor: "pointer", userSelect: "none" }}>
+                    <input type="checkbox" checked={checked}
+                      onChange={() => setEditingMember({ ...editingMember, translationLanguages: checked ? (editingMember.translationLanguages || []).filter((l) => l !== lang) : [...(editingMember.translationLanguages || []), lang] })} />
+                    {lang}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div>
           <label>Família</label>
           <select value={editingMember.familyId} onChange={(e) => setEditingMember({ ...editingMember, familyId: e.target.value })}>
