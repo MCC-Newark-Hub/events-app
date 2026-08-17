@@ -357,6 +357,9 @@ function TeamLeaderView(props) {
                                 <td style={{ fontWeight: 600 }}>
                                   <span className={`dot ${cfg.dot}`}></span>
                                   {m.name}
+                                  {(m.roles || []).includes("Professor de Seminário") && (
+                                    <span className="badge badge-purple" style={{ fontSize: 9, marginLeft: 5, verticalAlign: "middle" }} title="Professor de Seminário">Prof</span>
+                                  )}
                                 </td>
                                 <td>
                                   <span className="badge badge-blue">{m.category}</span>

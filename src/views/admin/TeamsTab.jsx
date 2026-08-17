@@ -573,7 +573,12 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
                         <span style={{ width: 13, flexShrink: 0 }} />
                       )}
                       <span className={`dot ${cfg.dot}`}></span>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{m.name}</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>
+                        {m.name}
+                        {(m.roles || []).includes("Professor de Seminário") && (
+                          <span className="badge badge-purple" style={{ fontSize: 9, marginLeft: 5, verticalAlign: "middle" }} title="Professor de Seminário">Prof</span>
+                        )}
+                      </span>
                       <span className={`badge ${cfg.badge}`} style={{ fontSize: 10 }}>
                         {
                           t[
