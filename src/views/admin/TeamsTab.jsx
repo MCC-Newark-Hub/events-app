@@ -583,6 +583,11 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
                             {lang.slice(0, 3).toUpperCase()}
                           </span>
                         ))}
+                        {team === "Tradução" && (roster?.assignments || {})[mid] && (
+                          <span className="badge badge-green" style={{ fontSize: 9, marginLeft: 4, verticalAlign: "middle" }} title="Idioma atribuído neste evento">
+                            ✓ {(roster.assignments)[mid]}
+                          </span>
+                        )}
                       </span>
                       <span className={`badge ${cfg.badge}`} style={{ fontSize: 10 }}>
                         {

@@ -103,6 +103,7 @@ export function mapRoster(r) {
     leaderId: r.leader_id,
     description: r.description || "",
     memberIds: r.member_ids || [],
+    assignments: r.assignments || {},
   };
 }
 

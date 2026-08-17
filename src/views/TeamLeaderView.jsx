@@ -48,8 +48,10 @@ function TeamLeaderView(props) {
   // Flat pool of everyone on any of this leader's teams, for the scoped reports view.
   const isCozinhaLeader = myTeams.includes("Cozinha");
   const isCIALeader = myTeams.includes("Professoras");
+  const isTranslationLeader = myTeams.includes("Tradução");
   const [kitchenView, setKitchenView] = useState("equipe");
   const [ciaTab, setCiaTab] = useState("cia");
+  const [translationTab, setTranslationTab] = useState("traducao");
   const [ciaExpanded, setCiaExpanded] = useState({ "0-3": true, "Criança": true, "Intermediário": true, "Adolescente": true });
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
@@ -107,6 +109,17 @@ function TeamLeaderView(props) {
     if (roster.id) sb.from("rosters").update({ member_ids: updatedIds }).eq("id", roster.id);
     if (!silent) notify("Removed.");
   };
+  const setMemberAssignment = (team, memberId, language) => {
+    const roster = rosters.find((r) => r.eventId === event?.id && r.team === team);
+    if (!roster?.id) return;
+    const updated = { ...(roster.assignments || {}), [memberId]: language || null };
+    if (!language) delete updated[memberId];
+    setRosters((prev) => prev.map((r) =>
+      r.id === roster.id ? { ...r, assignments: updated } : r
+    ));
+    sb.from("rosters").update({ assignments: updated }).eq("id", roster.id)
+      .then((res) => { if (res.error) notify("Erro ao salvar atribuição."); });
+  };
   const transferMember = (fromTeam, member, toTeam) => {
     const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: member.id, targetTeam: toTeam, memberRoles: member.roles, ignoreTeam: fromTeam });
     if (!check.allowed) {
@@ -142,27 +155,33 @@ function TeamLeaderView(props) {
             <p style={{ color: "#6b7280", fontSize: 13 }}>{t.teamReadOnly}</p>
           </div>
 
-          {/* Tab bar — Cozinha and/or CIA leaders */}
-          {(isCozinhaLeader || isCIALeader) && (
+          {/* Tab bar — Cozinha / CIA / Tradução leaders */}
+          {(isCozinhaLeader || isCIALeader || isTranslationLeader) && (
             <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: "2px solid var(--border)", paddingBottom: 0 }}>
               {(isCIALeader
                 ? [{ id: "cia", label: "📚 CIA — Classes" }, { id: "equipe", label: "Equipe" }]
-                : [{ id: "equipe", label: "Equipe" }, { id: "planejamento", label: "🍽️ Planejamento" }]
-              ).map(({ id, label }) => (
-                <button
-                  key={id}
-                  onClick={() => isCIALeader ? setCiaTab(id) : setKitchenView(id)}
-                  style={{
-                    background: "none", border: "none", cursor: "pointer", padding: "6px 14px",
-                    fontWeight: (isCIALeader ? ciaTab : kitchenView) === id ? 700 : 400,
-                    color: (isCIALeader ? ciaTab : kitchenView) === id ? "var(--primary)" : "var(--muted)",
-                    borderBottom: (isCIALeader ? ciaTab : kitchenView) === id ? "2px solid var(--primary)" : "2px solid transparent",
-                    marginBottom: -2, fontSize: 14,
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
+                : isCozinhaLeader
+                  ? [{ id: "equipe", label: "Equipe" }, { id: "planejamento", label: "🍽️ Planejamento" }]
+                  : [{ id: "traducao", label: "🌐 Tradução" }, { id: "equipe", label: "Equipe" }]
+              ).map(({ id, label }) => {
+                const activeTab = isCIALeader ? ciaTab : isCozinhaLeader ? kitchenView : translationTab;
+                const setTab = isCIALeader ? setCiaTab : isCozinhaLeader ? setKitchenView : setTranslationTab;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setTab(id)}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer", padding: "6px 14px",
+                      fontWeight: activeTab === id ? 700 : 400,
+                      color: activeTab === id ? "var(--primary)" : "var(--muted)",
+                      borderBottom: activeTab === id ? "2px solid var(--primary)" : "2px solid transparent",
+                      marginBottom: -2, fontSize: 14,
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -251,6 +270,113 @@ function TeamLeaderView(props) {
             );
           })() : null}
 
+          {/* Tradução tab */}
+          {isTranslationLeader && translationTab === "traducao" ? (() => {
+            const LANGS = ["Inglês", "Espanhol", "Francês", "Mandarim", "Italiano", "Alemão"];
+            const roster = rosters.find((r) => r.eventId === event?.id && r.team === "Tradução");
+            const assignments = roster?.assignments || {};
+            const mids = roster?.memberIds || [];
+            const teamMembers = mids
+              .map((mid) => members.find((m) => m.id === mid))
+              .filter(Boolean)
+              .sort((a, b) => norm(a.name).localeCompare(norm(b.name)));
+
+            // Group by assigned language for the summary row
+            const byLang = {};
+            LANGS.forEach((l) => { byLang[l] = []; });
+            byLang["—"] = [];
+            teamMembers.forEach((m) => {
+              const lang = assignments[m.id] || "—";
+              if (!byLang[lang]) byLang[lang] = [];
+              byLang[lang].push(m);
+            });
+            const coveredLangs = LANGS.filter((l) => byLang[l]?.length > 0);
+
+            return (
+              <>
+                {/* Language coverage summary */}
+                {coveredLangs.length > 0 && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+                    {coveredLangs.map((lang) => (
+                      <div key={lang} className="card" style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontWeight: 700, fontSize: 13 }}>{lang}</span>
+                        <span className="badge badge-blue" style={{ fontSize: 11 }}>{byLang[lang].length}</span>
+                      </div>
+                    ))}
+                    {byLang["—"].length > 0 && (
+                      <div className="card" style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 8, opacity: 0.6 }}>
+                        <span style={{ fontSize: 13, color: "var(--muted)" }}>Sem atribuição</span>
+                        <span className="badge badge-gray" style={{ fontSize: 11 }}>{byLang["—"].length}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Member list with language assignment */}
+                <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+                  {teamMembers.length === 0 ? (
+                    <p style={{ padding: 24, color: "var(--muted)", textAlign: "center", fontSize: 13 }}>
+                      Nenhum tradutor na equipe ainda.
+                    </p>
+                  ) : (
+                    <div style={{ overflowX: "auto" }}>
+                      <table className="table" style={{ minWidth: 480 }}>
+                        <thead>
+                          <tr>
+                            <th>Nome</th>
+                            <th>Idiomas (perfil)</th>
+                            <th>Atribuição — {event?.name || "este evento"}</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teamMembers.map((m) => {
+                            const capable = m.translationLanguages || [];
+                            const assigned = assignments[m.id] || "";
+                            const regStatus = getStatus(m.id);
+                            const statusColor = regStatus === "confirmed" ? "#2d8a4e" : regStatus === "pending" ? "#d4820a" : "#9ca3af";
+                            const statusLabel = regStatus === "confirmed" ? t.confirmed : regStatus === "pending" ? t.pendPayment : t.notRegistered;
+                            return (
+                              <tr key={m.id}>
+                                <td style={{ fontWeight: 600 }}>{m.name}</td>
+                                <td>
+                                  {capable.length === 0 ? (
+                                    <span style={{ color: "var(--muted)", fontSize: 11 }}>—</span>
+                                  ) : (
+                                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                                      {capable.map((l) => (
+                                        <span key={l} className="badge badge-blue" style={{ fontSize: 10 }}>{l}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </td>
+                                <td>
+                                  <select
+                                    value={assigned}
+                                    onChange={(e) => setMemberAssignment("Tradução", m.id, e.target.value)}
+                                    style={{ fontSize: 12, padding: "3px 6px", width: "auto" }}
+                                  >
+                                    <option value="">— Não atribuído —</option>
+                                    {(capable.length > 0 ? capable : LANGS).map((l) => (
+                                      <option key={l} value={l}>{l}</option>
+                                    ))}
+                                  </select>
+                                </td>
+                                <td>
+                                  <span style={{ fontSize: 11, color: statusColor }}>● {statusLabel}</span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })() : null}
+
           {/* Planejamento tab */}
           {isCozinhaLeader && kitchenView === "planejamento" ? (
             <>
@@ -259,7 +385,7 @@ function TeamLeaderView(props) {
               </div>
               <KitchenPlanningTab regs={regs} event={event} events={props.events} notify={notify} />
             </>
-          ) : (!isCIALeader || ciaTab !== "cia") ? (
+          ) : (!isCIALeader || ciaTab !== "cia") && (!isTranslationLeader || translationTab !== "traducao") ? (
             <>
               {myTeams.length === 0 && (
                 <div style={{ padding: "24px", background: "var(--card)", borderRadius: 10, border: "1px solid var(--border)", color: "var(--muted)", textAlign: "center" }}>
