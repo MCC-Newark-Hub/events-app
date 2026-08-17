@@ -20,6 +20,8 @@ export function mapMember(m) {
     allergies: m.allergies || '',
     specialNeeds: m.special_needs || '',
     notes: m.notes || '',
+    isGuest: m.is_guest || false,
+    invitedBy: m.invited_by || '',
   };
 }
 export function mapFamily(f) {
@@ -864,6 +866,25 @@ export function useAppData({ getUserRef, notify }) {
     notify("Capacidade atualizada para " + newCapacity + ".");
   };
 
+  const toggleRegistrationPaused = function () {
+    if (!event) return;
+    var newVal = !event.registration_paused;
+    var byName = getUser()?.name || "Sistema";
+    setEventState(function (cur) { return cur ? { ...cur, registration_paused: newVal } : cur; });
+    setEvents(function (p) { return p.map(function (e) { return e.id === event.id ? { ...e, registration_paused: newVal } : e; }); });
+    sb.from("events").update({ registration_paused: newVal }).eq("id", event.id)
+      .then(function (res) {
+        if (res.error) {
+          notify("Erro: " + res.error.message);
+          setEventState(function (cur) { return cur ? { ...cur, registration_paused: !newVal } : cur; });
+          setEvents(function (p) { return p.map(function (e) { return e.id === event.id ? { ...e, registration_paused: !newVal } : e; }); });
+        } else {
+          logAudit(newVal ? "registrations_paused" : "registrations_resumed", "event", event.id, event.name, { by: byName });
+        }
+      });
+    notify(newVal ? "Inscrições pausadas." : "Inscrições reabertas.");
+  };
+
   const updateSessionTtlHours = async (hours) => {
     // A blocked RLS policy makes UPDATE/DELETE affect zero rows with NO error at
     // all (unlike INSERT, which throws) — .select().single() is what turns that
@@ -905,6 +926,7 @@ export function useAppData({ getUserRef, notify }) {
     setDbTeams,
     settings,
     updateEventCapacity,
+    toggleRegistrationPaused,
     updateSessionTtlHours,
     activeRegs,
     activeCount,

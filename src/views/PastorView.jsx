@@ -26,7 +26,7 @@ function PaymentStatusStrip({ paid, exempt, pend, total, lang }) {
 }
 
 function PastorView(props) {
-  const { event, regs, approvals, resolveApproval, updateEventCapacity, user, logout, activeCount, wlRegs, exRegs, pendingApprovals, lang, setLang, theme, toggleTheme, churches, members } = props;
+  const { event, regs, approvals, resolveApproval, updateEventCapacity, toggleRegistrationPaused, user, logout, activeCount, wlRegs, exRegs, pendingApprovals, lang, setLang, theme, toggleTheme, churches, members } = props;
   const t = useT();
   const [sec, setSec] = useState("dashboard");
   const [capInput, setCapInput] = useState("");
@@ -97,6 +97,20 @@ function PastorView(props) {
                   <p style={{ color: "#6b7280", fontSize: 13 }}>{event?.date} · {event?.location}</p>
                 </div>
                 <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} />
+                {event?.registration_paused && (
+                  <div style={{ background: "#fef3c7", border: "1px solid #f59e0b", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "#92400e", fontWeight: 600 }}>
+                    ⏸ Inscrições pausadas — o portal público está bloqueado para novas inscrições.
+                  </div>
+                )}
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+                  <button
+                    onClick={toggleRegistrationPaused}
+                    className={`btn btn-sm ${event?.registration_paused ? "btn-primary" : "btn-ghost"}`}
+                    style={event?.registration_paused ? { background: "#b45309", borderColor: "#b45309" } : {}}
+                  >
+                    {event?.registration_paused ? "▶ Retomar Inscrições" : "⏸ Pausar Inscrições"}
+                  </button>
+                </div>
                 {event?.capacity && (
                   <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 10, padding: "14px 16px", marginBottom: 18, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                     <div style={{ flex: 1, minWidth: 200 }}>

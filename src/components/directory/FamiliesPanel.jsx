@@ -82,10 +82,11 @@ export default function FamiliesPanel({ members, families, setFamilies, gas, sho
     }))
   );
 
+  const lc = (a, b) => (a || "").localeCompare(b || "", "pt", { sensitivity: "base" });
   const sorted = [...rawList].sort((a, b) => {
-    if (sortBy === "group")  return (a.gaName || "").localeCompare(b.gaName || "")  || (a.name || "").localeCompare(b.name || "");
-    if (sortBy === "church") return (a.churchName || "").localeCompare(b.churchName || "") || (a.name || "").localeCompare(b.name || "");
-    return (a.name || "").localeCompare(b.name || "");
+    if (sortBy === "group")  return lc(a.gaName, b.gaName)  || lc(a.name, b.name);
+    if (sortBy === "church") return lc(a.churchName, b.churchName) || lc(a.name, b.name);
+    return lc(a.name, b.name);
   });
 
   const allIds = sorted.map((f) => f.id).filter(Boolean);

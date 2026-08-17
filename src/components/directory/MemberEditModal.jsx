@@ -5,7 +5,7 @@ import { genMemberId } from "@/lib/genMemberId";
 import Modal from "@/components/Modal";
 import SearchSelect from "@/components/SearchSelect";
 import RolesMultiSelect from "@/components/directory/RolesMultiSelect";
-import { syncRegistrationNames } from "@/lib/syncMemberName";
+import { syncMemberToRegistrations } from "@/lib/syncMemberName";
 
 // Church-locked member editor: the acting user's church is always the value written to
 // `members.church`, regardless of what's shown/typed elsewhere — mirrors GroupsPanel's
@@ -58,6 +58,8 @@ export default function MemberEditModal({
         allergies: editingMember.allergies || null,
         special_needs: editingMember.specialNeeds || null,
         notes: editingMember.notes || null,
+        is_guest: editingMember.isGuest || false,
+        invited_by: editingMember.isGuest ? (editingMember.invitedBy || null) : null,
       };
       let memberId = editingMember.id;
       if (editingMember.id) {
@@ -65,8 +67,8 @@ export default function MemberEditModal({
         const { error } = await sb.from("members").update(row).eq("id", editingMember.id);
         if (error) throw error;
         setMembers((prev) => prev.map((m) => (m.id === editingMember.id ? mapMember({ ...m, ...row, id: editingMember.id }) : m)));
-        if (oldMember && oldMember.name !== fullName && setRegs) {
-          syncRegistrationNames({ memberId: editingMember.id, oldName: oldMember.name, newName: fullName, newBadgeName: row.badge_name, setRegs });
+        if (setRegs) {
+          syncMemberToRegistrations({ memberId: editingMember.id, memberName: fullName, badgeName: row.badge_name, category: row.category, church: row.church, setRegs });
         }
         logAudit?.("member_updated", "member", editingMember.id, fullName, null);
       } else {
@@ -168,6 +170,19 @@ export default function MemberEditModal({
           </select>
           {editingMember.familyId === "__new__" && (
             <input value={newFamilyName} onChange={(e) => setNewFamilyName(e.target.value)} placeholder="Nome da nova família" style={{ marginTop: 6 }} />
+          )}
+        </div>
+        <div>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
+            <input type="checkbox" checked={editingMember.isGuest || false}
+              onChange={(e) => setEditingMember({ ...editingMember, isGuest: e.target.checked, invitedBy: e.target.checked ? editingMember.invitedBy : "" })} />
+            Convidado
+          </label>
+          {editingMember.isGuest && (
+            <div style={{ marginTop: 8 }}>
+              <label>Convidado por</label>
+              <input value={editingMember.invitedBy || ""} onChange={(e) => setEditingMember({ ...editingMember, invitedBy: e.target.value })} placeholder="Nome de quem convidou" />
+            </div>
           )}
         </div>
         <div>

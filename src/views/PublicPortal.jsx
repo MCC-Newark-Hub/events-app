@@ -353,6 +353,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
   const deadlineDays = event?.payment_deadline_days ?? event?.paymentDeadlineDays ?? null;
   const activeRegCount = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted).length;
   const eventIsFull = event?.capacity ? activeRegCount >= event.capacity : false;
+  const registrationPaused = !!event?.registration_paused;
 
   const allMembers = propMembers || [];
   const existingMemberIds = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled && r.memberId !== "GUEST").map((r) => r.memberId);
@@ -630,8 +631,22 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
         <div style={{ background: "#fff", borderRadius: 20, padding: "24px 20px" }}>
           {step === 0 && (
             <div>
+              {/* Paused notice — blocks all new registrations */}
+              {registrationPaused && (
+                <div style={{ background: "#fef3c7", border: "2px solid #f59e0b", borderRadius: 14, padding: "28px 18px", marginBottom: 24, textAlign: "center" }}>
+                  <div style={{ fontSize: 40, marginBottom: 10 }}>⏸</div>
+                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 700, color: "#78350f", marginBottom: 8 }}>
+                    {lang === "en" ? "Registrations Temporarily Paused" : "Inscrições Temporariamente Pausadas"}
+                  </h3>
+                  <p style={{ fontSize: 14, color: "#92400e", lineHeight: 1.6, margin: 0 }}>
+                    {lang === "en"
+                      ? "Registrations are currently paused by the organizers. Please check back shortly."
+                      : "As inscrições estão temporariamente pausadas pela organização. Por favor, tente novamente em breve."}
+                  </p>
+                </div>
+              )}
               {/* Waitlist notice — shown FIRST when event is full */}
-              {eventIsFull && (
+              {!registrationPaused && eventIsFull && (
                 <div style={{ background: "#fef3c7", border: "2px solid #f59e0b", borderRadius: 14, padding: "20px 18px", marginBottom: 24 }}>
                   <div style={{ textAlign: "center", marginBottom: 14 }}>
                     <div style={{ fontSize: 40, marginBottom: 8 }}>⏳</div>
@@ -660,57 +675,61 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
                 </div>
               )}
 
-              <div style={{ textAlign: "center", marginBottom: 24 }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>💵</div>
-                <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, fontWeight: 700, color: "#03223f", marginBottom: 10 }}>
-                  {lang === "en" ? "In-Person Payment Only" : "Pagamento Presencial"}
-                </h3>
-                <p style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
-                  {lang === "en"
-                    ? "Before you register, please read the payment policy."
-                    : "Antes de se inscrever, leia a política de pagamento."}
-                </p>
-              </div>
+              {!registrationPaused && (
+                <>
+                  <div style={{ textAlign: "center", marginBottom: 24 }}>
+                    <div style={{ fontSize: 48, marginBottom: 12 }}>💵</div>
+                    <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, fontWeight: 700, color: "#03223f", marginBottom: 10 }}>
+                      {lang === "en" ? "In-Person Payment Only" : "Pagamento Presencial"}
+                    </h3>
+                    <p style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
+                      {lang === "en"
+                        ? "Before you register, please read the payment policy."
+                        : "Antes de se inscrever, leia a política de pagamento."}
+                    </p>
+                  </div>
 
-              <div style={{ background: "#fef2f2", border: "1.5px solid #fca5a5", borderRadius: 12, padding: "16px 18px", marginBottom: 24 }}>
-                <ul style={{ margin: 0, paddingLeft: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-                  <li style={{ fontSize: 14, color: "#374151", lineHeight: 1.6 }}>
-                    {lang === "en"
-                      ? "Payment must be made in cash, in person, to authorized staff at the event."
-                      : "O pagamento deve ser feito em dinheiro, presencialmente, com a equipe autorizada no evento."}
-                  </li>
-                  <li style={{ fontSize: 14, color: "#991b1b", fontWeight: 700, lineHeight: 1.6 }}>
-                    {lang === "en"
-                      ? "We do not accept Zelle, Venmo, PayPal, Cash App, or credit/debit cards."
-                      : "Não aceitamos Zelle, Venmo, PayPal, Cash App ou cartões de crédito/débito."}
-                  </li>
-                  <li style={{ fontSize: 14, color: "#374151", lineHeight: 1.6 }}>
-                    {lang === "en"
-                      ? "Your registration will remain PENDING until payment is confirmed in person."
-                      : "Sua inscrição ficará PENDENTE até que o pagamento seja confirmado presencialmente."}
-                  </li>
-                </ul>
-              </div>
+                  <div style={{ background: "#fef2f2", border: "1.5px solid #fca5a5", borderRadius: 12, padding: "16px 18px", marginBottom: 24 }}>
+                    <ul style={{ margin: 0, paddingLeft: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+                      <li style={{ fontSize: 14, color: "#374151", lineHeight: 1.6 }}>
+                        {lang === "en"
+                          ? "Payment must be made in cash, in person, to authorized staff at the event."
+                          : "O pagamento deve ser feito em dinheiro, presencialmente, com a equipe autorizada no evento."}
+                      </li>
+                      <li style={{ fontSize: 14, color: "#991b1b", fontWeight: 700, lineHeight: 1.6 }}>
+                        {lang === "en"
+                          ? "We do not accept Zelle, Venmo, PayPal, Cash App, or credit/debit cards."
+                          : "Não aceitamos Zelle, Venmo, PayPal, Cash App ou cartões de crédito/débito."}
+                      </li>
+                      <li style={{ fontSize: 14, color: "#374151", lineHeight: 1.6 }}>
+                        {lang === "en"
+                          ? "Your registration will remain PENDING until payment is confirmed in person."
+                          : "Sua inscrição ficará PENDENTE até que o pagamento seja confirmado presencialmente."}
+                      </li>
+                    </ul>
+                  </div>
 
-              <div className="cb" style={{ marginBottom: 16, padding: "12px 14px", background: introAgreed ? "#f0fdf4" : "#f8f9fb", border: `1.5px solid ${introAgreed ? "#86efac" : "var(--border)"}`, borderRadius: 10 }}>
-                <input type="checkbox" id="intro-agree" checked={introAgreed} onChange={(e) => setIntroAgreed(e.target.checked)} />
-                <label htmlFor="intro-agree" style={{ fontSize: 14, fontWeight: 600, color: "#1a1e2e", cursor: "pointer" }}>
-                  {lang === "en"
-                    ? "I understand that payment must be made in cash, in person. I wish to proceed with registration."
-                    : "Entendo que o pagamento deve ser feito em dinheiro, presencialmente. Desejo prosseguir com a inscrição."}
-                </label>
-              </div>
+                  <div className="cb" style={{ marginBottom: 16, padding: "12px 14px", background: introAgreed ? "#f0fdf4" : "#f8f9fb", border: `1.5px solid ${introAgreed ? "#86efac" : "var(--border)"}`, borderRadius: 10 }}>
+                    <input type="checkbox" id="intro-agree" checked={introAgreed} onChange={(e) => setIntroAgreed(e.target.checked)} />
+                    <label htmlFor="intro-agree" style={{ fontSize: 14, fontWeight: 600, color: "#1a1e2e", cursor: "pointer" }}>
+                      {lang === "en"
+                        ? "I understand that payment must be made in cash, in person. I wish to proceed with registration."
+                        : "Entendo que o pagamento deve ser feito em dinheiro, presencialmente. Desejo prosseguir com a inscrição."}
+                    </label>
+                  </div>
 
-              <button
-                className="btn btn-accent"
-                style={{ width: "100%", padding: 14, fontSize: 16, opacity: (introAgreed && (!eventIsFull || waitlistAcknowledged)) ? 1 : 0.45 }}
-                disabled={!introAgreed || (eventIsFull && !waitlistAcknowledged)}
-                onClick={() => setStep(1)}
-              >
-                {eventIsFull
-                  ? (lang === "en" ? "Join Waitlist →" : "Entrar na Lista de Espera →")
-                  : (lang === "en" ? "Proceed to Registration →" : "Prosseguir com a Inscrição →")}
-              </button>
+                  <button
+                    className="btn btn-accent"
+                    style={{ width: "100%", padding: 14, fontSize: 16, opacity: (introAgreed && (!eventIsFull || waitlistAcknowledged)) ? 1 : 0.45 }}
+                    disabled={!introAgreed || (eventIsFull && !waitlistAcknowledged)}
+                    onClick={() => setStep(1)}
+                  >
+                    {eventIsFull
+                      ? (lang === "en" ? "Join Waitlist →" : "Entrar na Lista de Espera →")
+                      : (lang === "en" ? "Proceed to Registration →" : "Prosseguir com a Inscrição →")}
+                  </button>
+                </>
+              )}
             </div>
           )}
 

@@ -3,14 +3,20 @@ import { CHURCH_LIST } from "@/constants";
 
 const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
 
+const isOutraValue = (v) => v === "Outra / Not Listed" || v === "Outra / Não Listada" || (v || "").startsWith("Outra: ");
+
 export default function ChurchSearch({ value, onChange, placeholder, churches }) {
   var churchList = churches && churches.length > 0 ? churches : CHURCH_LIST;
   var [search, setSearch] = useState(
-    value && !["Sem Igreja", "Outra / Not Listed"].includes(value) ? value : ""
+    value && value !== "Sem Igreja" && !isOutraValue(value) ? value : ""
   );
   var [open, setOpen] = useState(false);
-  var [customText, setCustomText] = useState("");
-  var isOther = value === "Outra / Not Listed";
+  // Separate mode flag so "Outra" is active even before the note is typed.
+  // value stays "" (invalid) until the user actually types the church name.
+  var [isOtherMode, setIsOtherMode] = useState(isOutraValue(value));
+  var [customText, setCustomText] = useState(
+    (value || "").startsWith("Outra: ") ? value.slice(7) : ""
+  );
   var isNoChurch = value === "Sem Igreja";
 
   var filtered = churchList
@@ -19,15 +25,29 @@ export default function ChurchSearch({ value, onChange, placeholder, churches })
     })
     .slice(0, 10);
 
-  var pick = function (c) {
-    var display = c.display || c;
-    setSearch(display);
+  var enterOtherMode = function () {
+    setIsOtherMode(true);
+    setSearch("");
     setOpen(false);
+    onChange(""); // stays invalid until note is entered
+  };
+
+  var pick = function (c) {
     if (c.allow_custom) {
-      onChange(display);
+      enterOtherMode();
     } else {
+      var display = c.display || c;
+      setSearch(display);
+      setOpen(false);
       onChange(display);
     }
+  };
+
+  var clearAll = function () {
+    setSearch("");
+    setCustomText("");
+    setIsOtherMode(false);
+    onChange("");
   };
 
   return (
@@ -36,7 +56,7 @@ export default function ChurchSearch({ value, onChange, placeholder, churches })
         <div className="sb">
           <span className="si-icon">⛪</span>
           <input
-            value={isNoChurch ? "Sem Igreja" : isOther ? "Outra / Not Listed" : search}
+            value={isNoChurch ? "Sem Igreja" : isOtherMode ? "Outra / Não Listada" : search}
             onChange={function (e) {
               setSearch(e.target.value);
               onChange("");
@@ -47,15 +67,11 @@ export default function ChurchSearch({ value, onChange, placeholder, churches })
             }}
             placeholder={placeholder || "Buscar igreja..."}
             style={{ borderColor: value ? "var(--primary)" : "", flex: 1 }}
-            readOnly={isNoChurch || isOther}
+            readOnly={isNoChurch || isOtherMode}
           />
-          {value && (
+          {(value || isOtherMode) && (
             <button
-              onClick={function () {
-                setSearch("");
-                setCustomText("");
-                onChange("");
-              }}
+              onClick={clearAll}
               style={{
                 background: "none",
                 border: "none",
@@ -65,11 +81,11 @@ export default function ChurchSearch({ value, onChange, placeholder, churches })
                 padding: "0 8px",
               }}
             >
-              x
+              ×
             </button>
           )}
         </div>
-        {open && search.length > 0 && !isNoChurch && !isOther && (
+        {open && search.length > 0 && !isNoChurch && !isOtherMode && (
           <div
             style={{
               position: "absolute",
@@ -91,9 +107,7 @@ export default function ChurchSearch({ value, onChange, placeholder, churches })
               return (
                 <div
                   key={display}
-                  onClick={function () {
-                    pick(c);
-                  }}
+                  onClick={function () { pick(c); }}
                   style={{
                     padding: "10px 14px",
                     cursor: "pointer",
@@ -102,23 +116,12 @@ export default function ChurchSearch({ value, onChange, placeholder, churches })
                     color: isSpecial ? "var(--muted)" : "var(--text)",
                     fontStyle: isSpecial ? "italic" : "normal",
                   }}
-                  onMouseEnter={function (e) {
-                    e.currentTarget.style.background = "var(--bg2)";
-                  }}
-                  onMouseLeave={function (e) {
-                    e.currentTarget.style.background = "";
-                  }}
+                  onMouseEnter={function (e) { e.currentTarget.style.background = "var(--bg2)"; }}
+                  onMouseLeave={function (e) { e.currentTarget.style.background = ""; }}
                 >
                   {display}
                   {c.code && !isSpecial && (
-                    <span
-                      style={{
-                        marginLeft: 6,
-                        fontSize: 10,
-                        color: "var(--muted)",
-                        fontWeight: 600,
-                      }}
-                    >
+                    <span style={{ marginLeft: 6, fontSize: 10, color: "var(--muted)", fontWeight: 600 }}>
                       {c.code}
                     </span>
                   )}
@@ -133,34 +136,37 @@ export default function ChurchSearch({ value, onChange, placeholder, churches })
           </div>
         )}
       </div>
-      {isOther && (
+      {isOtherMode && (
         <div style={{ marginTop: 8 }}>
           <input
+            autoFocus
             value={customText}
             onChange={function (e) {
               setCustomText(e.target.value);
-              onChange("Outra: " + e.target.value);
+              onChange(e.target.value.trim() ? "Outra: " + e.target.value.trim() : "");
             }}
-            placeholder="Nome da igreja..."
-            style={{ width: "100%", boxSizing: "border-box" }}
+            placeholder="Nome da igreja (obrigatório)..."
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              borderColor: customText.trim() ? "var(--primary)" : "var(--danger)",
+            }}
           />
-          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>
-            Este nome aparecerá no crachá.
+          <div style={{ fontSize: 11, marginTop: 3, color: customText.trim() ? "var(--muted)" : "var(--danger)" }}>
+            {customText.trim()
+              ? "Este nome aparecerá no crachá."
+              : "⚠ Informe o nome da igreja para continuar."}
           </div>
         </div>
       )}
-      {!value && (
+      {!value && !isOtherMode && (
         <div style={{ marginTop: 6 }}>
           <button
             type="button"
             className="btn btn-ghost btn-xs"
-            onClick={function () {
-              setSearch("Outra / Not Listed");
-              setOpen(false);
-              onChange("Outra / Not Listed");
-            }}
+            onClick={enterOtherMode}
           >
-            Igreja não listada / Not Listed
+            Outra / Não Listada
           </button>
         </div>
       )}

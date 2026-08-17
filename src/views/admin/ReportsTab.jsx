@@ -5,7 +5,7 @@ import { fmt, ROLE_BADGE, CATEGORIES, deadlineStatus } from "@/constants";
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const byName = (a, b) => norm(a.memberName).localeCompare(norm(b.memberName));
 
-export default function ReportsTab({ regs, event, wlRegs, exRegs, lang }) {
+export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members }) {
   const t = useT();
   const [type, setType] = useState("summary");
   const [repSearch, setRepSearch] = useState("");
@@ -30,16 +30,21 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang }) {
   });
   const cancelledNonpayment = all.filter((r) => r.cancelled && (r.cancelReason === "nonpayment_auto" || r.cancelReason === "nonpayment_manual"));
 
+  const liveChurch = (r) => {
+    const live = (members || []).find((m) => m.id === r.memberId)?.church || r.church;
+    return (!live || live === "Sem Igreja") ? "Outra / Não Listada" : live;
+  };
+
   const applyReportFilters = (rows) => rows.filter((r) => {
     const q = norm(repSearch);
     return (!q || norm(r.memberName).includes(q)) &&
       (!repCategory || r.category === repCategory) &&
-      (!repChurch || r.church === repChurch) &&
+      (!repChurch || liveChurch(r) === repChurch) &&
       (!repDate || r.registeredAt === repDate);
   });
   const reportFilterPool = [...er, ...(wl || [])];
   const reportCategories = [...new Set(reportFilterPool.map((r) => r.category).filter(Boolean))].sort();
-  const reportChurches = [...new Set(reportFilterPool.map((r) => r.church).filter(Boolean))].sort();
+  const reportChurches = [...new Set(reportFilterPool.map(liveChurch).filter(Boolean))].sort();
   const reportDates = [...new Set(reportFilterPool.map((r) => r.registeredAt).filter(Boolean))].sort();
 
   const pendView = applyReportFilters(pend).sort(byName);
@@ -48,12 +53,15 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang }) {
   const expiringView = applyReportFilters(expiring).sort(byName);
   const cancelledNonpaymentView = applyReportFilters(cancelledNonpayment).sort(byName);
 
+  const churchKey = liveChurch;
   const groupStats = (rows, field) => {
     const keys = field === "category"
       ? CATEGORIES.filter((c) => rows.some((r) => r.category === c))
-      : [...new Set(rows.map((r) => r.church))];
+      : [...new Set(rows.map(churchKey))];
     const groups = keys.map((key) => {
-      const subset = rows.filter((r) => r[field] === key);
+      const subset = field === "church"
+        ? rows.filter((r) => churchKey(r) === key)
+        : rows.filter((r) => r[field] === key);
       return {
         key,
         rows: subset,

@@ -25,7 +25,7 @@ import AuditLogTab from "./admin/AuditLogTab";
 import BadgeGeneratorTab from "./admin/BadgeGeneratorTab";
 import KitchenTab from "./admin/KitchenTab";
 import KitchenPlanningTab from "./admin/KitchenPlanningTab";
-import { syncRegistrationNames } from "@/lib/syncMemberName";
+import { syncRegistrationNames, syncMemberToRegistrations } from "@/lib/syncMemberName";
 import { groupByFamily } from "@/lib/family";
 
 // Accent-insensitive search: "joao" matches "João"
@@ -99,7 +99,7 @@ function PaymentStatusStrip({ paid, exempt, pend, total, lang }) {
   );
 }
 
-function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members, lang }) {
+function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members, lang, toggleRegistrationPaused }) {
   const t = useT();
   const [expandedCat, setExpandedCat] = useState({});
   const [expandedCh, setExpandedCh] = useState({});
@@ -108,7 +108,8 @@ function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members, lang
   // Use the member's current church, not the text snapshotted on the registration at
   // signup time — that snapshot goes stale if the member record is corrected afterward,
   // which used to split one church into two buckets here (e.g. "Newark" vs "Newark, NJ").
-  const liveChurchOf = (r) => (members || []).find((m) => m.id === r.memberId)?.church || r.church || "—";
+  const normalizeChurch = (c) => (!c || c === "Sem Igreja") ? "Outra / Não Listada" : c;
+  const liveChurchOf = (r) => normalizeChurch((members || []).find((m) => m.id === r.memberId)?.church || r.church);
   const er = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
   const paid = er.filter((r) => r.paid && !r.exempt);
   const exempt = er.filter((r) => r.exempt);
@@ -121,7 +122,23 @@ function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members, lang
   const byCh = byChOf(er);
   return (
     <div>
-      <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700, marginBottom: 14, color: "var(--text)" }}>{t.overview}</h2>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700, color: "var(--text)" }}>{t.overview}</h2>
+        {toggleRegistrationPaused && (
+          <button
+            onClick={toggleRegistrationPaused}
+            className={`btn btn-sm ${event?.registration_paused ? "btn-primary" : "btn-ghost"}`}
+            style={event?.registration_paused ? { background: "#b45309", borderColor: "#b45309" } : {}}
+          >
+            {event?.registration_paused ? "▶ Retomar Inscrições" : "⏸ Pausar Inscrições"}
+          </button>
+        )}
+      </div>
+      {event?.registration_paused && (
+        <div style={{ background: "#fef3c7", border: "1px solid #f59e0b", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "#92400e", fontWeight: 600 }}>
+          ⏸ Inscrições pausadas — o portal público está bloqueado para novas inscrições.
+        </div>
+      )}
       <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} />
       <div className="stat-grid-4" style={{ marginBottom: 18 }}>
         {[
@@ -1041,6 +1058,8 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   const [tab, setTab]         = useState("churches");
   const [search, setSearch]   = useState("");
   const [groupByFam, setGroupByFam] = useState(false);
+  const [filterChurch, setFilterChurch] = useState("");
+  const [filterGa, setFilterGa] = useState("");
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({});
   const [deleting, setDeleting] = useState(null); // { ids:[], label:"" }
@@ -1064,7 +1083,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   const ChTh = makeTh(chSk, chSd, chToggle);
   const MbTh = makeTh(mbSk, mbSd, mbToggle);
 
-  const switchTab = (id) => { setTab(id); setSearch(""); setEditing(null); setSelected([]); setFormData({}); };
+  const switchTab = (id) => { setTab(id); setSearch(""); setEditing(null); setSelected([]); setFormData({}); setFilterChurch(""); setFilterGa(""); };
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   const toggleSel = (id) => setSelected((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
@@ -1107,7 +1126,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
     clearSel();
   };
 
-  const mapMember  = (m) => ({ id: m.id, name: m.name, firstName: m.first_name || m.firstName || '', lastName: m.last_name || m.lastName || '', badgeName: m.badge_name || m.badgeName, gender: m.gender, category: m.category, church: m.church, role: m.role || "", roles: m.roles || (m.role ? [m.role] : []), familyId: m.family_id || m.familyId, gaId: m.ga_id || m.gaId, allergies: m.allergies || '', specialNeeds: m.special_needs || m.specialNeeds || '', notes: m.notes || '' });
+  const mapMember  = (m) => ({ id: m.id, name: m.name, firstName: m.first_name || m.firstName || '', lastName: m.last_name || m.lastName || '', badgeName: m.badge_name || m.badgeName, gender: m.gender, category: m.category, church: m.church, role: m.role || "", roles: m.roles || (m.role ? [m.role] : []), familyId: m.family_id || m.familyId, gaId: m.ga_id || m.gaId, allergies: m.allergies || '', specialNeeds: m.special_needs || m.specialNeeds || '', notes: m.notes || '', isGuest: m.is_guest || m.isGuest || false, invitedBy: m.invited_by || m.invitedBy || '' });
   const mapFamily  = (f) => ({ id: f.id, name: f.name, memberIds: f.member_ids || f.memberIds || [] });
   const mapGA      = (g) => ({ id: g.id, name: g.name, church: g.church, leaderId: g.leader_id || g.leaderId, description: g.description || "" });
   const mapRoster  = (r) => ({ id: r.id, eventId: r.event_id || r.eventId, team: r.team, leaderId: r.leader_id || r.leaderId, memberIds: r.member_ids || r.memberIds || [] });
@@ -1138,9 +1157,36 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
         {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}><X size={14} /></button>}
       </div>
       {tab === "members" && (
-        <button className={`btn btn-sm ${groupByFam ? "btn-primary" : "btn-ghost"}`} onClick={() => setGroupByFam((p) => !p)}>
-          👪 Agrupar por Família
-        </button>
+        <>
+          <select
+            value={filterChurch}
+            onChange={(e) => { setFilterChurch(e.target.value); setFilterGa(""); }}
+            style={{ fontSize: 13, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card-bg)", color: filterChurch ? "var(--text)" : "var(--muted)" }}>
+            <option value="">Todas as Igrejas</option>
+            {[...new Set((members || []).map((m) => m.church).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt", { sensitivity: "base" })).map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <select
+            value={filterGa}
+            onChange={(e) => setFilterGa(e.target.value)}
+            style={{ fontSize: 13, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card-bg)", color: filterGa ? "var(--text)" : "var(--muted)" }}>
+            <option value="">Todos os Grupos</option>
+            {(gas || [])
+              .filter((g) => {
+                if (!filterChurch) return true;
+                const city = (filterChurch || "").split(",")[0].trim().toLowerCase();
+                return (g.church || "").toLowerCase().includes(city);
+              })
+              .map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+          </select>
+          {(filterChurch || filterGa) && (
+            <button className="btn btn-ghost btn-sm" onClick={() => { setFilterChurch(""); setFilterGa(""); }}>✕ Limpar</button>
+          )}
+          <button className={`btn btn-sm ${groupByFam ? "btn-primary" : "btn-ghost"}`} onClick={() => setGroupByFam((p) => !p)}>
+            👪 Agrupar por Família
+          </button>
+        </>
       )}
       </div>
 
@@ -1290,7 +1336,13 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       {/* ── Members ──────────────────────────────────────────────────────── */}
       {tab === "members" && (() => {
         const rawList = (members || [])
-          .filter((m) => ["name", "firstName", "lastName", "church", "category", "role", "badgeName"].some((f) => norm(m[f]).includes(norm(search))) || norm((gas || []).find((g) => g.id === m.gaId)?.name || "").includes(norm(search)))
+          .filter((m) => {
+            if (filterChurch && m.church !== filterChurch) return false;
+            if (filterGa && m.gaId !== filterGa) return false;
+            if (!search) return true;
+            return ["name", "firstName", "lastName", "church", "category", "role", "badgeName"].some((f) => norm(m[f]).includes(norm(search))) ||
+              norm((gas || []).find((g) => g.id === m.gaId)?.name || "").includes(norm(search));
+          })
           .map((m) => ({ ...m, gaName: (gas || []).find((g) => g.id === m.gaId)?.name || "", familyName: (families || []).find((f) => f.id === m.familyId || (f.memberIds || []).includes(m.id))?.name || "" }))
           .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const list = sortData(rawList, mbSk, mbSd);
@@ -1319,7 +1371,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
             <td style={{ fontSize: 11, color: "var(--muted)", maxWidth: 160 }}>{m.notes ? m.notes.slice(0, 40) + (m.notes.length > 40 ? '…' : '') : '—'}</td>
             <td>
               <div style={{ display: "flex", gap: 6 }}>
-                <button className="btn btn-ghost btn-xs" onClick={() => openEdit(m, { firstName: m.firstName || '', lastName: m.lastName || '', name: m.name, badgeName: m.badgeName || "", gender: m.gender || "M", category: m.category, church: m.church || "", roles: m.roles || (m.role ? [m.role] : []), role: m.role || "", familyId: m.familyId || "", gaId: m.gaId || "", allergies: m.allergies || '', specialNeeds: m.specialNeeds || '', notes: m.notes || '' })}><Pencil size={12} /></button>
+                <button className="btn btn-ghost btn-xs" onClick={() => openEdit(m, { firstName: m.firstName || '', lastName: m.lastName || '', name: m.name, badgeName: m.badgeName || "", gender: m.gender || "M", category: m.category, church: m.church || "", roles: m.roles || (m.role ? [m.role] : []), role: m.role || "", familyId: m.familyId || "", gaId: m.gaId || "", allergies: m.allergies || '', specialNeeds: m.specialNeeds || '', notes: m.notes || '', isGuest: m.isGuest || false, invitedBy: m.invitedBy || '' })}><Pencil size={12} /></button>
                 <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [m.id], label: m.name })}><Trash2 size={12} /></button>
               </div>
             </td>
@@ -1395,6 +1447,19 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         placeholder="Buscar família…"
                       />
                     </div>
+                    <div>
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
+                        <input type="checkbox" checked={formData.isGuest || false}
+                          onChange={(e) => setFormData({ ...formData, isGuest: e.target.checked, invitedBy: e.target.checked ? formData.invitedBy : "" })} />
+                        Convidado
+                      </label>
+                      {formData.isGuest && (
+                        <div style={{ marginTop: 8 }}>
+                          <label>Convidado por</label>
+                          <input value={formData.invitedBy || ""} onChange={(e) => setFormData({ ...formData, invitedBy: e.target.value })} placeholder="Nome de quem convidou" />
+                        </div>
+                      )}
+                    </div>
                     <div><label>Alergias</label><textarea rows={2} value={formData.allergies || ""} onChange={(e) => setFormData({ ...formData, allergies: e.target.value })} placeholder="Ex: amendoim, látex…" style={{ resize: "vertical" }} /></div>
                     <div><label>Necessidades Especiais</label><textarea rows={2} value={formData.specialNeeds || ""} onChange={(e) => setFormData({ ...formData, specialNeeds: e.target.value })} placeholder="Ex: cadeira de rodas…" style={{ resize: "vertical" }} /></div>
                     <div><label>Notas</label><textarea rows={2} value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} style={{ resize: "vertical" }} /></div>
@@ -1418,11 +1483,17 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       if (!formData.name?.trim() && !formData.firstName?.trim()) { notify("Nome obrigatório."); return; }
                       if (churches.find((c) => c.display === formData.church)?.is_hub && !formData.gaId) { notify("Grupo é obrigatório para igrejas do Pólo."); return; }
                       const fullName = formData.name?.trim() || ((formData.firstName || '') + ' ' + (formData.lastName || '')).trim();
-                      const row = { name: fullName, first_name: formData.firstName || null, last_name: formData.lastName || null, badge_name: formData.badgeName || fullName, gender: formData.gender || "M", category: formData.category || "Adulto", church: formData.church || "", roles: formData.roles || [], role: (formData.roles || [])[0] || "", family_id: formData.familyId || null, ga_id: formData.gaId || null, allergies: formData.allergies || null, special_needs: formData.specialNeeds || null, notes: formData.notes || null };
-                      if (!isNew) row.id = editing.id;
+                      const row = { name: fullName, first_name: formData.firstName || null, last_name: formData.lastName || null, badge_name: formData.badgeName || fullName, gender: formData.gender || "M", category: formData.category || "Adulto", church: formData.church || "", roles: formData.roles || [], role: (formData.roles || [])[0] || "", family_id: formData.familyId || null, ga_id: formData.gaId || null, allergies: formData.allergies || null, special_needs: formData.specialNeeds || null, notes: formData.notes || null, is_guest: formData.isGuest || false, invited_by: formData.isGuest ? (formData.invitedBy || null) : null };
+                      if (isNew) {
+                        const nums = (members || []).map((m) => parseInt((m.id || "").replace(/^M/, ""), 10)).filter((n) => !isNaN(n));
+                        const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+                        row.id = "M" + String(next).padStart(3, "0");
+                      } else {
+                        row.id = editing.id;
+                      }
                       saveRow("members", row, isNew, members, setMembers, mapMember);
-                      if (!isNew && editing.name && editing.name !== fullName) {
-                        syncRegistrationNames({ memberId: editing.id, oldName: editing.name, newName: fullName, newBadgeName: row.badge_name, setRegs });
+                      if (!isNew) {
+                        syncMemberToRegistrations({ memberId: editing.id, memberName: fullName, badgeName: row.badge_name, category: row.category, church: row.church, setRegs });
                       }
                     }}>{saving ? "Salvando…" : "Salvar"}</button>
                   </div>
@@ -1555,7 +1626,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
               </div>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ firstName: "", lastName: "", name: "", badgeName: "", gender: "M", category: "Adulto", church: "", roles: [], role: "", familyId: "", gaId: "", allergies: "", specialNeeds: "", notes: "" })}><Plus size={14} /> Novo Membro</button>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ firstName: "", lastName: "", name: "", badgeName: "", gender: "M", category: "Adulto", church: "", roles: [], role: "", familyId: "", gaId: "", allergies: "", specialNeeds: "", notes: "", isGuest: false, invitedBy: "" })}><Plus size={14} /> Novo Membro</button>
               {(members || []).length > 0 && (
                 <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
                   onClick={() => setDeleting({ ids: (members || []).map((m) => m.id).filter(Boolean), label: "" })}>

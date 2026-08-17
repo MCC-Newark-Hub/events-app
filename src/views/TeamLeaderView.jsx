@@ -277,6 +277,8 @@ function TeamLeaderView(props) {
                       />
                       {searchR.map((m) => {
                         const already = mids.includes(m.id);
+                        const check = already ? null : canAssignToTeam({ rosters, eventId: event?.id, memberId: m.id, targetTeam: team, memberRoles: m.roles });
+                        const regStatus = getStatus(m.id);
                         return (
                           <div
                             key={m.id}
@@ -284,25 +286,32 @@ function TeamLeaderView(props) {
                               display: "flex",
                               justifyContent: "space-between",
                               alignItems: "center",
-                              padding: "5px 0",
+                              padding: "6px 0",
                               borderTop: "1px solid var(--border)",
+                              gap: 8,
                             }}
                           >
-                            <span style={{ fontSize: 13 }}>
-                              {m.name}{" "}
-                              <span style={{ color: "#6b7280", fontSize: 11 }}>({m.category})</span>
-                            </span>
+                            <div>
+                              <div style={{ fontSize: 13 }}>
+                                {m.name}{" "}
+                                <span style={{ color: "#6b7280", fontSize: 11 }}>({m.category})</span>
+                              </div>
+                              <div style={{ fontSize: 11, marginTop: 2 }}>
+                                {regStatus === "confirmed" && <span style={{ color: "#2d8a4e" }}>● {t.confirmed}</span>}
+                                {regStatus === "pending" && <span style={{ color: "#d4820a" }}>● {t.pendPayment}</span>}
+                                {regStatus === "not_registered" && <span style={{ color: "#9ca3af" }}>○ {t.notRegistered}</span>}
+                              </div>
+                            </div>
                             {already ? (
-                              <span className="badge badge-gray">{t.teams}</span>
+                              <span className="badge badge-gray" style={{ whiteSpace: "nowrap" }}>{t.teams}</span>
+                            ) : !check.allowed ? (
+                              <span style={{ fontSize: 11, color: "#9ca3af", whiteSpace: "nowrap" }}>
+                                Equipe {check.conflictTeam}
+                              </span>
                             ) : (
                               <button
                                 className="btn btn-ok btn-xs"
                                 onClick={() => {
-                                  const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: m.id, targetTeam: team, memberRoles: m.roles });
-                                  if (!check.allowed) {
-                                    notify(`Não é possível adicionar ${m.name} à sua equipe porque ele(a) já está na equipe ${check.conflictTeam}.`);
-                                    return;
-                                  }
                                   addToRoster(team, m.id);
                                   setMsearch("");
                                 }}
