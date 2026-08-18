@@ -57,6 +57,27 @@ export default function RegistrationsTab(props) {
   };
   const toggleBulk = (id) => setBulkSel((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
   const t = useT();
+
+  const exportBadgeCSV = () => {
+    const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    const eventDate = new Date((event?.date || "") + "T12:00:00");
+    const mesAno = `${MESES[eventDate.getMonth()]} ${eventDate.getFullYear()}`;
+    const local = (event?.location || "").split(",")[0].trim();
+    const rows = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
+    const headers = ["NOME","SOBRENOME","EQUIPE","IGREJA","CATEGORIA","LOCAL","MÊS E ANO","Nro da Inscrição"];
+    const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const csvRows = rows.map((r) => {
+      const member = (members || []).find((m) => m.id === r.memberId);
+      const nome = member?.firstName || r.memberName.trim().split(" ")[0];
+      const sobrenome = member?.lastName || r.memberName.trim().split(" ").slice(1).join(" ");
+      return [nome, sobrenome, r.team || "Participante", r.church || "", r.category || "", local, mesAno, r.regNumber || ""].map(escape).join(",");
+    });
+    const csv = "﻿" + [headers.join(","), ...csvRows].join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = `crachas-${(event?.name || "evento").replace(/\s+/g,"-")}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState(initialFilter || "all");
   const [showReg, setShowReg] = useState(false);
@@ -108,6 +129,7 @@ export default function RegistrationsTab(props) {
               </button>
             </>
           )}
+          <button className="btn btn-ghost btn-sm" onClick={exportBadgeCSV} title="Exportar CSV para impressão de crachás no Canva">🪪 Crachás CSV</button>
           <button className="btn btn-primary" onClick={() => setShowReg(true)}>{t.addNew}</button>
         </div>
       </div>
