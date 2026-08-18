@@ -148,7 +148,7 @@ function ClerkView(props) {
 
           {sec === "regs" ? (
             <>
-              <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} />
+              <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} onWaitlistClick={wlRegs.length > 0 ? () => setTab("waitlist") : undefined} />
 
               <div className="stat-grid-4" style={{ marginBottom: 12 }}>
                 {[

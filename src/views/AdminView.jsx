@@ -141,7 +141,7 @@ function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members, lang
           ⏸ Inscrições pausadas — o portal público está bloqueado para novas inscrições.
         </div>
       )}
-      <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} />
+      <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} onWaitlistClick={wlRegs.length > 0 ? () => navToRegs("waitlist") : undefined} />
       <div className="stat-grid-4" style={{ marginBottom: 18 }}>
         {[
           { label: t.registered, value: er.length, sub: `${t.cia}:${er.filter((r) => ["0-3","Criança","Intermediário"].includes(r.category)).length} · ${t.ya}:${er.filter((r) => ["Adolescente","Jovem","Adulto"].includes(r.category)).length}`, color: "#1a3a6b", icon: <Users size={22} /> },

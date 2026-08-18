@@ -1,6 +1,6 @@
 import { useT } from "@/i18n/strings";
 
-export default function CapBar({ event, activeCount, wlCount, exCount }) {
+export default function CapBar({ event, activeCount, wlCount, exCount, onWaitlistClick }) {
   const t = useT();
   if (!event?.capacity) return null;
   const base = Math.min(activeCount, event.capacity);
@@ -26,7 +26,7 @@ export default function CapBar({ event, activeCount, wlCount, exCount }) {
             </span>
           )}
           {wlCount > 0 && (
-            <span className="wl">
+            <span className="wl" onClick={onWaitlistClick} style={{ cursor: onWaitlistClick ? "pointer" : "default" }}>
               ⏳{wlCount} {t.waiting}
             </span>
           )}

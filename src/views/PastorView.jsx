@@ -29,6 +29,8 @@ function PastorView(props) {
   const { event, regs, approvals, resolveApproval, updateEventCapacity, toggleRegistrationPaused, user, logout, activeCount, wlRegs, exRegs, pendingApprovals, lang, setLang, theme, toggleTheme, churches, members } = props;
   const t = useT();
   const [sec, setSec] = useState("dashboard");
+  const [regsInitialFilter, setRegsInitialFilter] = useState(null);
+  const navToRegs = (filter) => { setRegsInitialFilter(filter); setSec("regs"); };
   const [capInput, setCapInput] = useState("");
   const [expandedCat, setExpandedCat] = useState({});
   const [expandedCh, setExpandedCh] = useState({});
@@ -96,7 +98,7 @@ function PastorView(props) {
                   <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 24 }}>{event?.name}</h2>
                   <p style={{ color: "#6b7280", fontSize: 13 }}>{event?.date} · {event?.location}</p>
                 </div>
-                <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} />
+                <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} onWaitlistClick={wlRegs.length > 0 ? () => navToRegs("waitlist") : undefined} />
                 {event?.registration_paused && (
                   <div style={{ background: "#fef3c7", border: "1px solid #f59e0b", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "#92400e", fontWeight: 600 }}>
                     ⏸ Inscrições pausadas — o portal público está bloqueado para novas inscrições.
@@ -293,7 +295,7 @@ function PastorView(props) {
                 </div>
               </div>
             )}
-            {sec === "regs" && <RegistrationsTab {...props} />}
+            {sec === "regs" && <RegistrationsTab {...props} initialFilter={regsInitialFilter} />}
             {sec === "approvals" && <ApprovalsPanel approvals={approvals} resolveApproval={resolveApproval} event={event} activeCount={activeCount} />}
             {sec === "reports" && <ReportsTab regs={regs} event={event} wlRegs={wlRegs} exRegs={exRegs} lang={lang} />}
           </div>
