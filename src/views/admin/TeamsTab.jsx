@@ -497,22 +497,35 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
                         </span>
                         {already ? (
                           <span className="badge badge-gray">{t.teams}</span>
-                        ) : (
-                          <button
-                            className="btn btn-ok btn-xs"
-                            onClick={() => {
-                              const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: m.id, targetTeam: team, memberRoles: m.roles });
-                              if (!check.allowed) {
-                                notify(`Não é possível adicionar ${m.name}: já está na equipe ${check.conflictTeam}.`);
-                                return;
-                              }
-                              addToRoster(team, m.id);
-                              setMsearch("");
-                            }}
-                          >
-                            +
-                          </button>
-                        )}
+                        ) : (() => {
+                          const check = canAssignToTeam({ rosters, eventId: event?.id, memberId: m.id, targetTeam: team, memberRoles: m.roles });
+                          if (!check.allowed) {
+                            return (
+                              <button
+                                className="btn btn-ghost btn-xs"
+                                style={{ color: "#b45309", fontSize: 11 }}
+                                onClick={() => {
+                                  removeFromRoster(check.conflictTeam, m.id);
+                                  addToRoster(team, m.id);
+                                  setMsearch("");
+                                }}
+                              >
+                                ↪ Mover de {check.conflictTeam}
+                              </button>
+                            );
+                          }
+                          return (
+                            <button
+                              className="btn btn-ok btn-xs"
+                              onClick={() => {
+                                addToRoster(team, m.id);
+                                setMsearch("");
+                              }}
+                            >
+                              +
+                            </button>
+                          );
+                        })()}
                       </div>
                     );
                   })}
