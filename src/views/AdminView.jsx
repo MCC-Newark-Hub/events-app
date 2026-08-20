@@ -1,7 +1,7 @@
 import { useState, useRef, Fragment } from "react";
 import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X, ShieldCheck, IdCard, UtensilsCrossed } from "lucide-react";
 import { useT } from "@/i18n/strings";
-import { CATEGORIES, TEAMS, ROLE_BADGE, fmt } from "@/constants";
+import { CATEGORIES, TEAMS, ROLE_BADGE, ROLE_GROUPS, fmt } from "@/constants";
 import { sb } from "@/lib/supabase";
 import { eventSubtitle } from "@/lib/registrationDeadline";
 import Topbar from "@/components/Topbar";
@@ -1090,7 +1090,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
     { id: "members",     label: "Membros",               count: members?.length },
     { id: "families",    label: "Famílias",              count: families?.length },
     { id: "groups",      label: "Grupos de Assistência", count: gas?.length },
-    { id: "ministries",  label: "Funções",                count: 7 },
+    { id: "ministries",  label: "Membros com Funções",    count: (members || []).filter((m) => (m.roles || []).length > 0).length },
     { id: "teams",       label: "Trabalhadores",         count: rosters?.length },
     { id: "teams_dir",   label: "Equipes",               count: dbTeams?.length },
   ];
@@ -1113,6 +1113,8 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   const [bulkFamPick, setBulkFamPick] = useState(false); // "new" | "existing"
   const [bulkFamId, setBulkFamId] = useState("");
   const [bulkFamName, setBulkFamName] = useState("");
+  const [roleEditing, setRoleEditing] = useState(null);
+  const [editingRoles, setEditingRoles] = useState([]);
   // Sort state
   const [chSk, setChSk] = useState("display"); const [chSd, setChSd] = useState("asc");
   const [mbSk, setMbSk] = useState("name");    const [mbSd, setMbSd] = useState("asc");
@@ -1883,14 +1885,14 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── Teams / Rosters ──────────────────────────────────────────────── */}
       {tab === "ministries" && (() => {
-        const MINISTRY_GROUPS = [
-          { id: "louvor",      label: "Grupo de Louvor e Instrumentistas", roles: ["Grupo de Louvor", "Instrumentista", "Operador de Som"] },
-          { id: "intercessao", label: "Grupo de Intercessão",              roles: ["Grupo de Intercessão"] },
-          { id: "tesouraria",  label: "Tesouraria",                        roles: ["Tesoureiro(a)"] },
+        const FUNC_GROUPS = [
+          { id: "louvor",      label: "Grupo de Louvor e Instrumentistas", roles: ["Grupo de Louvor", "Instrumentista", "Instrumentista Aprendiz", "Operador de Som"] },
+          { id: "intercessao", label: "Grupo de Intercessão",              roles: ["Grupo de Intercessão", "Grupo de Oração"] },
+          { id: "tesouraria",  label: "Tesouraria",                        roles: ["Primeiro Tesoureiro", "Segundo Tesoureiro", "Comissão de Contas"] },
           { id: "secretaria",  label: "Secretaria",                        roles: ["Secretário(a) de Igreja", "Secretário(a) de GA"] },
-          { id: "traducao",    label: "Tradutores",                        roles: ["Tradutor"] },
+          { id: "traducao",    label: "Tradutores",                        roles: ["Tradutor", "Intérprete de Libras"] },
           { id: "ga",          label: "Responsáveis de GA",                gaLeaders: true },
-          { id: "professoras", label: "Professoras",                       roles: ["Professor(a) de Crianças", "Professor(a) de Intermediários", "Professor(a) de Adolescentes", "Professor(a) de Jovens", "Professor de Seminário"] },
+          { id: "professoras", label: "Professoras",                       roles: ["Professor(a) de Crianças", "Professor(a) de Crianças 0-3", "Professor(a) de Intermediários", "Professor(a) de Adolescentes", "Professor(a) de Jovens", "Professor de Seminário"] },
         ];
 
         const applyFilters = (mems) => mems
@@ -1906,47 +1908,101 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
           })
           .filter(Boolean);
 
+        const openRoleEdit = (m) => {
+          setRoleEditing(m);
+          setEditingRoles(m.roles || []);
+        };
+
+        const saveRoles = async () => {
+          const { error } = await sb.from("members").update({ roles: editingRoles }).eq("id", roleEditing.id).select();
+          if (error) { notify("Erro: " + error.message); return; }
+          setMembers((p) => p.map((m) => m.id === roleEditing.id ? { ...m, roles: editingRoles } : m));
+          notify("Funções atualizadas!");
+          setRoleEditing(null);
+        };
+
         return (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
-            {MINISTRY_GROUPS.map((group) => {
-              const mems = applyFilters(
-                group.gaLeaders
-                  ? gaLeaderEntries
-                  : (members || []).filter((m) => (m.roles || []).some((r) => (group.roles || []).includes(r)))
-              );
-              return (
-                <div key={group.id} className="card" style={{ padding: 0, overflow: "hidden" }}>
-                  <div style={{ padding: "10px 14px", background: "#f8f9fb", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <h4 style={{ fontWeight: 700, fontSize: 14, margin: 0 }}>{group.label}</h4>
-                    <span className={`badge ${mems.length > 0 ? "badge-blue" : "badge-gray"}`}>{mems.length}</span>
+          <>
+            {roleEditing && (
+              <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setRoleEditing(null)}>
+                <div className="modal" style={{ maxWidth: 480 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, margin: 0 }}>Funções — {roleEditing.name}</h3>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setRoleEditing(null)}>✕</button>
                   </div>
-                  <div style={{ padding: "4px 12px 8px" }}>
-                    {mems.length === 0 ? (
-                      <p style={{ color: "var(--muted)", fontSize: 12, padding: "8px 0", margin: 0, fontStyle: "italic" }}>
-                        {group.roles && !group.gaLeaders ? `Nenhum membro com função "${group.roles[0]}".` : "Nenhum responsável cadastrado."}
-                      </p>
-                    ) : (
-                      mems.map((m) => {
-                        const subRoles = group.gaLeaders
-                          ? [m._gaName]
-                          : (m.roles || []).filter((r) => (group.roles || []).includes(r));
-                        return (
-                          <div key={m.id + (m._gaName || "")} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "6px 0", borderBottom: "1px solid #f3f4f6" }}>
-                            <div>
-                              <div style={{ fontSize: 13, fontWeight: 500 }}>{m.name}</div>
-                              <div style={{ fontSize: 11, color: "var(--muted)" }}>
-                                {m.church}{subRoles.length > 0 && <span style={{ marginLeft: 4, color: "#6b7280" }}>· {subRoles.join(", ")}</span>}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
+                  <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>{roleEditing.church}</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    {(ROLE_GROUPS || []).map((g) => (
+                      <div key={g.group}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 6 }}>{g.group}</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {g.roles.map((r) => {
+                            const on = editingRoles.includes(r);
+                            return (
+                              <button
+                                key={r}
+                                onClick={() => setEditingRoles((p) => on ? p.filter((x) => x !== r) : [...p, r])}
+                                style={{ fontSize: 12, padding: "4px 10px", borderRadius: 20, border: `1px solid ${on ? "var(--icm-crimson)" : "var(--border)"}`, background: on ? "var(--icm-crimson)" : "var(--card-bg)", color: on ? "#fff" : "var(--text)", cursor: "pointer", fontWeight: on ? 600 : 400 }}
+                              >
+                                {r}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+                    <button className="btn btn-primary" style={{ flex: 1 }} onClick={saveRoles}>Salvar</button>
+                    <button className="btn btn-ghost" onClick={() => setRoleEditing(null)}>Cancelar</button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            )}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
+              {FUNC_GROUPS.map((group) => {
+                const mems = applyFilters(
+                  group.gaLeaders
+                    ? gaLeaderEntries
+                    : (members || []).filter((m) => (m.roles || []).some((r) => (group.roles || []).includes(r)))
+                );
+                return (
+                  <div key={group.id} className="card" style={{ padding: 0, overflow: "hidden" }}>
+                    <div style={{ padding: "10px 14px", background: "#f8f9fb", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <h4 style={{ fontWeight: 700, fontSize: 14, margin: 0 }}>{group.label}</h4>
+                      <span className={`badge ${mems.length > 0 ? "badge-blue" : "badge-gray"}`}>{mems.length}</span>
+                    </div>
+                    <div style={{ padding: "4px 12px 8px" }}>
+                      {mems.length === 0 ? (
+                        <p style={{ color: "var(--muted)", fontSize: 12, padding: "8px 0", margin: 0, fontStyle: "italic" }}>Nenhum membro cadastrado.</p>
+                      ) : (
+                        mems.map((m) => {
+                          const subRoles = group.gaLeaders
+                            ? [m._gaName]
+                            : (m.roles || []).filter((r) => (group.roles || []).includes(r));
+                          return (
+                            <div
+                              key={m.id + (m._gaName || "")}
+                              onClick={() => !group.gaLeaders && openRoleEdit(m)}
+                              style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "6px 0", borderBottom: "1px solid #f3f4f6", cursor: group.gaLeaders ? "default" : "pointer" }}
+                            >
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 500 }}>{m.name}</div>
+                                <div style={{ fontSize: 11, color: "var(--muted)" }}>
+                                  {m.church}{subRoles.length > 0 && <span style={{ marginLeft: 4 }}>· {subRoles.join(", ")}</span>}
+                                </div>
+                              </div>
+                              {!group.gaLeaders && <span style={{ fontSize: 11, color: "#9ca3af", flexShrink: 0, alignSelf: "center" }}>✏</span>}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         );
       })()}
 
