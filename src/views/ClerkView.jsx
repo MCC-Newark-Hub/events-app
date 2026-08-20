@@ -255,7 +255,7 @@ function ClerkView(props) {
                             </td>
                             <td>
                               <div style={{ display: "flex", gap: 4 }}>
-                                {r.waitlisted && <button className="btn btn-ok btn-sm" onClick={() => promoteFromWaitlist(r.id)}>{t.confirm}</button>}
+                                {r.waitlisted && <button className="btn btn-ok btn-sm" onClick={() => promoteFromWaitlist(r.id)}>{t.promoteWaitlist}</button>}
                                 {!r.waitlisted && !r.paid && !r.exempt && !r.cancelled && <button className="btn btn-ok btn-sm" onClick={() => updateReg(r.id, { paid: true })}>{t.markPaid}</button>}
                                 <button className="btn btn-ghost btn-sm" onClick={() => setDetail(r)}>{t.edit}</button>
                                 {!r.cancelled && !r.waitlisted && (

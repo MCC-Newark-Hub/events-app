@@ -236,7 +236,7 @@ export default function RegistrationsTab(props) {
                         style={{ marginRight: 4 }}
                         onClick={() => promoteFromWaitlist(r.id)}
                       >
-                        {t.confirm}
+                        {t.promoteWaitlist}
                       </button>
                     )}
                     <button className="btn btn-ghost btn-sm" onClick={() => setDetail(r)}>
