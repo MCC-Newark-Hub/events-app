@@ -1090,7 +1090,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
     { id: "members",     label: "Membros",               count: members?.length },
     { id: "families",    label: "Famílias",              count: families?.length },
     { id: "groups",      label: "Grupos de Assistência", count: gas?.length },
-    { id: "ministries",  label: "Ministérios",           count: 7 },
+    { id: "ministries",  label: "Funções",                count: 7 },
     { id: "teams",       label: "Trabalhadores",         count: rosters?.length },
     { id: "teams_dir",   label: "Equipes",               count: dbTeams?.length },
   ];
