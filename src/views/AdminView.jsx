@@ -1086,12 +1086,13 @@ function makeTh(sk, sd, toggle) {
 
 function AdminDirectory({ churches, setChurches, members, setMembers, families, setFamilies, gas, setGas, rosters, setRosters, dbTeams, setDbTeams, events, regs, setRegs, notify, logAudit }) {
   const TABS = [
-    { id: "churches",  label: "Igrejas",              count: churches?.length },
-    { id: "members",   label: "Membros",              count: members?.length },
-    { id: "families",  label: "Famílias",             count: families?.length },
-    { id: "groups",    label: "Grupos de Assistência",count: gas?.length },
-    { id: "teams",     label: "Trabalhadores",          count: rosters?.length },
-    { id: "teams_dir", label: "Equipes",               count: dbTeams?.length },
+    { id: "churches",    label: "Igrejas",               count: churches?.length },
+    { id: "members",     label: "Membros",               count: members?.length },
+    { id: "families",    label: "Famílias",              count: families?.length },
+    { id: "groups",      label: "Grupos de Assistência", count: gas?.length },
+    { id: "ministries",  label: "Ministérios",           count: 7 },
+    { id: "teams",       label: "Trabalhadores",         count: rosters?.length },
+    { id: "teams_dir",   label: "Equipes",               count: dbTeams?.length },
   ];
   const [tab, setTab]         = useState("churches");
   const [search, setSearch]   = useState("");
@@ -1194,7 +1195,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar…" />
         {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}><X size={14} /></button>}
       </div>
-      {tab === "members" && (
+      {(tab === "members" || tab === "ministries") && (
         <>
           <select
             value={filterChurch}
@@ -1205,25 +1206,29 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
-          <select
-            value={filterGa}
-            onChange={(e) => setFilterGa(e.target.value)}
-            style={{ fontSize: 13, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card-bg)", color: filterGa ? "var(--text)" : "var(--muted)" }}>
-            <option value="">Todos os Grupos</option>
-            {(gas || [])
-              .filter((g) => {
-                if (!filterChurch) return true;
-                const city = (filterChurch || "").split(",")[0].trim().toLowerCase();
-                return (g.church || "").toLowerCase().includes(city);
-              })
-              .map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-          </select>
+          {tab === "members" && (
+            <>
+              <select
+                value={filterGa}
+                onChange={(e) => setFilterGa(e.target.value)}
+                style={{ fontSize: 13, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card-bg)", color: filterGa ? "var(--text)" : "var(--muted)" }}>
+                <option value="">Todos os Grupos</option>
+                {(gas || [])
+                  .filter((g) => {
+                    if (!filterChurch) return true;
+                    const city = (filterChurch || "").split(",")[0].trim().toLowerCase();
+                    return (g.church || "").toLowerCase().includes(city);
+                  })
+                  .map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+              <button className={`btn btn-sm ${groupByFam ? "btn-primary" : "btn-ghost"}`} onClick={() => setGroupByFam((p) => !p)}>
+                👪 Agrupar por Família
+              </button>
+            </>
+          )}
           {(filterChurch || filterGa) && (
             <button className="btn btn-ghost btn-sm" onClick={() => { setFilterChurch(""); setFilterGa(""); }}>✕ Limpar</button>
           )}
-          <button className={`btn btn-sm ${groupByFam ? "btn-primary" : "btn-ghost"}`} onClick={() => setGroupByFam((p) => !p)}>
-            👪 Agrupar por Família
-          </button>
         </>
       )}
       </div>
@@ -1877,6 +1882,74 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
       })()}
 
       {/* ── Teams / Rosters ──────────────────────────────────────────────── */}
+      {tab === "ministries" && (() => {
+        const MINISTRY_GROUPS = [
+          { id: "louvor",      label: "Grupo de Louvor e Instrumentistas", roles: ["Grupo de Louvor", "Instrumentista", "Operador de Som"] },
+          { id: "intercessao", label: "Grupo de Intercessão",              roles: ["Grupo de Intercessão"] },
+          { id: "tesouraria",  label: "Tesouraria",                        roles: ["Tesoureiro(a)"] },
+          { id: "secretaria",  label: "Secretaria",                        roles: ["Secretário(a) de Igreja", "Secretário(a) de GA"] },
+          { id: "traducao",    label: "Tradutores",                        roles: ["Tradutor"] },
+          { id: "ga",          label: "Responsáveis de GA",                gaLeaders: true },
+          { id: "professoras", label: "Professoras",                       roles: ["Professor(a) de Crianças", "Professor(a) de Intermediários", "Professor(a) de Adolescentes", "Professor(a) de Jovens", "Professor de Seminário"] },
+        ];
+
+        const applyFilters = (mems) => mems
+          .filter((m) => !filterChurch || m.church === filterChurch)
+          .filter((m) => !search || norm(m.name).includes(norm(search)) || norm(m.church || "").includes(norm(search)))
+          .sort((a, b) => norm(a.name).localeCompare(norm(b.name)));
+
+        const gaLeaderEntries = (gas || [])
+          .filter((g) => g.leaderId)
+          .map((g) => {
+            const m = (members || []).find((x) => x.id === g.leaderId);
+            return m ? { ...m, _gaName: g.name } : null;
+          })
+          .filter(Boolean);
+
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
+            {MINISTRY_GROUPS.map((group) => {
+              const mems = applyFilters(
+                group.gaLeaders
+                  ? gaLeaderEntries
+                  : (members || []).filter((m) => (m.roles || []).some((r) => (group.roles || []).includes(r)))
+              );
+              return (
+                <div key={group.id} className="card" style={{ padding: 0, overflow: "hidden" }}>
+                  <div style={{ padding: "10px 14px", background: "#f8f9fb", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <h4 style={{ fontWeight: 700, fontSize: 14, margin: 0 }}>{group.label}</h4>
+                    <span className={`badge ${mems.length > 0 ? "badge-blue" : "badge-gray"}`}>{mems.length}</span>
+                  </div>
+                  <div style={{ padding: "4px 12px 8px" }}>
+                    {mems.length === 0 ? (
+                      <p style={{ color: "var(--muted)", fontSize: 12, padding: "8px 0", margin: 0, fontStyle: "italic" }}>
+                        {group.roles && !group.gaLeaders ? `Nenhum membro com função "${group.roles[0]}".` : "Nenhum responsável cadastrado."}
+                      </p>
+                    ) : (
+                      mems.map((m) => {
+                        const subRoles = group.gaLeaders
+                          ? [m._gaName]
+                          : (m.roles || []).filter((r) => (group.roles || []).includes(r));
+                        return (
+                          <div key={m.id + (m._gaName || "")} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "6px 0", borderBottom: "1px solid #f3f4f6" }}>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 500 }}>{m.name}</div>
+                              <div style={{ fontSize: 11, color: "var(--muted)" }}>
+                                {m.church}{subRoles.length > 0 && <span style={{ marginLeft: 4, color: "#6b7280" }}>· {subRoles.join(", ")}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {tab === "teams" && (() => {
         const list = (rosters || []).filter((r) =>
           norm(r.team).includes(norm(search))
