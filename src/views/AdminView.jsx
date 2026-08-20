@@ -101,10 +101,11 @@ function PaymentStatusStrip({ paid, exempt, pend, total, lang }) {
   );
 }
 
-function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members, lang, toggleRegistrationPaused, navToRegs }) {
+function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members, lang, toggleRegistrationPaused, closeRegistrations, navToRegs }) {
   const t = useT();
   const [expandedCat, setExpandedCat] = useState({});
   const [expandedCh, setExpandedCh] = useState({});
+  const [confirmClose, setConfirmClose] = useState(false);
   const toggleCat = (key) => setExpandedCat((p) => ({ ...p, [key]: !p[key] }));
   const toggleCh = (key) => setExpandedCh((p) => ({ ...p, [key]: !p[key] }));
   // Use the member's current church, not the text snapshotted on the registration at
@@ -124,21 +125,56 @@ function AdminOverview({ event, regs, activeCount, wlRegs, exRegs, members, lang
   const byCh = byChOf(er);
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
         <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700, color: "var(--text)" }}>{t.overview}</h2>
-        {toggleRegistrationPaused && (
-          <button
-            onClick={toggleRegistrationPaused}
-            className={`btn btn-sm ${event?.registration_paused ? "btn-primary" : "btn-ghost"}`}
-            style={event?.registration_paused ? { background: "#b45309", borderColor: "#b45309" } : {}}
-          >
-            {event?.registration_paused ? "▶ Retomar Inscrições" : "⏸ Pausar Inscrições"}
-          </button>
-        )}
+        <div style={{ display: "flex", gap: 8 }}>
+          {!event?.registrations_locked && toggleRegistrationPaused && (
+            <button
+              onClick={toggleRegistrationPaused}
+              className={`btn btn-sm ${event?.registration_paused ? "btn-primary" : "btn-ghost"}`}
+              style={event?.registration_paused ? { background: "#b45309", borderColor: "#b45309" } : {}}
+            >
+              {event?.registration_paused ? "▶ Retomar Inscrições" : "⏸ Pausar Inscrições"}
+            </button>
+          )}
+          {!event?.registrations_locked && (
+            <button className="btn btn-sm btn-danger" onClick={() => setConfirmClose(true)}>
+              🔒 Encerrar Inscrições
+            </button>
+          )}
+          {event?.registrations_locked && (
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", padding: "6px 12px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8 }}>
+              🔒 Inscrições Encerradas
+            </span>
+          )}
+        </div>
       </div>
-      {event?.registration_paused && (
+      {event?.registrations_locked && (
+        <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "#dc2626", fontWeight: 600 }}>
+          🔒 Inscrições encerradas — pendentes movidos para lista de espera, pagos promovidos para a lista principal.
+        </div>
+      )}
+      {!event?.registrations_locked && event?.registration_paused && (
         <div style={{ background: "#fef3c7", border: "1px solid #f59e0b", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "#92400e", fontWeight: 600 }}>
           ⏸ Inscrições pausadas — o portal público está bloqueado para novas inscrições.
+        </div>
+      )}
+      {confirmClose && (
+        <div style={{ background: "#fef2f2", border: "2px solid #dc2626", borderRadius: 10, padding: "16px", marginBottom: 14 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#dc2626", marginBottom: 8 }}>🔒 Confirmar Encerramento de Inscrições</div>
+          <div style={{ fontSize: 13, color: "#374151", marginBottom: 12 }}>
+            Esta ação irá:<br />
+            • Mover <strong>todos os pendentes</strong> para a lista de espera<br />
+            • Promover <strong>todos os pagos da lista de espera</strong> para a lista principal<br />
+            • <strong>Bloquear</strong> novas inscrições e alterações<br /><br />
+            Esta ação não pode ser desfeita facilmente. Confirma?
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-danger" onClick={async () => { setConfirmClose(false); await closeRegistrations(); }}>
+              Sim, Encerrar Inscrições
+            </button>
+            <button className="btn btn-ghost" onClick={() => setConfirmClose(false)}>Cancelar</button>
+          </div>
         </div>
       )}
       <CapBar event={event} activeCount={activeCount} wlCount={wlRegs.length} exCount={exRegs.length} onWaitlistClick={wlRegs.length > 0 ? () => navToRegs("waitlist") : undefined} />

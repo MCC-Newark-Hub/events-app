@@ -130,7 +130,10 @@ export default function RegistrationsTab(props) {
             </>
           )}
           <button className="btn btn-ghost btn-sm" onClick={exportBadgeCSV} title="Exportar CSV para impressão de crachás no Canva">🪪 Crachás CSV</button>
-          <button className="btn btn-primary" onClick={() => setShowReg(true)}>{t.addNew}</button>
+          {event?.registrations_locked
+            ? <span style={{ fontSize: 12, fontWeight: 700, color: "#dc2626", padding: "6px 10px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 6 }}>🔒 Encerrado</span>
+            : <button className="btn btn-primary" onClick={() => setShowReg(true)}>{t.addNew}</button>
+          }
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>

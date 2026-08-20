@@ -908,6 +908,38 @@ export function useAppData({ getUserRef, notify }) {
     notify(newVal ? "Inscrições pausadas." : "Inscrições reabertas.");
   };
 
+  const closeRegistrations = async () => {
+    if (!event) return;
+    // 1. Move all pending → waitlisted
+    const pendingIds = regs
+      .filter((r) => r.eventId === event.id && !r.paid && !r.exempt && !r.cancelled && !r.waitlisted)
+      .map((r) => r.id);
+    if (pendingIds.length > 0) {
+      setRegs((p) => p.map((r) => pendingIds.includes(r.id) ? { ...r, waitlisted: true, waitlistReason: "Prazo encerrado" } : r));
+      const { error: e1 } = await sb.from("registrations")
+        .update({ waitlisted: true, waitlist_reason: "Prazo encerrado" })
+        .in("id", pendingIds);
+      if (e1) { notify("Erro ao mover pendentes: " + e1.message); return; }
+    }
+    // 2. Promote paid waitlisted → main list
+    const paidWlIds = regs
+      .filter((r) => r.eventId === event.id && r.waitlisted && r.paid)
+      .map((r) => r.id);
+    if (paidWlIds.length > 0) {
+      setRegs((p) => p.map((r) => paidWlIds.includes(r.id) ? { ...r, waitlisted: false, waitlistReason: null } : r));
+      const { error: e2 } = await sb.from("registrations")
+        .update({ waitlisted: false, waitlist_reason: null })
+        .in("id", paidWlIds);
+      if (e2) { notify("Erro ao promover pagos: " + e2.message); return; }
+    }
+    // 3. Lock the event
+    setEventState((cur) => cur ? { ...cur, registrations_locked: true, registration_paused: true } : cur);
+    setEvents((p) => p.map((e) => e.id === event.id ? { ...e, registrations_locked: true, registration_paused: true } : e));
+    await sb.from("events").update({ registrations_locked: true, registration_paused: true }).eq("id", event.id);
+    logAudit("registrations_closed", "event", event.id, event.name, { pending_moved: pendingIds.length, paid_promoted: paidWlIds.length });
+    notify(`✓ Inscrições encerradas. ${pendingIds.length} pendente(s) → lista de espera. ${paidWlIds.length} pago(s) → lista principal.`);
+  };
+
   const updateSessionTtlHours = async (hours) => {
     // A blocked RLS policy makes UPDATE/DELETE affect zero rows with NO error at
     // all (unlike INSERT, which throws) — .select().single() is what turns that
@@ -950,6 +982,7 @@ export function useAppData({ getUserRef, notify }) {
     settings,
     updateEventCapacity,
     toggleRegistrationPaused,
+    closeRegistrations,
     updateSessionTtlHours,
     activeRegs,
     activeCount,
