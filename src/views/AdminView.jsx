@@ -1115,6 +1115,9 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   const [bulkFamName, setBulkFamName] = useState("");
   const [roleEditing, setRoleEditing] = useState(null);
   const [editingRoles, setEditingRoles] = useState([]);
+  const [ministryAddGroup, setMinistryAddGroup] = useState(null);
+  const [ministryAddSearch, setMinistryAddSearch] = useState("");
+  const [ministryAddRole, setMinistryAddRole] = useState("");
   // Sort state
   const [chSk, setChSk] = useState("display"); const [chSd, setChSd] = useState("asc");
   const [mbSk, setMbSk] = useState("name");    const [mbSd, setMbSd] = useState("asc");
@@ -1921,6 +1924,19 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
           setRoleEditing(null);
         };
 
+        const addMemberToGroup = async (member, role) => {
+          const newRoles = [...new Set([...(member.roles || []), role])];
+          const { error } = await sb.from("members").update({ roles: newRoles }).eq("id", member.id).select();
+          if (error) { notify("Erro: " + error.message); return; }
+          setMembers((p) => p.map((m) => m.id === member.id ? { ...m, roles: newRoles } : m));
+          notify(`${member.name} adicionado(a) como ${role}!`);
+          setMinistryAddSearch("");
+        };
+
+        const addSearchResults = ministryAddSearch.length > 1
+          ? (members || []).filter((m) => norm(m.name).includes(norm(ministryAddSearch))).slice(0, 6)
+          : [];
+
         return (
           <>
             {roleEditing && (
@@ -1970,8 +1986,63 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                   <div key={group.id} className="card" style={{ padding: 0, overflow: "hidden" }}>
                     <div style={{ padding: "10px 14px", background: "#f8f9fb", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <h4 style={{ fontWeight: 700, fontSize: 14, margin: 0 }}>{group.label}</h4>
-                      <span className={`badge ${mems.length > 0 ? "badge-blue" : "badge-gray"}`}>{mems.length}</span>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <span className={`badge ${mems.length > 0 ? "badge-blue" : "badge-gray"}`}>{mems.length}</span>
+                        {!group.gaLeaders && (
+                          <button
+                            className="btn btn-ghost btn-xs"
+                            onClick={() => {
+                              if (ministryAddGroup === group.id) { setMinistryAddGroup(null); setMinistryAddSearch(""); setMinistryAddRole(""); }
+                              else { setMinistryAddGroup(group.id); setMinistryAddSearch(""); setMinistryAddRole(group.roles.length === 1 ? group.roles[0] : ""); }
+                            }}
+                          >
+                            {ministryAddGroup === group.id ? "✕" : "+ Adicionar"}
+                          </button>
+                        )}
+                      </div>
                     </div>
+                    {ministryAddGroup === group.id && (
+                      <div style={{ padding: "10px 12px", background: "#fffbeb", borderBottom: "1px solid var(--border)" }}>
+                        {group.roles.length > 1 && (
+                          <select value={ministryAddRole} onChange={(e) => setMinistryAddRole(e.target.value)} style={{ marginBottom: 6, fontSize: 13 }}>
+                            <option value="">Selecionar função…</option>
+                            {group.roles.map((r) => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                        )}
+                        <input
+                          value={ministryAddSearch}
+                          onChange={(e) => setMinistryAddSearch(e.target.value)}
+                          placeholder="Buscar membro…"
+                          style={{ marginBottom: 4 }}
+                        />
+                        {addSearchResults.map((m) => {
+                          const alreadyIn = (m.roles || []).some((r) => group.roles.includes(r));
+                          return (
+                            <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderTop: "1px solid var(--border)" }}>
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 500 }}>{m.name}</div>
+                                <div style={{ fontSize: 11, color: "var(--muted)" }}>{m.church}</div>
+                              </div>
+                              {alreadyIn ? (
+                                <span className="badge badge-gray" style={{ fontSize: 10 }}>Já cadastrado</span>
+                              ) : (
+                                <button
+                                  className="btn btn-ok btn-xs"
+                                  disabled={!ministryAddRole}
+                                  title={!ministryAddRole ? "Selecione uma função acima" : ""}
+                                  onClick={() => { if (ministryAddRole) addMemberToGroup(m, ministryAddRole); }}
+                                >
+                                  +
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {ministryAddSearch.length > 1 && addSearchResults.length === 0 && (
+                          <p style={{ fontSize: 12, color: "var(--muted)", margin: "6px 0 0" }}>Nenhum membro encontrado.</p>
+                        )}
+                      </div>
+                    )}
                     <div style={{ padding: "4px 12px 8px" }}>
                       {mems.length === 0 ? (
                         <p style={{ color: "var(--muted)", fontSize: 12, padding: "8px 0", margin: 0, fontStyle: "italic" }}>Nenhum membro cadastrado.</p>
