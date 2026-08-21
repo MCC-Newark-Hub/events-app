@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, ClipboardList, Users, Home, HeartHandshake, BarChart2 } from "lucide-react";
+import { Search, ClipboardList, Users, Home, HeartHandshake, BarChart2, BookOpen } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { ROLE_BADGE, fmt, deadlineStatus } from "@/constants";
 import { sb } from "@/lib/supabase";
@@ -14,6 +14,7 @@ import Modal from "@/components/Modal";
 import FamiliesPanel from "@/components/directory/FamiliesPanel";
 import GroupsPanel from "@/components/directory/GroupsPanel";
 import MemberEditModal from "@/components/directory/MemberEditModal";
+import MemberFunctionsView from "@/components/MemberFunctionsView";
 import RoleBadges from "@/components/directory/RoleBadges";
 import ReportsTab from "./admin/ReportsTab";
 import { newMemberForm, memberToForm } from "@/lib/memberForm";
@@ -106,6 +107,7 @@ function ClerkView(props) {
     { id: "members", icon: <Users size={16} />, label: `Membros (${myMembers.length})` },
     { id: "families", icon: <Home size={16} />, label: `Famílias (${myFamilies.length})` },
     { id: "groups", icon: <HeartHandshake size={16} />, label: `Grupos (${myGas.length})` },
+    { id: "functions", icon: <BookOpen size={16} />, label: "Membros com Funções" },
   ];
   const switchSec = (id) => { setSec(id); setSearch(""); };
 
@@ -343,6 +345,8 @@ function ClerkView(props) {
             </>
           ) : sec === "families" ? (
             <FamiliesPanel members={myMembers} families={myFamilies} setFamilies={setFamilies} gas={myGas} showGroup notify={notify} />
+          ) : sec === "functions" ? (
+            <MemberFunctionsView members={members} setMembers={setMembers} gas={gas} notify={notify} churchLock={myChurch} />
           ) : (
             <GroupsPanel members={myMembers} setMembers={setMembers} gas={myGas} setGas={setGas} churches={churches} notify={notify} defaultChurch={myChurch} lockChurch />
           )}

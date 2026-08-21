@@ -1,11 +1,12 @@
 import { useState, Fragment, useRef } from "react";
-import { LayoutDashboard, ClipboardList, Clock, BarChart2 } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Clock, BarChart2, BookOpen } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, fmt, deadlineStatus } from "@/constants";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
 import CapBar from "@/components/CapBar";
 import ApprovalsPanel from "@/components/ApprovalsPanel";
+import MemberFunctionsView from "@/components/MemberFunctionsView";
 import RegistrationsTab from "./admin/RegistrationsTab";
 import ReportsTab from "./admin/ReportsTab";
 import { eventSubtitle } from "@/lib/registrationDeadline";
@@ -84,6 +85,7 @@ function PastorView(props) {
     { id: "regs", icon: <ClipboardList size={16} />, label: t.registrations },
     { id: "approvals", icon: <Clock size={16} />, label: `${t.approvals}${pendingApprovals.length > 0 ? ` (${pendingApprovals.length})` : ""}` },
     { id: "reports", icon: <BarChart2 size={16} />, label: t.reports },
+    { id: "functions", icon: <BookOpen size={16} />, label: "Membros com Funções" },
   ];
   return (
     <div className="app-shell">
@@ -298,6 +300,7 @@ function PastorView(props) {
             {sec === "regs" && <RegistrationsTab {...props} initialFilter={regsInitialFilter} />}
             {sec === "approvals" && <ApprovalsPanel approvals={approvals} resolveApproval={resolveApproval} event={event} activeCount={activeCount} />}
             {sec === "reports" && <ReportsTab regs={regs} event={event} wlRegs={wlRegs} exRegs={exRegs} lang={lang} />}
+            {sec === "functions" && <MemberFunctionsView members={props.members} gas={props.gas} notify={props.notify} />}
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useT } from "@/i18n/strings";
+import MemberFunctionsView from "@/components/MemberFunctionsView";
 
 const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
 import { STATUS_CFG, SERVICE_TEAMS, deadlineStatus } from "@/constants";
@@ -30,8 +31,10 @@ function TeamLeaderView(props) {
     updatePresence,
     updateReg,
     churches,
+    gas,
   } = props;
   const t = useT();
+  const [mainView, setMainView] = useState("equipe");
   const myTeams = user?.teamLeads || [];
   const joinNames = (names) =>
     names.length === 0 ? "" :
@@ -49,6 +52,10 @@ function TeamLeaderView(props) {
   };
   const getReg = (mid) => eventRegs.find((x) => x.memberId === mid);
   const getCancelledReg = (mid) => allEventRegs.find((x) => x.memberId === mid && x.cancelled);
+  const allTeamMemberIds = [...new Set(myTeams.flatMap((team) => {
+    const r = rosters.find((ro) => ro.eventId === event?.id && ro.team === team);
+    return r?.memberIds || [];
+  }))];
   // Flat pool of everyone on any of this leader's teams, for the scoped reports view.
   const isCozinhaLeader = myTeams.includes("Cozinha");
   const isCIALeader = myTeams.includes("Professoras");
@@ -183,6 +190,37 @@ function TeamLeaderView(props) {
             </h2>
             <p style={{ color: "#6b7280", fontSize: 13 }}>{t.teamReadOnly}</p>
           </div>
+
+          {/* Top-level view selector */}
+          <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: "2px solid var(--border)", paddingBottom: 0 }}>
+            {[{ id: "equipe", label: "Equipe" }, { id: "funcoes", label: "Membros com Funções" }].map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setMainView(id)}
+                style={{
+                  background: "none", border: "none", cursor: "pointer", padding: "6px 14px",
+                  fontWeight: mainView === id ? 700 : 400,
+                  color: mainView === id ? "var(--primary)" : "var(--muted)",
+                  borderBottom: mainView === id ? "2px solid var(--primary)" : "2px solid transparent",
+                  marginBottom: -2, fontSize: 14,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {mainView === "funcoes" && (
+            <MemberFunctionsView
+              members={members}
+              setMembers={setMembers}
+              gas={gas}
+              notify={notify}
+              filterMemberIds={allTeamMemberIds}
+            />
+          )}
+
+          {mainView === "equipe" && <>
 
           {/* Tab bar — Cozinha / CIA / Tradução / Louvor leaders */}
           {(isCozinhaLeader || isCIALeader || isTranslationLeader || isPraiseLeader) && (
@@ -1253,6 +1291,8 @@ function TeamLeaderView(props) {
           </div>
             </>
           ) : null}
+
+          </>}
         </div>
       </div>
       {requestTarget && (

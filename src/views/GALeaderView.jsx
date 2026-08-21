@@ -7,6 +7,7 @@ import Modal from "@/components/Modal";
 import SearchSelect from "@/components/SearchSelect";
 import FamiliesPanel from "@/components/directory/FamiliesPanel";
 import MemberEditModal from "@/components/directory/MemberEditModal";
+import MemberFunctionsView from "@/components/MemberFunctionsView";
 import RoleBadges from "@/components/directory/RoleBadges";
 import ReportsTab from "./admin/ReportsTab";
 import { newMemberForm, memberToForm } from "@/lib/memberForm";
@@ -27,6 +28,7 @@ function GALeaderView(props) {
   const [newFamilyName, setNewFamilyName] = useState("");
   const [showFamilies, setShowFamilies] = useState(false);
   const [showReports, setShowReports] = useState(false);
+  const [showFuncoes, setShowFuncoes] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [groupByFam, setGroupByFam] = useState(false);
   const [transferMemberId, setTransferMemberId] = useState("");
@@ -149,6 +151,9 @@ function GALeaderView(props) {
                   {showTransfer ? "Ocultar Transferência" : "🔀 Transferir Membro"}
                 </button>
               )}
+              <button className={`btn btn-sm ${showFuncoes ? "btn-primary" : "btn-ghost"}`} onClick={() => setShowFuncoes((v) => !v)}>
+                {showFuncoes ? "Ocultar Funções" : "📋 Membros com Funções"}
+              </button>
               <button className="btn btn-primary btn-sm" onClick={() => { setEditingMember(newMemberForm()); setNewFamilyName(""); }}>
                 + Novo Membro
               </button>
@@ -164,6 +169,18 @@ function GALeaderView(props) {
           {showFamilies && (
             <div style={{ marginBottom: 20 }}>
               <FamiliesPanel members={members} families={myGaFamilies} setFamilies={setFamilies} gas={myGAs} showGroup notify={notify} />
+            </div>
+          )}
+
+          {showFuncoes && (
+            <div style={{ marginBottom: 20 }}>
+              <MemberFunctionsView
+                members={members}
+                setMembers={setMembers}
+                gas={gas}
+                notify={notify}
+                filterMemberIds={allMyMembers.map((m) => m.id)}
+              />
             </div>
           )}
 
