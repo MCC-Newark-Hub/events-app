@@ -742,8 +742,16 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
                   <label>{t.searchName} *</label>
                   <div className="sb">
                     <span className="si-icon"><Search size={16} /></span>
-                    <input value={primarySearch} onChange={(e) => { setPrimarySearch(e.target.value); setPrimary(null); setPrimaryNotFound(false); setErrors({}); }} placeholder={t.searchPlaceholder} />
+                    <input value={primarySearch} onChange={(e) => { setPrimarySearch(e.target.value); setPrimary(null); setPrimaryNotFound(false); setErrors({}); if (!e.target.value) setShowManualPrimary(false); }} placeholder={t.searchPlaceholder} />
                   </div>
+                  {!showManualPrimary && !primary && (
+                    <button
+                      onClick={() => { setShowManualPrimary(true); setManualPrimary((p) => ({ ...p, name: primarySearch })); }}
+                      style={{ background: "none", border: "none", padding: "4px 0 0", fontSize: 12, color: "#9ca3af", cursor: "pointer", textDecoration: "underline", textAlign: "left" }}
+                    >
+                      {t.cantFindMyself} →
+                    </button>
+                  )}
                   {primaryResults.length > 0 && !primary && (
                     <div style={{ border: "1.5px solid var(--border)", borderRadius: 8, marginTop: 4, overflow: "hidden", maxHeight: 200, overflowY: "auto" }}>
                       {primaryResults.map((m) => {
@@ -781,8 +789,10 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
                       {allMembers.length} {t.membersAvailableHint}
                     </p>
                   )}
-                  {primarySearch.length > 0 && primaryResults.length === 0 && !primary && (
-                    <div style={{ marginTop: 8, padding: "10px 14px", background: "#fef3c7", borderRadius: 8, fontSize: 13, color: "#92400e" }}>{t.nameNotFound} {t.nameNotFoundClerk}</div>
+                  {primarySearch.length > 0 && primaryResults.length === 0 && !primary && similarPrimary.length === 0 && !showManualPrimary && (
+                    <div style={{ marginTop: 8, padding: "10px 14px", background: "#fef3c7", borderRadius: 8, fontSize: 13, color: "#92400e" }}>
+                      {t.nameNotFound} {t.nameNotFoundClerk}
+                    </div>
                   )}
                   {similarPrimary.length > 0 && !primary && (
                     <div style={{ marginTop: 8, border: "1.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
@@ -795,20 +805,12 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
                       ))}
                     </div>
                   )}
-                  {primarySearch.length > 0 && primaryResults.length === 0 && !primary && !showManualPrimary && (
-                    <button
-                      onClick={() => { setShowManualPrimary(true); setManualPrimary((p) => ({ ...p, name: primarySearch })); }}
-                      style={{ marginTop: 8, background: "none", border: "1px dashed #f59e0b", borderRadius: 8, padding: "8px 12px", fontSize: 13, cursor: "pointer", color: "#92400e", width: "100%", textAlign: "center" }}
-                    >
-                      {t.cantFindMyself}
-                    </button>
-                  )}
-                  {showManualPrimary && !primary && (
+                  {(showManualPrimary || (primarySearch.length > 2 && primaryResults.length === 0 && !primary && similarPrimary.length === 0)) && !primary && (
                     <div style={{ marginTop: 8, background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 10, padding: "14px" }}>
                       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                         <div>
                           <label>{t.manualMemberName}</label>
-                          <input value={manualPrimary.name} onChange={(e) => setManualPrimary({ ...manualPrimary, name: e.target.value })} autoFocus />
+                          <input value={manualPrimary.name || primarySearch} onChange={(e) => setManualPrimary({ ...manualPrimary, name: e.target.value })} autoFocus />
                         </div>
                         <div className="fr">
                           <div>
