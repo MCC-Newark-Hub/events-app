@@ -873,6 +873,34 @@ export function useAppData({ getUserRef, notify }) {
       });
   };
 
+  const sendToWaitlist = (regIds) => {
+    const ids = Array.isArray(regIds) ? regIds : [regIds];
+    const today = new Date().toISOString().slice(0, 10);
+    const byName = getUser()?.name || "Sistema";
+    const updatedMap = {};
+    setRegs((p) =>
+      p.map((r) => {
+        if (!ids.includes(r.id) || r.cancelled || r.waitlisted) return r;
+        const entry = { status: "Lista de Espera", date: today, by: byName, note: "Movido para lista de espera manualmente" };
+        const timeline = [...(r.timeline || []), entry];
+        updatedMap[r.id] = { timeline, memberName: r.memberName };
+        return { ...r, waitlisted: true, waitlistReason: "manual", timeline };
+      })
+    );
+    ids.forEach((id) => {
+      const info = updatedMap[id];
+      if (!info) return;
+      sb.from("registrations")
+        .update({ waitlisted: true, waitlist_reason: "manual", timeline: info.timeline })
+        .eq("id", id)
+        .then(({ error }) => {
+          if (error) { console.error("sendToWaitlist DB error:", error); return; }
+          logAudit("registration_sent_to_waitlist", "registration", id, info.memberName, null);
+        });
+    });
+    notify(ids.length === 1 ? "Inscrito movido para lista de espera." : `${ids.length} inscritos movidos para lista de espera.`);
+  };
+
   const updateEventCapacity = function (newCapacity) {
     if (!event) return;
     if (newCapacity < activeCount) {
@@ -1011,6 +1039,7 @@ export function useAppData({ getUserRef, notify }) {
     resolveApproval,
     replaceReg,
     promoteFromWaitlist,
+    sendToWaitlist,
     logAudit,
   };
 }

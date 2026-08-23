@@ -7,7 +7,7 @@ import Modal from "@/components/Modal";
 import SearchSelect from "@/components/SearchSelect";
 import FamiliesPanel from "@/components/directory/FamiliesPanel";
 import MemberEditModal from "@/components/directory/MemberEditModal";
-import MemberFunctionsView from "@/components/MemberFunctionsView";
+import FuncoesTab from "@/views/admin/FuncoesTab";
 import RoleBadges from "@/components/directory/RoleBadges";
 import ReportsTab from "./admin/ReportsTab";
 import { newMemberForm, memberToForm } from "@/lib/memberForm";
@@ -174,7 +174,7 @@ function GALeaderView(props) {
 
           {showFuncoes && (
             <div style={{ marginBottom: 20 }}>
-              <MemberFunctionsView
+              <FuncoesTab
                 members={members}
                 setMembers={setMembers}
                 gas={gas}

@@ -30,6 +30,7 @@ export default function RegistrationsTab(props) {
     submitApproval,
     replaceReg,
     promoteFromWaitlist,
+    sendToWaitlist,
     event,
     user,
     isFull,
@@ -121,6 +122,14 @@ export default function RegistrationsTab(props) {
         <div style={{ display: "flex", gap: 8 }}>
           {bulkSel.length > 0 && (
             <>
+              <button className="btn btn-ghost btn-sm" onClick={() => {
+                const eligible = bulkSel.filter((id) => { const r = all.find((x) => x.id === id); return r && !r.cancelled && !r.waitlisted; });
+                if (eligible.length === 0) return;
+                sendToWaitlist(eligible);
+                setBulkSel([]);
+              }}>
+                🎫 Lista de espera ({bulkSel.length})
+              </button>
               <button className="btn btn-warn btn-sm" onClick={() => setConfirmBulkCancel(true)}>
                 🚫 Cancelar {bulkSel.length} selecionado(s)
               </button>
@@ -249,14 +258,24 @@ export default function RegistrationsTab(props) {
                       🖨️
                     </button>
                     {!r.cancelled && !r.waitlisted && (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ marginLeft: 4 }}
-                        title="Substituir inscrito"
-                        onClick={() => { setReplaceTarget(r); setReplaceSearch(""); setReplaceCandidate(null); }}
-                      >
-                        🔄
-                      </button>
+                      <>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ marginLeft: 4 }}
+                          title="Mover para lista de espera"
+                          onClick={() => sendToWaitlist(r.id)}
+                        >
+                          🎫
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ marginLeft: 4 }}
+                          title="Substituir inscrito"
+                          onClick={() => { setReplaceTarget(r); setReplaceSearch(""); setReplaceCandidate(null); }}
+                        >
+                          🔄
+                        </button>
+                      </>
                     )}
                     <button
                       className="btn btn-ghost btn-sm"

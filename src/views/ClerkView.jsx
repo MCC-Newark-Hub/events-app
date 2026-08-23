@@ -14,7 +14,7 @@ import Modal from "@/components/Modal";
 import FamiliesPanel from "@/components/directory/FamiliesPanel";
 import GroupsPanel from "@/components/directory/GroupsPanel";
 import MemberEditModal from "@/components/directory/MemberEditModal";
-import MemberFunctionsView from "@/components/MemberFunctionsView";
+import FuncoesTab from "@/views/admin/FuncoesTab";
 import RoleBadges from "@/components/directory/RoleBadges";
 import ReportsTab from "./admin/ReportsTab";
 import { newMemberForm, memberToForm } from "@/lib/memberForm";
@@ -258,6 +258,7 @@ function ClerkView(props) {
                             <td>
                               <div style={{ display: "flex", gap: 4 }}>
                                 {r.waitlisted && <button className="btn btn-ok btn-sm" onClick={() => promoteFromWaitlist(r.id)}>{t.promoteWaitlist}</button>}
+                                {!r.waitlisted && !r.cancelled && <button className="btn btn-ghost btn-sm" title="Mover para lista de espera" onClick={() => props.sendToWaitlist(r.id)}>🎫</button>}
                                 {!r.waitlisted && !r.paid && !r.exempt && !r.cancelled && <button className="btn btn-ok btn-sm" onClick={() => updateReg(r.id, { paid: true })}>{t.markPaid}</button>}
                                 <button className="btn btn-ghost btn-sm" onClick={() => setDetail(r)}>{t.edit}</button>
                                 {!r.cancelled && !r.waitlisted && (
@@ -346,7 +347,7 @@ function ClerkView(props) {
           ) : sec === "families" ? (
             <FamiliesPanel members={myMembers} families={myFamilies} setFamilies={setFamilies} gas={myGas} showGroup notify={notify} />
           ) : sec === "functions" ? (
-            <MemberFunctionsView members={members} setMembers={setMembers} gas={gas} notify={notify} churchLock={myChurch} />
+            <FuncoesTab members={members} setMembers={setMembers} gas={gas} notify={notify} churchLock={myChurch} />
           ) : (
             <GroupsPanel members={myMembers} setMembers={setMembers} gas={myGas} setGas={setGas} churches={churches} notify={notify} defaultChurch={myChurch} lockChurch />
           )}

@@ -24,13 +24,13 @@ const FUNC_GROUPS = [
   { id: "traducao",    label: "Tradutores",     roles: ["Tradutor", "Intérprete de Libras"] },
 ];
 
-export default function FuncoesTab({ members, setMembers, gas, notify }) {
+export default function FuncoesTab({ members, setMembers, gas, notify, churchLock, filterMemberIds }) {
   const [activeGroup, setActiveGroup] = useState("louvor");
   const [groupByChurch, setGroupByChurch] = useState(false);
   const [groupByClass, setGroupByClass] = useState(false);
   const [viewMode, setViewMode] = useState("list"); // "list" | "card"
   const [search, setSearch] = useState("");
-  const [filterChurch, setFilterChurch] = useState("");
+  const [filterChurch, setFilterChurch] = useState(churchLock || "");
   const [roleEditing, setRoleEditing] = useState(null);
   const [editingRoles, setEditingRoles] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
@@ -39,21 +39,25 @@ export default function FuncoesTab({ members, setMembers, gas, notify }) {
 
   const group = FUNC_GROUPS.find((g) => g.id === activeGroup);
 
+  const memberPool = filterMemberIds
+    ? (members || []).filter((m) => filterMemberIds.includes(m.id))
+    : (members || []);
+
   const gaLeaderEntries = (gas || [])
     .filter((g) => g.leaderId)
     .map((g) => {
-      const m = (members || []).find((x) => x.id === g.leaderId);
+      const m = memberPool.find((x) => x.id === g.leaderId);
       return m ? { ...m, _gaName: g.name } : null;
     })
     .filter(Boolean);
 
   const groupCount = (g) => g.gaLeaders
     ? gaLeaderEntries.length
-    : (members || []).filter((m) => (m.roles || []).some((r) => (g.roles || []).includes(r))).length;
+    : memberPool.filter((m) => (m.roles || []).some((r) => (g.roles || []).includes(r))).length;
 
   const rawMembers = group?.gaLeaders
     ? gaLeaderEntries
-    : (members || []).filter((m) => (m.roles || []).some((r) => (group?.roles || []).includes(r)));
+    : memberPool.filter((m) => (m.roles || []).some((r) => (group?.roles || []).includes(r)));
 
   const filtered = rawMembers
     .filter((m) => !filterChurch || m.church === filterChurch)
@@ -82,7 +86,7 @@ export default function FuncoesTab({ members, setMembers, gas, notify }) {
   const switchGroup = (id) => {
     setActiveGroup(id);
     setSearch("");
-    setFilterChurch("");
+    setFilterChurch(churchLock || "");
     setGroupByChurch(false);
     setGroupByClass(false);
     setShowAdd(false);
@@ -100,7 +104,7 @@ export default function FuncoesTab({ members, setMembers, gas, notify }) {
     setRoleEditing(null);
   };
 
-  const addPool = (members || []).filter((m) => !rawMembers.find((x) => x.id === m.id));
+  const addPool = memberPool.filter((m) => !rawMembers.find((x) => x.id === m.id));
   const addResults = addSearch.length > 1
     ? addPool.filter((m) => norm(m.name).includes(norm(addSearch))).slice(0, 6)
     : [];
@@ -197,12 +201,17 @@ export default function FuncoesTab({ members, setMembers, gas, notify }) {
             </button>
           )}
         </div>
-        {!group?.gaLeaders && (
+        {!group?.gaLeaders && !churchLock && (
           <select value={filterChurch} onChange={(e) => setFilterChurch(e.target.value)}
             style={{ fontSize: 13, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card-bg)", color: filterChurch ? "var(--text)" : "var(--muted)" }}>
             <option value="">Todas as igrejas</option>
             {churchOptions.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
+        )}
+        {churchLock && (
+          <span style={{ fontSize: 12, padding: "4px 10px", borderRadius: 12, background: "var(--bg2)", border: "1px solid var(--border)", color: "var(--muted)" }}>
+            ⛪ {churchLock}
+          </span>
         )}
         <button className={`btn btn-sm ${groupByChurch ? "btn-primary" : "btn-ghost"}`} onClick={() => setGroupByChurch((p) => !p)}>
           ⛪ Por Igreja
