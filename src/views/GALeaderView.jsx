@@ -298,7 +298,7 @@ function GALeaderView(props) {
                     <div style={{ display: "flex", gap: 4 }}>
                       <button
                         className="btn btn-ghost btn-xs"
-                        onClick={() => { setEditingMember(memberToForm(m)); setNewFamilyName(""); }}
+                        onClick={() => { setEditingMember(memberToForm(m, families)); setNewFamilyName(""); }}
                         title="Editar membro"
                       >
                         ✏️

@@ -112,7 +112,7 @@ function ClerkView(props) {
   const switchSec = (id) => { setSec(id); setSearch(""); };
 
   const openNewMember = () => { setEditingMember(newMemberForm()); setNewFamilyName(""); };
-  const openEditMember = (m) => { setEditingMember(memberToForm(m)); setNewFamilyName(""); };
+  const openEditMember = (m) => { setEditingMember(memberToForm(m, families)); setNewFamilyName(""); };
 
   const requestDeleteMember = (m) => {
     const regCount = regs.filter((r) => r.memberId === m.id && !r.cancelled).length;
