@@ -17,7 +17,7 @@ const DEFAULT_ITEMS = [
 
 function fmtCost(n) { return n > 0 ? "$" + Number(n).toFixed(2) : "—"; }
 
-export default function KitchenPlanningTab({ regs, event, events, notify }) {
+export default function KitchenPlanningTab({ regs, event, events, notify, logAudit }) {
   const [items,       setItems]       = useState([]);
   const [loaded,      setLoaded]      = useState(false);
   const [seeding,     setSeeding]     = useState(false);
@@ -99,18 +99,22 @@ export default function KitchenPlanningTab({ regs, event, events, notify }) {
       const { error } = await sb.from("kitchen_plan").update(row).eq("id", editing.id);
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setItems((prev) => prev.map((it) => it.id === editing.id ? { ...it, ...row } : it));
+      logAudit?.("kitchen_item_updated", "kitchen_plan", editing.id, row.name, { eventId: event.id });
     } else {
       row.id = "KP" + Math.random().toString(36).slice(2, 10).toUpperCase();
       const { data, error } = await sb.from("kitchen_plan").insert(row).select().single();
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setItems((prev) => [...prev, data || row]);
+      logAudit?.("kitchen_item_created", "kitchen_plan", row.id, row.name, { eventId: event.id });
     }
     setSaving(false); setEditing(null); notify("Salvo!");
   };
 
   const del = async (id) => {
+    const item = items.find((it) => it.id === id);
     await sb.from("kitchen_plan").delete().eq("id", id);
     setItems((prev) => prev.filter((it) => it.id !== id));
+    logAudit?.("kitchen_item_deleted", "kitchen_plan", id, item?.name || id, { eventId: event?.id });
   };
 
   // ── Shopping list print ─────────────────────────────────────────────────────

@@ -7,7 +7,7 @@ import { canAssignToTeam } from "@/lib/teamAssignment";
 const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
 import { SERVICE_TEAMS, STATUS_CFG } from "@/constants";
 
-export default function TeamsTab({ event, events, regs, members, rosters, setRosters, addReg, notify }) {
+export default function TeamsTab({ event, events, regs, members, rosters, setRosters, addReg, notify, logAudit }) {
   const t = useT();
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
@@ -54,6 +54,7 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
         r.eventId === event?.id && r.team === team ? { ...r, memberIds: newIds } : r
       ));
       sb.from("rosters").update({ member_ids: newIds }).eq("id", ex.id);
+      logAudit?.("roster_member_added", "roster", ex.id, team, { memberId: mid, memberName: members.find((m) => m.id === mid)?.name });
     } else {
       const newRoster = { eventId: event?.id, team, memberIds: [mid], leaderId: null };
       setRosters((prev) => [...prev, newRoster]);
@@ -79,7 +80,10 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
     setRosters((prev) => prev.map((r) =>
       r.eventId === event?.id && r.team === team ? { ...r, memberIds: updatedIds } : r
     ));
-    if (roster.id) sb.from("rosters").update({ member_ids: updatedIds }).eq("id", roster.id);
+    if (roster.id) {
+      sb.from("rosters").update({ member_ids: updatedIds }).eq("id", roster.id);
+      logAudit?.("roster_member_removed", "roster", roster.id, team, { memberId: mid, memberName: members.find((m) => m.id === mid)?.name });
+    }
   };
 
   const toggleSelected = (team, mid) => {
@@ -544,6 +548,7 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
                     );
                     if (roster?.id) {
                       await sb.from("rosters").update({ leader_id: newLeaderId || null }).eq("id", roster.id);
+                      logAudit?.("roster_leader_changed", "roster", roster.id, team, { newLeaderId: newLeaderId || null, newLeaderName: members.find((m) => m.id === newLeaderId)?.name });
                     }
                   }}
                   style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--input-bg)", marginBottom: 8 }}

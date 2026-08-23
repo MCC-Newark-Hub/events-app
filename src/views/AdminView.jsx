@@ -68,17 +68,17 @@ function AdminView(props) {
             {sec === "ga" && <AdminGA {...props} />}
             {sec === "approvals" && <ApprovalsPanel {...props} />}
             {sec === "reports" && <ReportsTab {...props} />}
-            {sec === "events" && <EventsTab events={props.events} setEvents={props.setEvents} event={props.event} setEvent={props.setEvent} lang={props.lang} notify={props.notify} rosters={props.rosters} setRosters={props.setRosters} />}
+            {sec === "events" && <EventsTab events={props.events} setEvents={props.setEvents} event={props.event} setEvent={props.setEvent} lang={props.lang} notify={props.notify} rosters={props.rosters} setRosters={props.setRosters} logAudit={props.logAudit} />}
             {sec === "import" && <AdminImport members={props.members} setMembers={props.setMembers} families={props.families} setFamilies={props.setFamilies} gas={props.gas} setGas={props.setGas} rosters={props.rosters} setRosters={props.setRosters} churches={props.churches} setChurches={props.setChurches} notify={props.notify} />}
             {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} dbTeams={props.dbTeams} gas={props.gas} notify={props.notify} settings={props.settings} updateSessionTtlHours={props.updateSessionTtlHours} logAudit={props.logAudit} />}
             {sec === "directory" && <AdminDirectory {...props} dbTeams={props.dbTeams} setDbTeams={props.setDbTeams} dbInstruments={props.dbInstruments} setDbInstruments={props.setDbInstruments} dbVoiceTypes={props.dbVoiceTypes} setDbVoiceTypes={props.setDbVoiceTypes} />}
-            {sec === "funcoes" && <FuncoesTab members={props.members} setMembers={props.setMembers} gas={props.gas} notify={props.notify} />}
+            {sec === "funcoes" && <FuncoesTab members={props.members} setMembers={props.setMembers} gas={props.gas} notify={props.notify} logAudit={props.logAudit} />}
             {sec === "audit" && <AuditLogTab dbUsers={props.dbUsers} />}
             {sec === "kitchen" && (
               <>
                 <KitchenTab regs={props.regs} event={props.event} />
                 <div style={{ marginTop: 28 }}>
-                  <KitchenPlanningTab regs={props.regs} event={props.event} events={props.events} notify={props.notify} />
+                  <KitchenPlanningTab regs={props.regs} event={props.event} events={props.events} notify={props.notify} logAudit={props.logAudit} />
                 </div>
               </>
             )}
@@ -1880,12 +1880,12 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
 
       {/* ── Families ─────────────────────────────────────────────────────── */}
       {tab === "families" && (
-        <FamiliesPanel members={members} families={families} setFamilies={setFamilies} gas={gas} showGroup showChurch notify={notify} />
+        <FamiliesPanel members={members} families={families} setFamilies={setFamilies} gas={gas} showGroup showChurch notify={notify} logAudit={logAudit} />
       )}
 
       {/* ── GA Groups ────────────────────────────────────────────────────── */}
       {tab === "groups" && (
-        <GroupsPanel members={members} setMembers={setMembers} gas={gas} setGas={setGas} churches={churches} notify={notify} />
+        <GroupsPanel members={members} setMembers={setMembers} gas={gas} setGas={setGas} churches={churches} notify={notify} logAudit={logAudit} />
       )}
 
       {/* ── Teams Domain ─────────────────────────────────────────────────── */}

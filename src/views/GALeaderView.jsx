@@ -84,6 +84,7 @@ function GALeaderView(props) {
     const { error } = await sb.from("members").update({ ga_id: toGA.id }).eq("id", member.id);
     if (error) { notify("Erro: " + error.message); return; }
     setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, gaId: toGA.id } : m)));
+    logAudit?.("member_ga_moved", "member", member.id, member.name, { toGaId: toGA.id, toGaName: toGA.name });
     notify(`${member.name} movido(a) para ${toGA.name}.`);
     setPendingMove(null);
   };
@@ -168,7 +169,7 @@ function GALeaderView(props) {
 
           {showFamilies && (
             <div style={{ marginBottom: 20 }}>
-              <FamiliesPanel members={members} families={myGaFamilies} setFamilies={setFamilies} gas={myGAs} showGroup notify={notify} />
+              <FamiliesPanel members={members} families={myGaFamilies} setFamilies={setFamilies} gas={myGAs} showGroup notify={notify} logAudit={logAudit} />
             </div>
           )}
 
@@ -180,6 +181,7 @@ function GALeaderView(props) {
                 gas={gas}
                 notify={notify}
                 filterMemberIds={allMyMembers.map((m) => m.id)}
+                logAudit={logAudit}
               />
             </div>
           )}

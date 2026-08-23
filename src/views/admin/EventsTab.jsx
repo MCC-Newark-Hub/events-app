@@ -6,7 +6,7 @@ import { sb } from "@/lib/supabase";
 import Modal from "@/components/Modal";
 import { fetchEventTeams, importTeamsFromEvent } from "@/lib/rosterImport";
 
-export default function EventsTab({ events, setEvents, event, setEvent, lang, notify, rosters, setRosters }) {
+export default function EventsTab({ events, setEvents, event, setEvent, lang, notify, rosters, setRosters, logAudit }) {
   const t = useT();
   const [showNew, setShowNew] = useState(false);
   const [editEvt, setEditEvt] = useState(null);
@@ -47,6 +47,7 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
     setDeleting(true);
     try {
       await deleteEventRow(id);
+      logAudit?.("event_deleted", "event", id, confirmDelete.name, null);
       notify("Evento excluído.");
       setConfirmDelete(null);
     } catch (err) {
@@ -62,6 +63,7 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
     setDeleting(true);
     try {
       await deleteEventRow(id);
+      logAudit?.("event_force_deleted", "event", id, confirmDelete.name, { regCount: confirmDelete.regCount });
       notify("Evento e todas as inscrições foram excluídos.");
       setConfirmDelete(null);
       setShowForceDelete(false);
@@ -503,7 +505,8 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
                         .update(upd)
                         .eq("id", editEvt.id)
                         .then(function (res) {
-                          if (res.error) console.error("event update error:", res.error);
+                          if (res.error) { console.error("event update error:", res.error); return; }
+                          logAudit?.("event_updated", "event", editEvt.id, editEvt.name, { capacity: upd.capacity });
                         });
                       notify("Evento atualizado!");
                       setShowNew(false);
@@ -538,6 +541,7 @@ export default function EventsTab({ events, setEvents, event, setEvent, lang, no
                             console.error("event insert error:", res.error);
                             return;
                           }
+                          logAudit?.("event_created", "event", newId, nEvt.name, { capacity: nEvt.capacity });
                           if (importSourceId && teamsToImport.length > 0) {
                             importTeamsFromEvent({
                               sourceEventId: importSourceId,

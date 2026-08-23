@@ -167,7 +167,7 @@ function RegsTab({ eventRegs, updateReg, notify }) {
 }
 
 // ── Expenses tab ──────────────────────────────────────────────────────────────
-function ExpensesTab({ event, expenses, setExpenses, notify }) {
+function ExpensesTab({ event, expenses, setExpenses, notify, logAudit }) {
   const [editing,    setEditing]    = useState(null);
   const [saving,     setSaving]     = useState(false);
   const [uploading,  setUploading]  = useState(false);
@@ -212,19 +212,23 @@ function ExpensesTab({ event, expenses, setExpenses, notify }) {
       const { error } = await sb.from("treasury_expenses").update(row).eq("id", editing.id);
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setExpenses((prev) => prev.map((e) => e.id === editing.id ? { ...e, ...row } : e));
+      logAudit?.("expense_updated", "treasury_expenses", editing.id, row.description, { amount: row.amount, category: row.category });
     } else {
       row.id = "EXP" + String(Date.now()).slice(-8);
       const { data, error } = await sb.from("treasury_expenses").insert(row).select().single();
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setExpenses((prev) => [...prev, data || row]);
+      logAudit?.("expense_created", "treasury_expenses", row.id, row.description, { amount: row.amount, category: row.category });
     }
     setSaving(false); setEditing(null); notify("Salvo!");
   };
 
   const del = async (id) => {
+    const item = expenses.find((e) => e.id === id);
     const { error } = await sb.from("treasury_expenses").delete().eq("id", id);
     if (error) { notify("Erro: " + error.message); return; }
     setExpenses((prev) => prev.filter((e) => e.id !== id));
+    logAudit?.("expense_deleted", "treasury_expenses", id, item?.description || id, { amount: item?.amount });
   };
 
   return (
@@ -355,7 +359,7 @@ function ExpensesTab({ event, expenses, setExpenses, notify }) {
 }
 
 // ── Extra income tab ──────────────────────────────────────────────────────────
-function ExtraIncomeTab({ event, extras, setExtras, notify }) {
+function ExtraIncomeTab({ event, extras, setExtras, notify, logAudit }) {
   const [editing, setEditing] = useState(null);
   const [saving,  setSaving]  = useState(false);
 
@@ -379,19 +383,23 @@ function ExtraIncomeTab({ event, extras, setExtras, notify }) {
       const { error } = await sb.from("treasury_collections").update(row).eq("id", editing.id);
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setExtras((prev) => prev.map((e) => e.id === editing.id ? { ...e, ...row } : e));
+      logAudit?.("extra_income_updated", "treasury_collections", editing.id, row.type, { amount: row.amount, description: row.description });
     } else {
       row.id = "EXT" + String(Date.now()).slice(-8);
       const { data, error } = await sb.from("treasury_collections").insert(row).select().single();
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setExtras((prev) => [...prev, data || row]);
+      logAudit?.("extra_income_created", "treasury_collections", row.id, row.type, { amount: row.amount, description: row.description });
     }
     setSaving(false); setEditing(null); notify("Salvo!");
   };
 
   const del = async (id) => {
+    const item = extras.find((e) => e.id === id);
     const { error } = await sb.from("treasury_collections").delete().eq("id", id);
     if (error) { notify("Erro: " + error.message); return; }
     setExtras((prev) => prev.filter((e) => e.id !== id));
+    logAudit?.("extra_income_deleted", "treasury_collections", id, item?.type || id, { amount: item?.amount });
   };
 
   return (
@@ -492,7 +500,7 @@ function ExtraIncomeTab({ event, extras, setExtras, notify }) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 export default function TreasurerView(props) {
-  const { event, regs, updateReg, user, logout, notify, lang, setLang, theme, toggleTheme } = props;
+  const { event, regs, updateReg, user, logout, notify, lang, setLang, theme, toggleTheme, logAudit } = props;
   const [sec,      setSec]      = useState("balanco");
   const [expenses, setExpenses] = useState([]);
   const [extras,   setExtras]   = useState([]);
@@ -540,8 +548,8 @@ export default function TreasurerView(props) {
               <>
                 {sec === "balanco"  && <BalanceTab eventRegs={eventRegs} expenses={expenses} extras={extras} />}
                 {sec === "regs"     && <RegsTab eventRegs={eventRegs} updateReg={updateReg} notify={notify} />}
-                {sec === "despesas" && <ExpensesTab event={event} expenses={expenses} setExpenses={setExpenses} notify={notify} />}
-                {sec === "extras"   && <ExtraIncomeTab event={event} extras={extras} setExtras={setExtras} notify={notify} />}
+                {sec === "despesas" && <ExpensesTab event={event} expenses={expenses} setExpenses={setExpenses} notify={notify} logAudit={logAudit} />}
+                {sec === "extras"   && <ExtraIncomeTab event={event} extras={extras} setExtras={setExtras} notify={notify} logAudit={logAudit} />}
               </>
             )}
           </div>

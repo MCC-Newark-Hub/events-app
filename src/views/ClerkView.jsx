@@ -126,6 +126,7 @@ function ClerkView(props) {
       const { error } = await sb.from("members").delete().eq("id", confirmDeleteMember.id);
       if (error) throw error;
       setMembers((prev) => prev.filter((m) => m.id !== confirmDeleteMember.id));
+      logAudit?.("member_deleted", "member", confirmDeleteMember.id, confirmDeleteMember.name, null);
       notify("Membro removido.");
       setConfirmDeleteMember(null);
     } catch (err) {
@@ -345,11 +346,11 @@ function ClerkView(props) {
               </div>
             </>
           ) : sec === "families" ? (
-            <FamiliesPanel members={myMembers} families={myFamilies} setFamilies={setFamilies} gas={myGas} showGroup notify={notify} />
+            <FamiliesPanel members={myMembers} families={myFamilies} setFamilies={setFamilies} gas={myGas} showGroup notify={notify} logAudit={logAudit} />
           ) : sec === "functions" ? (
-            <FuncoesTab members={members} setMembers={setMembers} gas={gas} notify={notify} churchLock={myChurch} />
+            <FuncoesTab members={members} setMembers={setMembers} gas={gas} notify={notify} churchLock={myChurch} logAudit={logAudit} />
           ) : (
-            <GroupsPanel members={myMembers} setMembers={setMembers} gas={myGas} setGas={setGas} churches={churches} notify={notify} defaultChurch={myChurch} lockChurch />
+            <GroupsPanel members={myMembers} setMembers={setMembers} gas={myGas} setGas={setGas} churches={churches} notify={notify} defaultChurch={myChurch} lockChurch logAudit={logAudit} />
           )}
         </div>
         </div>

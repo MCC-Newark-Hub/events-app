@@ -32,6 +32,7 @@ function TeamLeaderView(props) {
     updateReg,
     churches,
     gas,
+    logAudit,
   } = props;
   const t = useT();
   const [mainView, setMainView] = useState("equipe");
@@ -80,7 +81,10 @@ function TeamLeaderView(props) {
     const newRoles = newRole ? [...filtered, newRole] : filtered;
     setMembers((prev) => prev.map((m) => m.id === member.id ? { ...m, roles: newRoles } : m));
     sb.from("members").update({ roles: newRoles }).eq("id", member.id)
-      .then(({ error }) => { if (error) notify("Erro ao atualizar função do professor."); });
+      .then(({ error }) => {
+        if (error) { notify("Erro ao atualizar função do professor."); return; }
+        logAudit?.("member_teacher_class_changed", "member", member.id, member.name, { newClass: newCat, newRoles });
+      });
     setEditingTeacher(null);
   };
   const [editTeam, setEditTeam] = useState(null);
@@ -111,7 +115,10 @@ function TeamLeaderView(props) {
         r.eventId === event?.id && r.team === team ? { ...r, memberIds: newIds } : r
       ));
       sb.from("rosters").update({ member_ids: newIds }).eq("id", ex.id)
-        .then((res) => { if (res.error) console.error("addToRoster update error:", res.error); });
+        .then((res) => {
+          if (res.error) { console.error("addToRoster update error:", res.error); return; }
+          logAudit?.("roster_member_added", "roster", ex.id, team, { memberId: mid, memberName: members.find((m) => m.id === mid)?.name });
+        });
     } else {
       const newRoster = { eventId: event?.id, team, memberIds: [mid], leaderId: null };
       setRosters((prev) => [...prev, newRoster]);
@@ -124,6 +131,7 @@ function TeamLeaderView(props) {
             r.eventId === newRoster.eventId && r.team === newRoster.team && !r.id
               ? { ...r, id: data.id } : r
           ));
+          logAudit?.("roster_member_added", "roster", data.id, team, { memberId: mid, memberName: members.find((m) => m.id === mid)?.name });
         }
       });
     }
@@ -136,7 +144,10 @@ function TeamLeaderView(props) {
     setRosters((prev) => prev.map((r) =>
       r.eventId === event?.id && r.team === team ? { ...r, memberIds: updatedIds } : r
     ));
-    if (roster.id) sb.from("rosters").update({ member_ids: updatedIds }).eq("id", roster.id);
+    if (roster.id) {
+      sb.from("rosters").update({ member_ids: updatedIds }).eq("id", roster.id);
+      logAudit?.("roster_member_removed", "roster", roster.id, team, { memberId: mid, memberName: members.find((m) => m.id === mid)?.name });
+    }
     if (!silent) notify("Removed.");
   };
   const setMemberAssignment = (team, memberId, value) => {
@@ -152,8 +163,9 @@ function TeamLeaderView(props) {
     ));
     sb.from("rosters").update({ assignments: updated }).eq("id", roster.id).select()
       .then(({ data, error }) => {
-        if (error) notify("Erro ao salvar atribuição: " + error.message);
-        else if (!data?.length) notify("Erro: registro não encontrado ao salvar atribuição.");
+        if (error) { notify("Erro ao salvar atribuição: " + error.message); return; }
+        if (!data?.length) { notify("Erro: registro não encontrado ao salvar atribuição."); return; }
+        logAudit?.("roster_assignment_changed", "roster", roster.id, team, { memberId, value: value || null });
       });
   };
   const transferMember = (fromTeam, member, toTeam) => {
