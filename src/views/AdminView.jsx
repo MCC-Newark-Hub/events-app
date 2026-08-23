@@ -1803,7 +1803,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         const { data, error } = await sb.from("families").insert({ name: famName, member_ids: memberIds }).select().single();
                         if (error) { notify("Erro ao criar família: " + error.message); return; }
                         famId = data.id;
-                        setFamilies((prev) => [...prev, { id: data.id, name: famName, memberIds }]);
+                        setFamilies((prev) => [...prev, { id: data.id, name: famName, memberIds }].sort((a, b) => (a.name || "").localeCompare(b.name || "", "pt", { sensitivity: "base" })));
                       } else {
                         const fam = (families || []).find((f) => f.id === famId);
                         const mergedIds = [...new Set([...(fam?.memberIds || []), ...memberIds])];

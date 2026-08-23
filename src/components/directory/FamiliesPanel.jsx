@@ -42,7 +42,7 @@ export default function FamiliesPanel({ members, families, setFamilies, gas, sho
       row.id = "F" + String(Date.now()).slice(-8);
       const { data, error } = await sb.from("families").insert(row).select().single();
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
-      setFamilies((prev) => [...prev, mapFamily(data)]);
+      setFamilies((prev) => [...prev, mapFamily(data)].sort((a, b) => (a.name || "").localeCompare(b.name || "", "pt", { sensitivity: "base" })));
       notify("Criado!");
     } else {
       row.id = editing.id;

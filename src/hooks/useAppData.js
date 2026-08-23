@@ -202,7 +202,7 @@ export function useAppData({ getUserRef, notify }) {
         var memberList = (memRes.data || []).map(mapMember);
         if (memberList.length === 0) console.warn("Members loaded as empty — check Supabase RLS on the members table");
         setMembers(memberList);
-        setFamilies((famRes.data || []).map(mapFamily));
+        setFamilies((famRes.data || []).map(mapFamily).sort((a, b) => (a.name || "").localeCompare(b.name || "", "pt", { sensitivity: "base" })));
         setGas((gaRes.data || []).map(mapGA));
         setRegs((regRes.data || []).map(mapReg));
         if (aprRes.error) console.error("Approvals load error:", aprRes.error);
