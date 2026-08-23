@@ -319,6 +319,9 @@ function RegModal({
                   }}
                 >
                   <strong>{sel.name}</strong>
+                  {sel.isGuest && (
+                    <span className="badge badge-gray" style={{ fontSize: 10, marginLeft: 6, verticalAlign: "middle" }}>Visitante</span>
+                  )}
                   {sel.badgeName && sel.badgeName !== sel.name && (
                     <span style={{ color: "#6b7280" }}>
                       {" "}

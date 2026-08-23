@@ -24,7 +24,10 @@ export function mapMember(m) {
     invitedBy: m.invited_by || '',
     translationLanguages: m.translation_languages || [],
     voiceType: m.voice_type || '',
+    voiceLowestNote: m.voice_lowest_note || '',
+    voiceHighestNote: m.voice_highest_note || '',
     instruments: m.instruments || [],
+    immigrationStatus: m.immigration_status || '',
   };
 }
 export function mapFamily(f) {
@@ -155,6 +158,8 @@ export function useAppData({ getUserRef, notify }) {
   const [dbFunctions, setDbFunctions] = useState([]);
   const [dbUsers, setDbUsers] = useState([]);
   const [dbTeams, setDbTeams] = useState([]);
+  const [dbInstruments, setDbInstruments] = useState([]);
+  const [dbVoiceTypes, setDbVoiceTypes] = useState([]);
   const [settings, setSettings] = useState({ sessionTtlHours: 2 });
   const seqRef = useRef(0);
 
@@ -164,7 +169,7 @@ export function useAppData({ getUserRef, notify }) {
     async function loadAll() {
       setLoading(true);
       try {
-        var [evRes, memRes, famRes, gaRes, regRes, aprRes, rosRes, chrRes, usrRes, catRes, fnRes, teamsRes, setRes] =
+        var [evRes, memRes, famRes, gaRes, regRes, aprRes, rosRes, chrRes, usrRes, catRes, fnRes, teamsRes, setRes, instRes, voiceRes] =
           await Promise.all([
             sb.from("events").select("*").order("date"),
             sb.from("members").select("*").order("name"),
@@ -179,6 +184,8 @@ export function useAppData({ getUserRef, notify }) {
             sb.from("functions").select("*").order("sort_order"),
             sb.from("teams").select("*").order("sort_order"),
             sb.from("app_settings").select("*").eq("id", 1).maybeSingle(),
+            sb.from("instruments").select("*").order("sort_order"),
+            sb.from("voice_types").select("*").order("sort_order"),
           ]);
         if (cancelled) return;
         if (evRes.error) {
@@ -206,6 +213,8 @@ export function useAppData({ getUserRef, notify }) {
         if (catRes.data && catRes.data.length > 0) setDbCategories(catRes.data);
         if (fnRes.data && fnRes.data.length > 0) setDbFunctions(fnRes.data);
         setDbTeams((teamsRes.data || []).map(mapTeam));
+        if (instRes.data && instRes.data.length > 0) setDbInstruments(instRes.data);
+        if (voiceRes.data && voiceRes.data.length > 0) setDbVoiceTypes(voiceRes.data.map((v) => ({ id: v.id, name: v.name, gender: v.gender, minNote: v.min_note, maxNote: v.max_note, sortOrder: v.sort_order })));
         if (setRes.data) setSettings({ sessionTtlHours: Number(setRes.data.session_ttl_hours) || 2 });
         var maxSeq = (regRes.data || []).reduce(function (m, r) {
           var n = parseInt((r.reg_number || "").split("-")[2] || "0");
@@ -386,7 +395,7 @@ export function useAppData({ getUserRef, notify }) {
       member_name: data.memberName,
       badge_name: data.badgeName || data.memberName,
       category: data.category,
-      church: data.church || "",
+      church: data.church || (members || []).find((m) => m.id === data.memberId)?.church || "",
       role: data.role || "",
       family_id: data.familyId || null,
       invited_by_member_id: data.invitedByMemberId || null,
@@ -979,6 +988,10 @@ export function useAppData({ getUserRef, notify }) {
     setDbUsers,
     dbTeams,
     setDbTeams,
+    dbInstruments,
+    setDbInstruments,
+    dbVoiceTypes,
+    setDbVoiceTypes,
     settings,
     updateEventCapacity,
     toggleRegistrationPaused,

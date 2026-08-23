@@ -1,7 +1,7 @@
 import { useState, useRef, Fragment } from "react";
-import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X, ShieldCheck, IdCard, UtensilsCrossed } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X, ShieldCheck, IdCard, UtensilsCrossed, Star } from "lucide-react";
 import { useT } from "@/i18n/strings";
-import { CATEGORIES, TEAMS, ROLE_BADGE, ROLE_GROUPS, fmt } from "@/constants";
+import { CATEGORIES, TEAMS, ROLE_BADGE, ROLE_GROUPS, fmt, VOICE_NOTES, classifyVoice } from "@/constants";
 import { sb } from "@/lib/supabase";
 import { eventSubtitle } from "@/lib/registrationDeadline";
 import Topbar from "@/components/Topbar";
@@ -25,6 +25,7 @@ import AuditLogTab from "./admin/AuditLogTab";
 import BadgeGeneratorTab from "./admin/BadgeGeneratorTab";
 import KitchenTab from "./admin/KitchenTab";
 import KitchenPlanningTab from "./admin/KitchenPlanningTab";
+import FuncoesTab from "./admin/FuncoesTab";
 import MemberFunctionsView from "@/components/MemberFunctionsView";
 import { syncRegistrationNames, syncMemberToRegistrations } from "@/lib/syncMemberName";
 import { groupByFamily } from "@/lib/family";
@@ -49,6 +50,7 @@ function AdminView(props) {
     { id: "import", icon: <Upload size={16} />, label: "Importar" },
     { id: "users", icon: <KeyRound size={16} />, label: "Usuários & PINs" },
     { id: "directory", icon: <BookOpen size={16} />, label: "Diretório" },
+    { id: "funcoes", icon: <Star size={16} />, label: "Funções" },
     { id: "audit", icon: <ShieldCheck size={16} />, label: "Auditoria" },
     { id: "kitchen", icon: <UtensilsCrossed size={16} />, label: "Cozinha" },
     { id: "badges", icon: <IdCard size={16} />, label: "Crachás" },
@@ -69,7 +71,8 @@ function AdminView(props) {
             {sec === "events" && <EventsTab events={props.events} setEvents={props.setEvents} event={props.event} setEvent={props.setEvent} lang={props.lang} notify={props.notify} rosters={props.rosters} setRosters={props.setRosters} />}
             {sec === "import" && <AdminImport members={props.members} setMembers={props.setMembers} families={props.families} setFamilies={props.setFamilies} gas={props.gas} setGas={props.setGas} rosters={props.rosters} setRosters={props.setRosters} churches={props.churches} setChurches={props.setChurches} notify={props.notify} />}
             {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} dbTeams={props.dbTeams} gas={props.gas} notify={props.notify} settings={props.settings} updateSessionTtlHours={props.updateSessionTtlHours} logAudit={props.logAudit} />}
-            {sec === "directory" && <AdminDirectory {...props} dbTeams={props.dbTeams} setDbTeams={props.setDbTeams} />}
+            {sec === "directory" && <AdminDirectory {...props} dbTeams={props.dbTeams} setDbTeams={props.setDbTeams} dbInstruments={props.dbInstruments} setDbInstruments={props.setDbInstruments} dbVoiceTypes={props.dbVoiceTypes} setDbVoiceTypes={props.setDbVoiceTypes} />}
+            {sec === "funcoes" && <FuncoesTab members={props.members} setMembers={props.setMembers} gas={props.gas} notify={props.notify} />}
             {sec === "audit" && <AuditLogTab dbUsers={props.dbUsers} />}
             {sec === "kitchen" && (
               <>
@@ -1085,19 +1088,21 @@ function makeTh(sk, sd, toggle) {
 
 // ── Directory ─────────────────────────────────────────────────────────────────
 
-function AdminDirectory({ churches, setChurches, members, setMembers, families, setFamilies, gas, setGas, rosters, setRosters, dbTeams, setDbTeams, events, regs, setRegs, notify, logAudit }) {
+function AdminDirectory({ churches, setChurches, members, setMembers, families, setFamilies, gas, setGas, rosters, setRosters, dbTeams, setDbTeams, dbInstruments, setDbInstruments, dbVoiceTypes, setDbVoiceTypes, events, regs, setRegs, notify, logAudit }) {
   const TABS = [
     { id: "churches",    label: "Igrejas",               count: churches?.length },
     { id: "members",     label: "Membros",               count: members?.length },
     { id: "families",    label: "Famílias",              count: families?.length },
     { id: "groups",      label: "Grupos de Assistência", count: gas?.length },
-    { id: "ministries",  label: "Membros com Funções",    count: (members || []).filter((m) => (m.roles || []).length > 0).length },
     { id: "teams",       label: "Trabalhadores",         count: rosters?.length },
     { id: "teams_dir",   label: "Equipes",               count: dbTeams?.length },
+    { id: "instruments", label: "Instrumentos",          count: dbInstruments?.length },
+    { id: "voice_types", label: "Vozes",                 count: dbVoiceTypes?.length },
   ];
   const [tab, setTab]         = useState("churches");
   const [search, setSearch]   = useState("");
-  const [groupByFam, setGroupByFam] = useState(false);
+  const [groupBy, setGroupBy] = useState(""); // "" | "church" | "ga" | "family"
+  const [filterType, setFilterType] = useState(""); // "" | "members" | "visitors"
   const [filterChurch, setFilterChurch] = useState("");
   const [filterGa, setFilterGa] = useState("");
   const [editing, setEditing] = useState(null);
@@ -1115,6 +1120,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   const [bulkFamId, setBulkFamId] = useState("");
   const [bulkFamName, setBulkFamName] = useState("");
   // Sort state
+  const [chGroupByState, setChGroupByState] = useState(false);
   const [chSk, setChSk] = useState("display"); const [chSd, setChSd] = useState("asc");
   const [mbSk, setMbSk] = useState("name");    const [mbSd, setMbSd] = useState("asc");
   const mkToggle = (sk, setSk, sd, setSd) => (k) => { if (sk === k) setSd((d) => d === "asc" ? "desc" : "asc"); else { setSk(k); setSd("asc"); } };
@@ -1123,7 +1129,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
   const ChTh = makeTh(chSk, chSd, chToggle);
   const MbTh = makeTh(mbSk, mbSd, mbToggle);
 
-  const switchTab = (id) => { setTab(id); setSearch(""); setEditing(null); setSelected([]); setFormData({}); setFilterChurch(""); setFilterGa(""); };
+  const switchTab = (id) => { setTab(id); setSearch(""); setEditing(null); setSelected([]); setFormData({}); setFilterChurch(""); setFilterGa(""); setGroupBy(""); setFilterType(""); };
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   const toggleSel = (id) => setSelected((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
@@ -1196,7 +1202,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar…" />
         {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}><X size={14} /></button>}
       </div>
-      {(tab === "members" || tab === "ministries") && (
+      {tab === "members" && (
         <>
           <select
             value={filterChurch}
@@ -1214,6 +1220,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                 onChange={(e) => setFilterGa(e.target.value)}
                 style={{ fontSize: 13, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card-bg)", color: filterGa ? "var(--text)" : "var(--muted)" }}>
                 <option value="">Todos os Grupos</option>
+                <option value="__none__">Sem grupo</option>
                 {(gas || [])
                   .filter((g) => {
                     if (!filterChurch) return true;
@@ -1222,13 +1229,20 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                   })
                   .map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
-              <button className={`btn btn-sm ${groupByFam ? "btn-primary" : "btn-ghost"}`} onClick={() => setGroupByFam((p) => !p)}>
-                👪 Agrupar por Família
-              </button>
+              <div className="pt">
+                {[["", "Todos"], ["members", "Membros"], ["visitors", "Visitantes"]].map(([v, l]) => (
+                  <button key={v} className={`pt-btn ${filterType === v ? "active" : ""}`} onClick={() => setFilterType(v)}>{l}</button>
+                ))}
+              </div>
+              <div className="pt">
+                {[["", "Sem agrup."], ["church", "Por Igreja"], ["ga", "Por Grupo"], ["family", "Por Família"]].map(([v, l]) => (
+                  <button key={v} className={`pt-btn ${groupBy === v ? "active" : ""}`} onClick={() => setGroupBy(v)}>{l}</button>
+                ))}
+              </div>
             </>
           )}
-          {(filterChurch || filterGa) && (
-            <button className="btn btn-ghost btn-sm" onClick={() => { setFilterChurch(""); setFilterGa(""); }}>✕ Limpar</button>
+          {(filterChurch || filterGa || filterType) && (
+            <button className="btn btn-ghost btn-sm" onClick={() => { setFilterChurch(""); setFilterGa(""); setFilterType(""); }}>✕ Limpar</button>
           )}
         </>
       )}
@@ -1266,12 +1280,24 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     </div>
                     <div>
                       <label>Endereço</label>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <input value={formData.address || ""} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="123 Main St" />
-                        {(formData.address || formData.display) && (
-                          <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.address || formData.display)}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm" style={{ whiteSpace: "nowrap" }}>🗺 Maps</a>
-                        )}
-                      </div>
+                      <input value={formData.address || ""} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="123 Main St, Newark, NJ" />
+                      {(formData.address || formData.display) && (() => {
+                        const query = encodeURIComponent(formData.address || formData.display);
+                        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+                        const embedUrl = `https://maps.google.com/maps?q=${query}&output=embed&z=15`;
+                        return (
+                          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" title="Abrir no Google Maps" style={{ display: "block", marginTop: 8, borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", cursor: "pointer" }}>
+                            <iframe
+                              src={embedUrl}
+                              width="100%"
+                              height="160"
+                              style={{ display: "block", border: "none", pointerEvents: "none" }}
+                              title="Mapa"
+                              loading="lazy"
+                            />
+                          </a>
+                        );
+                      })()}
                     </div>
                     <div><label>Nome da Congregação</label><input value={formData.churchName || ""} onChange={(e) => setFormData({ ...formData, churchName: e.target.value })} placeholder="ICM Newark" /></div>
                     <div>
@@ -1286,6 +1312,25 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       />
                       {formData.pastorId && (
                         <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>ID: {formData.pastorId}</div>
+                      )}
+                    </div>
+                    <div className="fr">
+                      <div>
+                        <label>Tipo de local</label>
+                        <select value={formData.churchType || "Igreja"} onChange={(e) => setFormData({ ...formData, churchType: e.target.value, propertyOwnership: e.target.value === "Ponto de Pregação" ? "" : formData.propertyOwnership })}>
+                          <option value="Igreja">Igreja</option>
+                          <option value="Ponto de Pregação">Ponto de Pregação</option>
+                        </select>
+                      </div>
+                      {(formData.churchType || "Igreja") === "Igreja" && (
+                        <div>
+                          <label>Imóvel</label>
+                          <select value={formData.propertyOwnership || ""} onChange={(e) => setFormData({ ...formData, propertyOwnership: e.target.value })}>
+                            <option value="">— Não informado —</option>
+                            <option value="Próprio">Próprio</option>
+                            <option value="Alugado">Alugado</option>
+                          </select>
+                        </div>
                       )}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1303,17 +1348,19 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       if (!formData.city?.trim())    { notify("Cidade obrigatória."); return; }
                       if (!formData.stateCode?.trim()) { notify("Sigla do estado obrigatória."); return; }
                       const row = {
-                        display:      formData.display.trim(),
-                        code:         formData.countryCode || "EUA",
-                        city:         formData.city.trim(),
-                        state_code:   formData.stateCode.trim(),
-                        state_name:   formData.stateName?.trim()  || null,
-                        country_code: formData.countryCode || "EUA",
-                        country:      formData.country?.trim()    || null,
-                        address:      formData.address?.trim()    || null,
-                        church_name:  formData.churchName?.trim() || null,
-                        pastor_id:    formData.pastorId           || null,
-                        is_hub:       !!formData.isHub,
+                        display:            formData.display.trim(),
+                        code:               formData.countryCode || "EUA",
+                        city:               formData.city.trim(),
+                        state_code:         formData.stateCode.trim(),
+                        state_name:         formData.stateName?.trim()  || null,
+                        country_code:       formData.countryCode || "EUA",
+                        country:            formData.country?.trim()    || null,
+                        address:            formData.address?.trim()    || null,
+                        church_name:        formData.churchName?.trim() || null,
+                        pastor_id:          formData.pastorId           || null,
+                        is_hub:             !!formData.isHub,
+                        church_type:        formData.churchType || "Igreja",
+                        property_ownership: (formData.churchType === "Ponto de Pregação") ? null : (formData.propertyOwnership || null),
                       };
                       if (!isNew) row.id = editing.id;
                       saveRow("churches", row, isNew, churches, setChurches, null);
@@ -1331,6 +1378,14 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                 onSelectAll={() => selAll(allIds)} onClearAll={clearSel}
                 onDeleteSelected={() => setDeleting({ ids: selected, label: "" })} />
             )}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+              <button
+                className={`btn btn-sm ${chGroupByState ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => setChGroupByState((v) => !v)}
+              >
+                Agrupar por Estado
+              </button>
+            </div>
             <div className="card" style={{ padding: 0, overflow: "hidden" }}>
               <table className="table">
                 <thead>
@@ -1343,29 +1398,51 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                   </tr>
                 </thead>
                 <tbody>
-                  {list.map((c) => (
-                    <tr key={c.id || c.display} style={{ background: c.id && selected.includes(c.id) ? "var(--sidebar-active-bg)" : "" }}>
-                      <td><input type="checkbox" disabled={!c.id} checked={!!(c.id && selected.includes(c.id))} onChange={() => c.id && toggleSel(c.id)} /></td>
-                      <td style={{ fontWeight: 500 }}>{c.display}{c.is_hub && <span className="badge badge-green" style={{ marginLeft: 6 }}>Pólo</span>}</td>
-                      <td style={{ fontSize: 12 }}>{c.city || "—"}</td>
-                      <td><span className="badge badge-gray">{c.state_code || c.stateCode || "—"}</span></td>
-                      <td><span className="badge badge-blue">{c.country_code || c.code || "—"}</span></td>
-                      <td style={{ fontSize: 12 }}>{(members || []).find((m) => m.id === c.pastor_id)?.name || "—"}</td>
-                      <td>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address || c.display)}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-xs" title="Ver no Maps">🗺</a>
-                          <button className="btn btn-ghost btn-xs" onClick={() => openEdit(c, { display: c.display, city: c.city || "", stateCode: c.state_code || "", stateName: c.state_name || "", countryCode: c.country_code || c.code || "EUA", country: c.country || "", address: c.address || "", churchName: c.church_name || "", pastorId: c.pastor_id || null, isHub: c.is_hub || false })}><Pencil size={12} /></button>
-                          {c.id && <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [c.id], label: c.display })}><Trash2 size={12} /></button>}
-                        </div>
+                  {(() => {
+                    const renderChurchRow = (c) => (
+                      <tr key={c.id || c.display} style={{ background: c.id && selected.includes(c.id) ? "var(--sidebar-active-bg)" : "" }}>
+                        <td><input type="checkbox" disabled={!c.id} checked={!!(c.id && selected.includes(c.id))} onChange={() => c.id && toggleSel(c.id)} /></td>
+                        <td style={{ fontWeight: 500 }}>
+                        {c.display}
+                        {c.is_hub && <span className="badge badge-green" style={{ marginLeft: 6 }}>Pólo</span>}
+                        {c.church_type === "Ponto de Pregação" && <span className="badge badge-yellow" style={{ marginLeft: 6 }}>Ponto</span>}
+                        {c.property_ownership && <span className="badge badge-gray" style={{ marginLeft: 4, fontSize: 10 }}>{c.property_ownership}</span>}
                       </td>
-                    </tr>
-                  ))}
-                  {list.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
+                        <td style={{ fontSize: 12 }}>{c.city || "—"}</td>
+                        <td><span className="badge badge-gray">{c.state_code || c.stateCode || "—"}</span></td>
+                        <td><span className="badge badge-blue">{c.country_code || c.code || "—"}</span></td>
+                        <td style={{ fontSize: 12 }}>{(members || []).find((m) => m.id === c.pastor_id)?.name || "—"}</td>
+                        <td>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address || c.display)}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-xs" title="Ver no Maps">🗺</a>
+                            <button className="btn btn-ghost btn-xs" onClick={() => openEdit(c, { display: c.display, city: c.city || "", stateCode: c.state_code || "", stateName: c.state_name || "", countryCode: c.country_code || c.code || "EUA", country: c.country || "", address: c.address || "", churchName: c.church_name || "", pastorId: c.pastor_id || null, isHub: c.is_hub || false, churchType: c.church_type || "Igreja", propertyOwnership: c.property_ownership || "" })}><Pencil size={12} /></button>
+                            {c.id && <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [c.id], label: c.display })}><Trash2 size={12} /></button>}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                    if (!chGroupByState) return list.length > 0 ? list.map(renderChurchRow) : <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>;
+                    const stateGroups = list.reduce((acc, c) => {
+                      const key = (c.state_name || c.state_code || c.stateCode || "—") + " (" + (c.state_code || c.stateCode || "—") + ")";
+                      (acc[key] = acc[key] || []).push(c);
+                      return acc;
+                    }, {});
+                    const sortedStates = Object.keys(stateGroups).sort();
+                    if (sortedStates.length === 0) return <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>;
+                    return sortedStates.flatMap((state) => [
+                      <tr key={"state-" + state} style={{ background: "var(--bg2)" }}>
+                        <td colSpan={7} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".5px", borderBottom: "1px solid var(--border)" }}>
+                          {state} <span style={{ fontWeight: 400, marginLeft: 6 }}>· {stateGroups[state].length} {stateGroups[state].length === 1 ? "igreja" : "igrejas"}</span>
+                        </td>
+                      </tr>,
+                      ...stateGroups[state].map(renderChurchRow),
+                    ]);
+                  })()}
                 </tbody>
               </table>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ display: "", city: "", stateCode: "", stateName: "", countryCode: "EUA", country: "", address: "", churchName: "", pastorId: null, isHub: false })}><Plus size={14} /> Nova Igreja</button>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ display: "", city: "", stateCode: "", stateName: "", countryCode: "EUA", country: "", address: "", churchName: "", pastorId: null, isHub: false, churchType: "Igreja", propertyOwnership: "" })}><Plus size={14} /> Nova Igreja</button>
               {(churches || []).filter((c) => c.id).length > 0 && (
                 <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
                   onClick={() => setDeleting({ ids: (churches || []).map((c) => c.id).filter(Boolean), label: "" })}>
@@ -1382,7 +1459,10 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
         const rawList = (members || [])
           .filter((m) => {
             if (filterChurch && m.church !== filterChurch) return false;
-            if (filterGa && m.gaId !== filterGa) return false;
+            if (filterGa === "__none__" && m.gaId) return false;
+            else if (filterGa && filterGa !== "__none__" && m.gaId !== filterGa) return false;
+            if (filterType === "members" && m.isGuest) return false;
+            if (filterType === "visitors" && !m.isGuest) return false;
             if (!search) return true;
             return ["name", "firstName", "lastName", "church", "category", "role", "badgeName"].some((f) => norm(m[f]).includes(norm(search))) ||
               norm((gas || []).find((g) => g.id === m.gaId)?.name || "").includes(norm(search));
@@ -1391,11 +1471,33 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
           .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const list = sortData(rawList, mbSk, mbSd);
         const allIds = list.map((m) => m.id).filter(Boolean);
-        const familyGroups = groupByFam ? groupByFamily(list, families) : null;
+
+        const makeGroups = () => {
+          if (groupBy === "family") return groupByFamily(list, families);
+          if (groupBy === "church") {
+            const keys = [...new Set(list.map((m) => m.church || "Outra / Não Listada"))].sort((a, b) => a.localeCompare(b, "pt"));
+            return keys.map((k) => {
+              const mems = list.filter((m) => (m.church || "Outra / Não Listada") === k);
+              return { familyId: k, familyName: k, members: mems };
+            });
+          }
+          if (groupBy === "ga") {
+            const named = [...new Set(list.filter((m) => m.gaName).map((m) => m.gaName))].sort((a, b) => a.localeCompare(b, "pt"));
+            const groups = named.map((k) => ({ familyId: k, familyName: k, members: list.filter((m) => m.gaName === k) }));
+            const noGroup = list.filter((m) => !m.gaName);
+            if (noGroup.length > 0) groups.push({ familyId: "__none__", familyName: "Sem grupo", members: noGroup });
+            return groups;
+          }
+          return null;
+        };
+        const groups = makeGroups();
         const renderMemberRow = (m) => (
           <tr key={m.id} style={{ background: selected.includes(m.id) ? "var(--sidebar-active-bg)" : "" }}>
             <td><input type="checkbox" checked={selected.includes(m.id)} onChange={() => toggleSel(m.id)} /></td>
-            <td style={{ fontWeight: 500 }}>{(m.firstName && m.lastName) ? `${m.firstName} ${m.lastName}` : m.name}</td>
+            <td style={{ fontWeight: 500 }}>
+              <span>{(m.firstName && m.lastName) ? `${m.firstName} ${m.lastName}` : m.name}</span>
+              {m.isGuest && <span className="badge badge-gray" style={{ fontSize: 9, marginLeft: 5, verticalAlign: "middle" }}>Visitante</span>}
+            </td>
             <td style={{ color: "var(--muted)", fontSize: 12 }}>{m.badgeName}</td>
             <td><span className="badge badge-gray">{m.gender}</span></td>
             <td><span className="badge badge-blue">{m.category}</span></td>
@@ -1415,7 +1517,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
             <td style={{ fontSize: 11, color: "var(--muted)", maxWidth: 160 }}>{m.notes ? m.notes.slice(0, 40) + (m.notes.length > 40 ? '…' : '') : '—'}</td>
             <td>
               <div style={{ display: "flex", gap: 6 }}>
-                <button className="btn btn-ghost btn-xs" onClick={() => openEdit(m, { firstName: m.firstName || '', lastName: m.lastName || '', name: m.name, badgeName: m.badgeName || "", gender: m.gender || "M", category: m.category, church: m.church || "", roles: m.roles || (m.role ? [m.role] : []), role: m.role || "", familyId: m.familyId || "", gaId: m.gaId || "", allergies: m.allergies || '', specialNeeds: m.specialNeeds || '', notes: m.notes || '', isGuest: m.isGuest || false, invitedBy: m.invitedBy || '', translationLanguages: m.translationLanguages || [], voiceType: m.voiceType || '', instruments: m.instruments || [] })}><Pencil size={12} /></button>
+                <button className="btn btn-ghost btn-xs" onClick={() => openEdit(m, { firstName: m.firstName || '', lastName: m.lastName || '', name: m.name, badgeName: m.badgeName || "", gender: m.gender || "M", category: m.category, church: m.church || "", roles: m.roles || (m.role ? [m.role] : []), role: m.role || "", familyId: m.familyId || "", gaId: m.gaId || "", allergies: m.allergies || '', specialNeeds: m.specialNeeds || '', notes: m.notes || '', isGuest: m.isGuest || false, invitedBy: m.invitedBy || '', translationLanguages: m.translationLanguages || [], voiceType: m.voiceType || '', voiceLowestNote: m.voiceLowestNote || '', voiceHighestNote: m.voiceHighestNote || '', instruments: m.instruments || [], immigrationStatus: m.immigrationStatus || '' })}><Pencil size={12} /></button>
                 <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [m.id], label: m.name })}><Trash2 size={12} /></button>
               </div>
             </td>
@@ -1484,22 +1586,50 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       {(formData.roles || []).some((r) => ["Grupo de Louvor", "Instrumentista", "Instrumentista Aprendiz", "Responsável - Grupo de Louvor"].includes(r)) && (
                         <>
                           <div>
-                            <label>Tipo de Voz</label>
-                            <select value={formData.voiceType || ""} onChange={(e) => setFormData({ ...formData, voiceType: e.target.value })}>
-                              <option value="">— Nenhum —</option>
-                              {["Soprano", "Mezzo-Soprano", "Contralto", "Tenor", "Barítono", "Baixo"].map((v) => <option key={v}>{v}</option>)}
-                            </select>
+                            <label>Alcance de Voz</label>
+                            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                              <select value={formData.voiceLowestNote || ""} onChange={(e) => setFormData({ ...formData, voiceLowestNote: e.target.value })} style={{ flex: 1, minWidth: 110 }}>
+                                <option value="">Nota mais baixa…</option>
+                                {VOICE_NOTES.map((n) => <option key={n}>{n}</option>)}
+                              </select>
+                              <span style={{ color: "var(--muted)", fontSize: 14 }}>—</span>
+                              <select value={formData.voiceHighestNote || ""} onChange={(e) => setFormData({ ...formData, voiceHighestNote: e.target.value })} style={{ flex: 1, minWidth: 110 }}>
+                                <option value="">Nota mais alta…</option>
+                                {VOICE_NOTES.map((n) => <option key={n}>{n}</option>)}
+                              </select>
+                            </div>
+                            {(() => {
+                              const classified = classifyVoice(formData.voiceLowestNote, formData.voiceHighestNote, dbVoiceTypes);
+                              if (!classified.length) return null;
+                              return <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Classificada como: <strong style={{ color: "var(--text)" }}>{classified.join(", ")}</strong></div>;
+                            })()}
+                            <div style={{ marginTop: 6 }}>
+                              <label>Voz selecionada</label>
+                              <select value={formData.voiceType || ""} onChange={(e) => setFormData({ ...formData, voiceType: e.target.value })}>
+                                <option value="">— Nenhuma —</option>
+                                {(dbVoiceTypes && dbVoiceTypes.length > 0
+                                  ? dbVoiceTypes.filter((v) => !v.gender || v.gender === (formData.gender || "M"))
+                                  : (formData.gender === "F"
+                                      ? ["Soprano","Mezzo-Soprano","Contralto"]
+                                      : ["Tenor","Barítono","Baixo"]
+                                    ).map((n) => ({ name: n }))
+                                ).map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
+                              </select>
+                            </div>
                           </div>
                           <div>
                             <label>Instrumentos</label>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-                              {["Violão", "Guitarra", "Contrabaixo", "Teclado", "Bateria", "Percussão", "Flauta", "Violino", "Trompete", "Saxofone"].map((inst) => {
-                                const checked = (formData.instruments || []).includes(inst);
+                              {(dbInstruments && dbInstruments.length > 0
+                                ? dbInstruments
+                                : ["Violão","Guitarra","Baixo Elétrico","Teclado","Bateria","Percussão","Flauta","Violino","Trompete","Saxofone"].map((n) => ({ name: n }))
+                              ).map((inst) => {
+                                const checked = (formData.instruments || []).includes(inst.name);
                                 return (
-                                  <label key={inst} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, cursor: "pointer", userSelect: "none" }}>
+                                  <label key={inst.name} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, cursor: "pointer", userSelect: "none" }}>
                                     <input type="checkbox" checked={checked}
-                                      onChange={() => setFormData({ ...formData, instruments: checked ? (formData.instruments || []).filter((i) => i !== inst) : [...(formData.instruments || []), inst] })} />
-                                    {inst}
+                                      onChange={() => setFormData({ ...formData, instruments: checked ? (formData.instruments || []).filter((i) => i !== inst.name) : [...(formData.instruments || []), inst.name] })} />
+                                    {inst.name}
                                   </label>
                                 );
                               })}
@@ -1550,6 +1680,17 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     <div><label>Alergias</label><textarea rows={2} value={formData.allergies || ""} onChange={(e) => setFormData({ ...formData, allergies: e.target.value })} placeholder="Ex: amendoim, látex…" style={{ resize: "vertical" }} /></div>
                     <div><label>Necessidades Especiais</label><textarea rows={2} value={formData.specialNeeds || ""} onChange={(e) => setFormData({ ...formData, specialNeeds: e.target.value })} placeholder="Ex: cadeira de rodas…" style={{ resize: "vertical" }} /></div>
                     <div><label>Notas</label><textarea rows={2} value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} style={{ resize: "vertical" }} /></div>
+                    <div>
+                      <label>Situação Imigratória</label>
+                      <select value={formData.immigrationStatus || ""} onChange={(e) => setFormData({ ...formData, immigrationStatus: e.target.value })}>
+                        <option value="">—</option>
+                        <option value="Cidadão">Cidadão</option>
+                        <option value="Residente Permanente">Residente Permanente</option>
+                        <option value="Com Visto">Com Visto</option>
+                        <option value="Em Processo">Em Processo</option>
+                        <option value="Sem Visto">Sem Visto</option>
+                      </select>
+                    </div>
                     {(() => {
                       const memberRosters = (rosters || []).filter((r) => (r.memberIds || []).includes(editing?.id));
                       const teamNames = [...new Set(memberRosters.map((r) => r.team))];
@@ -1570,7 +1711,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       if (!formData.name?.trim() && !formData.firstName?.trim()) { notify("Nome obrigatório."); return; }
                       if (churches.find((c) => c.display === formData.church)?.is_hub && !formData.gaId) { notify("Grupo é obrigatório para igrejas do Pólo."); return; }
                       const fullName = formData.name?.trim() || ((formData.firstName || '') + ' ' + (formData.lastName || '')).trim();
-                      const row = { name: fullName, first_name: formData.firstName || null, last_name: formData.lastName || null, badge_name: formData.badgeName || fullName, gender: formData.gender || "M", category: formData.category || "Adulto", church: formData.church || "", roles: formData.roles || [], role: (formData.roles || [])[0] || "", family_id: formData.familyId || null, ga_id: formData.gaId || null, allergies: formData.allergies || null, special_needs: formData.specialNeeds || null, notes: formData.notes || null, is_guest: formData.isGuest || false, invited_by: formData.isGuest ? (formData.invitedBy || null) : null, translation_languages: formData.translationLanguages || [], voice_type: formData.voiceType || null, instruments: formData.instruments || [] };
+                      const row = { name: fullName, first_name: formData.firstName || null, last_name: formData.lastName || null, badge_name: formData.badgeName || fullName, gender: formData.gender || "M", category: formData.category || "Adulto", church: formData.church || "", roles: formData.roles || [], role: (formData.roles || [])[0] || "", family_id: formData.familyId || null, ga_id: formData.gaId || null, allergies: formData.allergies || null, special_needs: formData.specialNeeds || null, notes: formData.notes || null, is_guest: formData.isGuest || false, invited_by: formData.isGuest ? (formData.invitedBy || null) : null, translation_languages: formData.translationLanguages || [], voice_type: formData.voiceType || null, voice_lowest_note: formData.voiceLowestNote || null, voice_highest_note: formData.voiceHighestNote || null, instruments: formData.instruments || [], immigration_status: formData.immigrationStatus || null };
                       if (isNew) {
                         const nums = (members || []).map((m) => parseInt((m.id || "").replace(/^M/, ""), 10)).filter((n) => !isNaN(n));
                         const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
@@ -1697,15 +1838,21 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     </tr>
                   </thead>
                   <tbody>
-                    {familyGroups
-                      ? familyGroups.flatMap((g) => [
-                          <tr key={`fg-${g.familyId ?? "none"}`} style={{ background: "var(--bg2)" }}>
-                            <td colSpan={10} style={{ fontWeight: 700, fontSize: 12, padding: "6px 10px" }}>
-                              👪 {g.familyName} <span style={{ opacity: .65, fontWeight: 400 }}>({g.members.length})</span>
-                            </td>
-                          </tr>,
-                          ...g.members.map(renderMemberRow),
-                        ])
+                    {groups
+                      ? groups.flatMap((g) => {
+                          const icon = groupBy === "family" ? "👪" : groupBy === "church" ? "⛪" : "👥";
+                          const visitors = g.members.filter((m) => m.isGuest).length;
+                          return [
+                            <tr key={`g-${g.familyId ?? "none"}`} style={{ background: "var(--bg2)" }}>
+                              <td colSpan={10} style={{ fontWeight: 700, fontSize: 12, padding: "6px 10px" }}>
+                                {icon} {g.familyName}
+                                <span style={{ opacity: .65, fontWeight: 400, marginLeft: 6 }}>{g.members.length} membro{g.members.length !== 1 ? "s" : ""}</span>
+                                {visitors > 0 && <span style={{ color: "var(--muted)", fontWeight: 400, marginLeft: 6, fontSize: 11 }}>· {visitors} visitante{visitors !== 1 ? "s" : ""}</span>}
+                              </td>
+                            </tr>,
+                            ...g.members.map(renderMemberRow),
+                          ];
+                        })
                       : list.map(renderMemberRow)}
                     {list.length === 0 && <tr><td colSpan={10} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
                   </tbody>
@@ -1713,7 +1860,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
               </div>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ firstName: "", lastName: "", name: "", badgeName: "", gender: "M", category: "Adulto", church: "", roles: [], role: "", familyId: "", gaId: "", allergies: "", specialNeeds: "", notes: "", isGuest: false, invitedBy: "", translationLanguages: [], voiceType: "", instruments: [] })}><Plus size={14} /> Novo Membro</button>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ firstName: "", lastName: "", name: "", badgeName: "", gender: "M", category: "Adulto", church: "", roles: [], role: "", familyId: "", gaId: "", allergies: "", specialNeeds: "", notes: "", isGuest: false, invitedBy: "", translationLanguages: [], voiceType: "", voiceLowestNote: "", voiceHighestNote: "", instruments: [], immigrationStatus: "" })}><Plus size={14} /> Novo Membro</button>
               {(members || []).length > 0 && (
                 <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
                   onClick={() => setDeleting({ ids: (members || []).map((m) => m.id).filter(Boolean), label: "" })}>
@@ -1882,15 +2029,142 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
         );
       })()}
 
-      {/* ── Membros com Funções ──────────────────────────────────────────── */}
-      {tab === "ministries" && (
-        <MemberFunctionsView
-          members={members}
-          setMembers={setMembers}
-          gas={gas}
-          notify={notify}
-        />
-      )}
+
+      {/* ── Instruments catalog ───────────────────────────────────────────── */}
+      {tab === "instruments" && (() => {
+        const list = (dbInstruments || []).filter((i) => norm(i.name).includes(norm(search))).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+        const mapInst = (i) => ({ id: i.id, name: i.name, sortOrder: i.sort_order ?? 0 });
+        return (
+          <>
+            {editing !== null && (
+              <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
+                <div className="modal" style={{ maxWidth: 360 }}>
+                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Novo Instrumento" : "Editar Instrumento"}</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div className="fr">
+                      <div style={{ flex: 2 }}><label>Nome *</label><input value={formData.name || ""} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
+                      <div><label>Ordem</label><input type="number" value={formData.sortOrder ?? 0} onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })} /></div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
+                    <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
+                      if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
+                      const row = { name: formData.name.trim(), sort_order: formData.sortOrder ?? 0 };
+                      if (!isNew) row.id = editing.id;
+                      saveRow("instruments", row, isNew, dbInstruments, setDbInstruments, mapInst);
+                    }}>{saving ? "Salvando…" : "Salvar"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {deleting && <ConfirmDelete label={deleting.label} count={deleting.ids.length} onCancel={() => setDeleting(null)} onConfirm={() => deleteRows("instruments", deleting.ids, dbInstruments, setDbInstruments)} />}
+            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <table className="table">
+                <thead><tr><th>Nome</th><th style={{ width: 80 }}>Ordem</th><th style={{ width: 90 }}></th></tr></thead>
+                <tbody>
+                  {list.map((i) => (
+                    <tr key={i.id || i.name}>
+                      <td style={{ fontWeight: 500 }}>{i.name}</td>
+                      <td style={{ fontSize: 12, color: "var(--muted)" }}>{i.sort_order ?? 0}</td>
+                      <td><div style={{ display: "flex", gap: 6 }}>
+                        <button className="btn btn-ghost btn-xs" onClick={() => openEdit(i, { name: i.name, sortOrder: i.sort_order ?? 0 })}><Pencil size={12} /></button>
+                        {i.id && <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [i.id], label: i.name })}><Trash2 size={12} /></button>}
+                      </div></td>
+                    </tr>
+                  ))}
+                  {list.length === 0 && <tr><td colSpan={3} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum instrumento. Execute a migration 019.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", sortOrder: (dbInstruments || []).length })}><Plus size={14} /> Novo Instrumento</button>
+            </div>
+          </>
+        );
+      })()}
+
+      {/* ── Voice types catalog ───────────────────────────────────────────── */}
+      {tab === "voice_types" && (() => {
+        const list = (dbVoiceTypes || []).slice().sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).filter((v) => norm(v.name).includes(norm(search)));
+        const mapVT = (v) => ({ id: v.id, name: v.name, gender: v.gender, minNote: v.min_note || v.minNote, maxNote: v.max_note || v.maxNote, sortOrder: v.sort_order ?? v.sortOrder ?? 0 });
+        return (
+          <>
+            {editing !== null && (
+              <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
+                <div className="modal" style={{ maxWidth: 400 }}>
+                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, marginBottom: 18 }}>{isNew ? "Nova Voz" : "Editar Voz"}</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div className="fr">
+                      <div style={{ flex: 2 }}><label>Nome *</label><input value={formData.name || ""} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
+                      <div><label>Gênero</label>
+                        <select value={formData.gender || "F"} onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
+                          <option value="F">Feminino</option><option value="M">Masculino</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="fr">
+                      <div><label>Nota mínima</label>
+                        <select value={formData.minNote || ""} onChange={(e) => setFormData({ ...formData, minNote: e.target.value })}>
+                          <option value="">—</option>{VOICE_NOTES.map((n) => <option key={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div><label>Nota máxima</label>
+                        <select value={formData.maxNote || ""} onChange={(e) => setFormData({ ...formData, maxNote: e.target.value })}>
+                          <option value="">—</option>{VOICE_NOTES.map((n) => <option key={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div><label>Ordem</label><input type="number" value={formData.sortOrder ?? 0} onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })} /></div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
+                    <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={() => {
+                      if (!formData.name?.trim()) { notify("Nome obrigatório."); return; }
+                      const row = { name: formData.name.trim(), gender: formData.gender || "F", min_note: formData.minNote || null, max_note: formData.maxNote || null, sort_order: formData.sortOrder ?? 0 };
+                      if (!isNew) row.id = editing.id;
+                      saveRow("voice_types", row, isNew, dbVoiceTypes, setDbVoiceTypes, mapVT);
+                    }}>{saving ? "Salvando…" : "Salvar"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {deleting && <ConfirmDelete label={deleting.label} count={deleting.ids.length} onCancel={() => setDeleting(null)} onConfirm={() => deleteRows("voice_types", deleting.ids, dbVoiceTypes, setDbVoiceTypes)} />}
+            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <table className="table">
+                <thead><tr><th>Nome</th><th style={{ width: 90 }}>Gênero</th><th style={{ width: 80 }}>Nota mín.</th><th style={{ width: 80 }}>Nota máx.</th><th style={{ width: 90 }}></th></tr></thead>
+                <tbody>
+                  {[{ label: "Femininas", gender: "F" }, { label: "Masculinas", gender: "M" }].flatMap(({ label, gender }) => {
+                    const rows = list.filter((v) => v.gender === gender);
+                    if (rows.length === 0) return [];
+                    return [
+                      <tr key={"hdr-" + gender} style={{ background: "var(--bg2)" }}>
+                        <td colSpan={5} style={{ padding: "6px 12px", fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".5px" }}>{label}</td>
+                      </tr>,
+                      ...rows.map((v) => (
+                        <tr key={v.id || v.name}>
+                          <td style={{ fontWeight: 500 }}>{v.name}</td>
+                          <td><span className={`badge ${v.gender === "F" ? "badge-blue" : "badge-green"}`}>{v.gender === "F" ? "Feminino" : "Masculino"}</span></td>
+                          <td style={{ fontSize: 12, fontFamily: "monospace" }}>{v.minNote || "—"}</td>
+                          <td style={{ fontSize: 12, fontFamily: "monospace" }}>{v.maxNote || "—"}</td>
+                          <td><div style={{ display: "flex", gap: 6 }}>
+                            <button className="btn btn-ghost btn-xs" onClick={() => openEdit(v, { name: v.name, gender: v.gender, minNote: v.minNote, maxNote: v.maxNote, sortOrder: v.sortOrder ?? 0 })}><Pencil size={12} /></button>
+                            {v.id && <button className="btn btn-danger btn-xs" onClick={() => setDeleting({ ids: [v.id], label: v.name })}><Trash2 size={12} /></button>}
+                          </div></td>
+                        </tr>
+                      )),
+                    ];
+                  })}
+                  {list.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhuma voz. Execute a migration 020.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", gender: "F", minNote: "", maxNote: "", sortOrder: (dbVoiceTypes || []).length })}><Plus size={14} /> Nova Voz</button>
+            </div>
+          </>
+        );
+      })()}
 
       {tab === "teams" && (() => {
         const list = (rosters || []).filter((r) =>

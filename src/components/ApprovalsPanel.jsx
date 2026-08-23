@@ -21,18 +21,79 @@ const historyTypeLabel = (a, t) =>
   : a.type === "cia_excedente" ? "📚 CIA — Excedente"
   : t.exempt;
 
+// Replacement-type approvals just need "Ciente" — exclude from bulk selection
+const isBulkable = (a) => a.type !== "replacement";
+
 export default function ApprovalsPanel({ approvals, resolveApproval, event, activeCount }) {
   const t = useT();
   const [note, setNote] = useState({});
   const [customDate, setCustomDate] = useState({});
+  const [selected, setSelected] = useState(new Set());
+  const [bulkNote, setBulkNote] = useState("");
+
   const pending = approvals.filter((a) => a.eventId === event?.id && a.status === "pending");
   const resolved = approvals.filter((a) => a.eventId === event?.id && a.status !== "pending");
+  const bulkable = pending.filter(isBulkable);
+
+  const toggleSelect = (id) =>
+    setSelected((p) => { const s = new Set(p); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  const allSelected = bulkable.length > 0 && bulkable.every((a) => selected.has(a.id));
+  const toggleAll = () =>
+    setSelected(allSelected ? new Set() : new Set(bulkable.map((a) => a.id)));
+
+  const handleBulk = (approve) => {
+    bulkable.filter((a) => selected.has(a.id)).forEach((a) =>
+      resolveApproval(a.id, approve, bulkNote, customDate[a.id] || null)
+    );
+    setSelected(new Set());
+    setBulkNote("");
+  };
+
   return (
     <div>
       <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700, marginBottom: 18, color: "var(--text)" }}>{t.approvals}</h2>
+
       {pending.length === 0 && (
         <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10, padding: "20px", textAlign: "center", color: "#166534", marginBottom: 14 }}>{t.noPending}</div>
       )}
+
+      {bulkable.length > 1 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, padding: "10px 14px", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 10 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", fontSize: 13, fontWeight: 600, userSelect: "none" }}>
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleAll}
+              style={{ width: "auto", accentColor: "#b41926", cursor: "pointer" }}
+            />
+            {allSelected ? "Desmarcar todos" : `Selecionar todos (${bulkable.length})`}
+          </label>
+          {selected.size > 0 && (
+            <span style={{ fontSize: 12, color: "var(--muted)" }}>{selected.size} selecionado{selected.size !== 1 ? "s" : ""}</span>
+          )}
+        </div>
+      )}
+
+      {selected.size > 0 && (
+        <div style={{ marginBottom: 14, padding: "12px 14px", background: "#fff", border: "2px solid #b41926", borderRadius: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+            Ação em massa — {selected.size} aprovação{selected.size !== 1 ? "ões" : ""}
+          </div>
+          <textarea
+            rows={1}
+            value={bulkNote}
+            onChange={(e) => setBulkNote(e.target.value)}
+            placeholder="Nota do pastor (opcional)..."
+            style={{ marginBottom: 8, fontSize: 12 }}
+          />
+          <div className="fr">
+            <button className="btn btn-ok" onClick={() => handleBulk(true)}>✓ Aprovar {selected.size} selecionado{selected.size !== 1 ? "s" : ""}</button>
+            <button className="btn btn-danger" onClick={() => handleBulk(false)}>✕ Negar {selected.size} selecionado{selected.size !== 1 ? "s" : ""}</button>
+          </div>
+        </div>
+      )}
+
       {pending.map((a) => {
         if (a.type === "replacement") {
           return (
@@ -54,10 +115,23 @@ export default function ApprovalsPanel({ approvals, resolveApproval, event, acti
             </div>
           );
         }
+        const isSelected = selected.has(a.id);
         return (
-          <div key={a.id} className={`apr-card ${a.type === "exemption" || a.type === "late_registration" || a.type === "reactivation" ? "danger" : ""}`}>
-            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>{typeLabel(a, t)}</span>
+          <div
+            key={a.id}
+            className={`apr-card ${a.type === "exemption" || a.type === "late_registration" || a.type === "reactivation" ? "danger" : ""}`}
+            style={isSelected ? { outline: "2px solid #b41926", outlineOffset: 1 } : {}}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6, marginBottom: 10, alignItems: "center" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggleSelect(a.id)}
+                  style={{ width: "auto", accentColor: "#b41926", cursor: "pointer" }}
+                />
+                <span style={{ fontWeight: 700, fontSize: 14 }}>{typeLabel(a, t)}</span>
+              </label>
               <span style={{ fontSize: 12, color: "#6b7280" }}>{t.requestedBy} {a.requestedBy}</span>
             </div>
             <div style={{ background: "#fff", borderRadius: 8, padding: "10px 14px", marginBottom: 10, fontSize: 13 }}>
@@ -91,6 +165,7 @@ export default function ApprovalsPanel({ approvals, resolveApproval, event, acti
           </div>
         );
       })}
+
       {resolved.length > 0 && (
         <div>
           <h4 style={{ fontWeight: 700, marginBottom: 10, color: "#6b7280", fontSize: 13, textTransform: "uppercase", letterSpacing: ".5px" }}>{t.history}</h4>

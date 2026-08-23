@@ -57,8 +57,10 @@ function PastorView(props) {
     return s && !s.overdue && s.remaining <= 3;
   });
   const cancelledNonpayment = allEventRegs.filter((r) => r.cancelled && (r.cancelReason === "nonpayment_auto" || r.cancelReason === "nonpayment_manual"));
+  const normalizeChurch = (c) => (!c || !c.trim() || c === "Sem Igreja") ? "Outra / Não Listada" : c;
+  const liveChurchOf = (r) => normalizeChurch((members || []).find((m) => m.id === r.memberId)?.church || r.church);
   const byCatOf = (rows) => CATEGORIES.map((c) => ({ c, n: rows.filter((r) => r.category === c).length })).filter((x) => x.n > 0);
-  const byChOf = (rows) => [...new Set(rows.map((r) => r.church))].map((ch) => ({ ch, total: rows.filter((r) => r.church === ch).length, paid: rows.filter((r) => r.church === ch && r.paid).length })).sort((a, b) => b.total - a.total);
+  const byChOf = (rows) => [...new Set(rows.map(liveChurchOf))].map((ch) => ({ ch, total: rows.filter((r) => liveChurchOf(r) === ch).length, paid: rows.filter((r) => liveChurchOf(r) === ch && r.paid).length })).sort((a, b) => b.total - a.total);
   const byCat = byCatOf(er);
   const byCh = byChOf(er);
 
@@ -299,7 +301,7 @@ function PastorView(props) {
             )}
             {sec === "regs" && <RegistrationsTab {...props} initialFilter={regsInitialFilter} />}
             {sec === "approvals" && <ApprovalsPanel approvals={approvals} resolveApproval={resolveApproval} event={event} activeCount={activeCount} />}
-            {sec === "reports" && <ReportsTab regs={regs} event={event} wlRegs={wlRegs} exRegs={exRegs} lang={lang} />}
+            {sec === "reports" && <ReportsTab regs={regs} event={event} wlRegs={wlRegs} exRegs={exRegs} lang={lang} members={props.members} gas={props.gas} />}
             {sec === "functions" && <MemberFunctionsView members={props.members} gas={props.gas} notify={props.notify} />}
           </div>
         </div>

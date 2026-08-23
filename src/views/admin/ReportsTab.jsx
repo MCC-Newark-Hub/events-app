@@ -5,13 +5,17 @@ import { fmt, ROLE_BADGE, CATEGORIES, deadlineStatus } from "@/constants";
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const byName = (a, b) => norm(a.memberName).localeCompare(norm(b.memberName));
 
-export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members }) {
+export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members, gas }) {
   const t = useT();
   const [type, setType] = useState("summary");
   const [repSearch, setRepSearch] = useState("");
   const [repCategory, setRepCategory] = useState("");
   const [repChurch, setRepChurch] = useState("");
   const [repDate, setRepDate] = useState("");
+  const [repGa, setRepGa] = useState("");
+  const [immChurch, setImmChurch] = useState("");
+  const [immGa, setImmGa] = useState("");
+  const [immDim, setImmDim] = useState("overview"); // "overview" | "church" | "ga"
   const [summaryDim, setSummaryDim] = useState("church"); // "church" | "category"
   const [expandedGroups, setExpandedGroups] = useState({});
   const toggleGroup = (key) => setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -30,6 +34,11 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members 
   });
   const cancelledNonpayment = all.filter((r) => r.cancelled && (r.cancelReason === "nonpayment_auto" || r.cancelReason === "nonpayment_manual"));
 
+  const gaNameOf = (r) => {
+    const gaId = (members || []).find((m) => m.id === r.memberId)?.gaId;
+    return gaId ? ((gas || []).find((g) => g.id === gaId)?.name || "") : "";
+  };
+
   const liveChurch = (r) => {
     const live = (members || []).find((m) => m.id === r.memberId)?.church || r.church;
     return (!live || live === "Sem Igreja") ? "Outra / Não Listada" : live;
@@ -40,11 +49,13 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members 
     return (!q || norm(r.memberName).includes(q)) &&
       (!repCategory || r.category === repCategory) &&
       (!repChurch || liveChurch(r) === repChurch) &&
+      (!repGa || gaNameOf(r) === repGa) &&
       (!repDate || r.registeredAt === repDate);
   });
   const reportFilterPool = [...er, ...(wl || [])];
   const reportCategories = [...new Set(reportFilterPool.map((r) => r.category).filter(Boolean))].sort();
   const reportChurches = [...new Set(reportFilterPool.map(liveChurch).filter(Boolean))].sort();
+  const reportGas = [...new Set(pend.map(gaNameOf).filter(Boolean))].sort();
   const reportDates = [...new Set(reportFilterPool.map((r) => r.registeredAt).filter(Boolean))].sort();
 
   const pendView = applyReportFilters(pend).sort(byName);
@@ -79,6 +90,219 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members 
   const otherDim = summaryDim === "church" ? "category" : "church";
   const summaryGroups = groupStats(er, summaryDim);
 
+  const printReport = () => {
+    const eventName = event?.name || "Evento";
+    const now = new Date().toLocaleDateString("pt-BR");
+    const filterInfo = [
+      repSearch && `Nome: "${repSearch}"`,
+      repCategory && `Categoria: ${repCategory}`,
+      repChurch && `Igreja: ${repChurch}`,
+      repGa && `Grupo: ${repGa}`,
+      repDate && `Data: ${repDate}`,
+    ].filter(Boolean).join(" · ");
+
+    const S = {
+      table: "border-collapse:collapse;width:100%;font-size:12px;",
+      th: "background:#8B0000;color:#fff;padding:7px 10px;text-align:left;font-weight:600;font-size:11px;white-space:nowrap;",
+      td: "padding:6px 10px;border-bottom:1px solid #e5e7eb;vertical-align:top;",
+      tdMuted: "padding:6px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:11px;",
+      tdBold: "padding:6px 10px;border-bottom:1px solid #e5e7eb;font-weight:600;",
+      foot: "padding:7px 10px;border-top:2px solid #e5e7eb;font-weight:700;background:#f3f4f6;",
+    };
+    const stripe = (i) => `style="${i % 2 === 0 ? "" : "background:#f9fafb;"}">`;
+
+    let title = "";
+    let body = "";
+
+    if (type === "summary") {
+      title = summaryDim === "church" ? "Resumo por Igreja" : "Resumo por Categoria";
+      const dimLabel = summaryDim === "church" ? "Igreja" : "Categoria";
+      const otherLabel = otherDim === "church" ? "Igreja" : "Categoria";
+      body = `
+        <table style="${S.table}">
+          <thead><tr>
+            <th style="${S.th}">${dimLabel}</th>
+            <th style="${S.th}">Total</th><th style="${S.th}">Pago</th>
+            <th style="${S.th}">Pendente</th><th style="${S.th}">Isento</th>
+            <th style="${S.th}">Arrecadado</th><th style="${S.th}">A receber</th>
+          </tr></thead>
+          <tbody>
+            ${summaryGroups.map((g, i) => {
+              const subs = groupStats(g.rows, otherDim);
+              return `
+                <tr ${stripe(i)}
+                  <td style="${S.tdBold}">${g.key}</td>
+                  <td style="${S.td}">${g.total}</td>
+                  <td style="${S.td};color:#2d8a4e;">${g.paid}</td>
+                  <td style="${S.td};color:#d4820a;">${g.pendN}</td>
+                  <td style="${S.td};color:#6b7280;">${g.exempt}</td>
+                  <td style="${S.td};color:#2d8a4e;">${fmt(g.coll)}</td>
+                  <td style="${S.td};color:#d4820a;">${fmt(g.pendA)}</td>
+                </tr>
+                ${subs.map(sg => `
+                  <tr style="background:#f5f5f5;">
+                    <td style="${S.td};padding-left:28px;font-size:11px;color:#374151;">↳ ${sg.key}</td>
+                    <td style="${S.tdMuted}">${sg.total}</td>
+                    <td style="${S.tdMuted};color:#2d8a4e;">${sg.paid}</td>
+                    <td style="${S.tdMuted};color:#d4820a;">${sg.pendN}</td>
+                    <td style="${S.tdMuted}">${sg.exempt}</td>
+                    <td style="${S.tdMuted};color:#2d8a4e;">${fmt(sg.coll)}</td>
+                    <td style="${S.tdMuted};color:#d4820a;">${fmt(sg.pendA)}</td>
+                  </tr>`).join("")}
+              `;
+            }).join("")}
+            <tr>
+              <td style="${S.foot}">Total</td>
+              <td style="${S.foot}">${er.length}</td>
+              <td style="${S.foot};color:#2d8a4e;">${er.filter(r=>r.paid).length}</td>
+              <td style="${S.foot};color:#d4820a;">${pend.length}</td>
+              <td style="${S.foot};color:#6b7280;">${er.filter(r=>r.exempt).length}</td>
+              <td style="${S.foot};color:#2d8a4e;">${fmt(er.filter(r=>r.paid).reduce((s,r)=>s+r.fee,0))}</td>
+              <td style="${S.foot};color:#d4820a;">${fmt(pend.reduce((s,r)=>s+r.fee,0))}</td>
+            </tr>
+          </tbody>
+        </table>`;
+    } else if (type === "pending") {
+      title = "Pagamentos Pendentes";
+      body = `
+        <table style="${S.table}">
+          <thead><tr>
+            <th style="${S.th}">Nome</th><th style="${S.th}">Categoria</th>
+            <th style="${S.th}">Igreja</th><th style="${S.th}">Grupo</th>
+            <th style="${S.th}">Taxa</th><th style="${S.th}">Data</th>
+          </tr></thead>
+          <tbody>
+            ${pendView.map((r, i) => `<tr ${stripe(i)}
+              <td style="${S.tdBold}">${r.memberName}</td>
+              <td style="${S.td}">${r.category}</td>
+              <td style="${S.tdMuted}">${liveChurch(r)}</td>
+              <td style="${S.tdMuted}">${gaNameOf(r) || "—"}</td>
+              <td style="${S.td};color:#d4820a;font-weight:600;">${fmt(r.fee)}</td>
+              <td style="${S.tdMuted}">${r.registeredAt}</td>
+            </tr>`).join("")}
+            <tr>
+              <td style="${S.foot}" colspan="4">Total (${pendView.length})</td>
+              <td style="${S.foot};color:#d4820a;">${fmt(pendView.reduce((s,r)=>s+r.fee,0))}</td>
+              <td style="${S.foot}"></td>
+            </tr>
+          </tbody>
+        </table>`;
+    } else if (type === "waitlist") {
+      title = "Lista de Espera";
+      body = `
+        <table style="${S.table}">
+          <thead><tr>
+            <th style="${S.th}">#</th><th style="${S.th}">Nome</th><th style="${S.th}">Categoria</th>
+            <th style="${S.th}">Igreja</th><th style="${S.th}">Taxa</th><th style="${S.th}">Data</th>
+          </tr></thead>
+          <tbody>
+            ${wlView.map((r, i) => `<tr ${stripe(i)}
+              <td style="${S.td};font-weight:700;color:#92400e;">#${r.wlPosition}</td>
+              <td style="${S.tdBold}">${r.memberName}</td>
+              <td style="${S.td}">${r.category}</td>
+              <td style="${S.tdMuted}">${liveChurch(r)}</td>
+              <td style="${S.td}">${fmt(r.fee)}</td>
+              <td style="${S.tdMuted}">${r.registeredAt}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>`;
+    } else if (type === "expiring") {
+      title = "Vencendo em até 3 dias";
+      body = `
+        <table style="${S.table}">
+          <thead><tr>
+            <th style="${S.th}">Nome</th><th style="${S.th}">Categoria</th>
+            <th style="${S.th}">Igreja</th><th style="${S.th}">Taxa</th><th style="${S.th}">Prazo</th>
+          </tr></thead>
+          <tbody>
+            ${expiringView.map((r, i) => {
+              const s = deadlineStatus(r, event, all);
+              return `<tr ${stripe(i)}
+                <td style="${S.tdBold}">${r.memberName}</td>
+                <td style="${S.td}">${r.category}</td>
+                <td style="${S.tdMuted}">${liveChurch(r)}</td>
+                <td style="${S.td};color:#d4820a;font-weight:600;">${fmt(r.fee)}</td>
+                <td style="${S.td};font-weight:600;color:${s?.urgent?"#c0392b":"#d4820a"};">${s?.label||""}</td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>`;
+    } else if (type === "cancelled_nonpayment") {
+      title = "Cancelados por Atraso";
+      body = `
+        <table style="${S.table}">
+          <thead><tr>
+            <th style="${S.th}">Nome</th><th style="${S.th}">Categoria</th>
+            <th style="${S.th}">Igreja</th><th style="${S.th}">Taxa</th>
+            <th style="${S.th}">Motivo</th><th style="${S.th}">Data</th>
+          </tr></thead>
+          <tbody>
+            ${cancelledNonpaymentView.map((r, i) => `<tr ${stripe(i)}
+              <td style="${S.tdBold}">${r.memberName}</td>
+              <td style="${S.td}">${r.category}</td>
+              <td style="${S.tdMuted}">${liveChurch(r)}</td>
+              <td style="${S.td}">${fmt(r.fee)}</td>
+              <td style="${S.tdMuted}">${r.cancelReason==="nonpayment_auto"?"Automático":"Manual"}</td>
+              <td style="${S.tdMuted}">${r.registeredAt}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>`;
+    } else if (type === "roster") {
+      title = "Roster Completo";
+      body = `
+        <table style="${S.table}">
+          <thead><tr>
+            <th style="${S.th}">Nº Inscrição</th><th style="${S.th}">Nome</th>
+            <th style="${S.th}">Crachá</th><th style="${S.th}">Cat.</th>
+            <th style="${S.th}">Igreja</th><th style="${S.th}">Equipe</th>
+            <th style="${S.th}">Status</th><th style="${S.th}">Presença</th>
+          </tr></thead>
+          <tbody>
+            ${erView.map((r, i) => `<tr ${stripe(i)}
+              <td style="${S.td};font-family:monospace;font-size:10px;">${r.regNumber}</td>
+              <td style="${S.tdBold}">${r.memberName}${r.excedente?" ⚡":""}</td>
+              <td style="${S.tdMuted}">${r.badgeName||r.memberName}</td>
+              <td style="${S.td}">${r.category}</td>
+              <td style="${S.tdMuted}">${liveChurch(r)}</td>
+              <td style="${S.td};font-size:11px;">${r.team||""}</td>
+              <td style="${S.td}">${r.exempt?"Isento":r.paid?"✓ Pago":"Pendente"}</td>
+              <td style="${S.td};font-size:16px;text-align:center;">☐</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>`;
+    } else {
+      window.print();
+      return;
+    }
+
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head>
+      <meta charset="utf-8">
+      <title>${title} — ${eventName}</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #111; padding: 20px 24px; }
+        .header { margin-bottom: 16px; border-bottom: 2px solid #8B0000; padding-bottom: 10px; }
+        .header h1 { font-size: 18px; font-weight: 700; color: #8B0000; }
+        .header p { font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .filters { font-size: 11px; color: #374151; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 10px; margin-bottom: 12px; display: inline-block; }
+        @media print { @page { margin: 12mm; size: A4 landscape; } body { padding: 0; } }
+      </style>
+    </head><body>
+      <div class="header">
+        <h1>📋 ${title}</h1>
+        <p>${eventName} · Gerado em ${now}</p>
+      </div>
+      ${filterInfo ? `<div class="filters">Filtros: ${filterInfo}</div>` : ""}
+      ${body}
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+  };
+
   return (
     <div>
       <div
@@ -90,7 +314,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members 
         }}
       >
         <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22 }}>{t.reports}</h2>
-        <button className="btn btn-ghost btn-sm" onClick={() => window.print()}>
+        <button className="btn btn-ghost btn-sm" onClick={printReport}>
           {t.print}
         </button>
       </div>
@@ -104,6 +328,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members 
           [t.rosterTab, "roster"],
           [t.badgesTab, "badges"],
           ["Check-in", "checkin"],
+          ["Imigração", "immigration"],
         ].map(([l, k]) => (
           <button
             key={k}
@@ -131,6 +356,12 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members 
             <option value="">Todas as igrejas</option>
             {reportChurches.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
+          {type === "pending" && (
+            <select value={repGa} onChange={(e) => setRepGa(e.target.value)}>
+              <option value="">Todos os grupos</option>
+              {reportGas.map((g) => <option key={g} value={g}>{g}</option>)}
+            </select>
+          )}
           <select value={repDate} onChange={(e) => setRepDate(e.target.value)}>
             <option value="">Todas as datas</option>
             {reportDates.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -232,19 +463,21 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members 
                   <th>{t.memberName}</th>
                   <th>{t.cat}</th>
                   <th>{t.churchH}</th>
+                  <th>Grupo</th>
                   <th>{t.feeH}</th>
                   <th>{t.date}</th>
                 </tr>
               </thead>
               <tbody>
-                {pendView.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "#6b7280", padding: 20 }}>{t.noRecords}</td></tr>}
+                {pendView.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "#6b7280", padding: 20 }}>{t.noRecords}</td></tr>}
                 {pendView.map((r) => (
                   <tr key={r.id}>
                     <td style={{ fontWeight: 600 }}>{r.memberName}</td>
                     <td>
                       <span className="badge badge-blue">{r.category}</span>
                     </td>
-                    <td style={{ fontSize: 12, color: "#6b7280" }}>{r.church}</td>
+                    <td style={{ fontSize: 12, color: "#6b7280" }}>{liveChurch(r)}</td>
+                    <td style={{ fontSize: 12, color: "#6b7280" }}>{gaNameOf(r) || "—"}</td>
                     <td style={{ color: "#d4820a", fontWeight: 600 }}>{fmt(r.fee)}</td>
                     <td style={{ fontSize: 12, color: "#6b7280" }}>{r.registeredAt}</td>
                   </tr>
@@ -563,6 +796,164 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members 
                 </div>
               )}
             </div>
+          </div>
+        );
+      })()}
+
+      {type === "immigration" && (() => {
+        const STATUSES = ["Cidadão", "Residente Permanente", "Com Visto", "Em Processo", "Sem Visto"];
+        const mems = members || [];
+        const total = mems.length;
+        const pct = (n) => total > 0 ? Math.round(n / total * 100) : 0;
+
+        const immChurches = [...new Set(mems.map((m) => m.church).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt"));
+        const immGas = (gas || []).filter((g) => mems.some((m) => m.gaId === g.id)).sort((a, b) => a.name.localeCompare(b.name, "pt"));
+
+        const filteredMems = mems.filter((m) =>
+          (!immChurch || m.church === immChurch) &&
+          (!immGa || m.gaId === immGa)
+        );
+        const filtTotal = filteredMems.length;
+        const filtPct = (n) => filtTotal > 0 ? Math.round(n / filtTotal * 100) : 0;
+
+        const statusRows = STATUSES.map((s) => ({ label: s, count: filteredMems.filter((m) => m.immigrationStatus === s).length }));
+        const notInformed = filteredMems.filter((m) => !m.immigrationStatus).length;
+
+        const churchBreakdown = immChurches.map((c) => {
+          const cms = mems.filter((m) => m.church === c && (!immGa || m.gaId === immGa));
+          return { church: c, total: cms.length, rows: STATUSES.map((s) => ({ label: s, count: cms.filter((m) => m.immigrationStatus === s).length })), notInformed: cms.filter((m) => !m.immigrationStatus).length };
+        }).filter((c) => c.total > 0);
+
+        const gaBreakdown = immGas.map((g) => {
+          const gms = mems.filter((m) => m.gaId === g.id && (!immChurch || m.church === immChurch));
+          return { name: g.name, church: g.church, total: gms.length, rows: STATUSES.map((s) => ({ label: s, count: gms.filter((m) => m.immigrationStatus === s).length })), notInformed: gms.filter((m) => !m.immigrationStatus).length };
+        }).filter((g) => g.total > 0);
+
+        const tdS = { padding: "6px 10px", borderBottom: "1px solid var(--border)", fontSize: 13 };
+        const thS = { padding: "6px 10px", fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".4px", textAlign: "left", borderBottom: "1px solid var(--border)" };
+
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Filters */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <select value={immChurch} onChange={(e) => setImmChurch(e.target.value)}>
+                <option value="">Todas as igrejas</option>
+                {immChurches.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select value={immGa} onChange={(e) => setImmGa(e.target.value)}>
+                <option value="">Todos os grupos</option>
+                {immGas.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+              <div style={{ display: "flex", gap: 4 }}>
+                {[["Visão geral", "overview"], ["Por Igreja", "church"], ["Por Grupo", "ga"]].map(([l, d]) => (
+                  <button key={d} className={`tab ${immDim === d ? "active" : ""}`} onClick={() => setImmDim(d)}>{l}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Overview */}
+            {immDim === "overview" && (
+              <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+                <div style={{ padding: "10px 14px", background: "var(--bg2)", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 700, fontSize: 14 }}>Situação Imigratória</span>
+                  <span className="badge badge-blue">{filtTotal} membros</span>
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr>
+                    <th style={thS}>Status</th>
+                    <th style={{ ...thS, textAlign: "right" }}>N</th>
+                    <th style={{ ...thS, textAlign: "right" }}>%</th>
+                    <th style={{ ...thS }}>Barra</th>
+                  </tr></thead>
+                  <tbody>
+                    {statusRows.map(({ label, count }) => (
+                      <tr key={label}>
+                        <td style={tdS}>{label}</td>
+                        <td style={{ ...tdS, textAlign: "right", fontWeight: 600 }}>{count}</td>
+                        <td style={{ ...tdS, textAlign: "right", color: "var(--muted)" }}>{filtPct(count)}%</td>
+                        <td style={{ ...tdS }}>
+                          <div style={{ height: 8, borderRadius: 4, background: "var(--border)", overflow: "hidden", minWidth: 80 }}>
+                            <div style={{ height: "100%", width: `${filtPct(count)}%`, background: "var(--icm-crimson)", borderRadius: 4 }} />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    <tr style={{ background: "var(--bg2)" }}>
+                      <td style={{ ...tdS, color: "var(--muted)", fontStyle: "italic" }}>Não informado</td>
+                      <td style={{ ...tdS, textAlign: "right", fontWeight: 600 }}>{notInformed}</td>
+                      <td style={{ ...tdS, textAlign: "right", color: "var(--muted)" }}>{filtPct(notInformed)}%</td>
+                      <td style={{ ...tdS }}>
+                        <div style={{ height: 8, borderRadius: 4, background: "var(--border)", overflow: "hidden", minWidth: 80 }}>
+                          <div style={{ height: "100%", width: `${filtPct(notInformed)}%`, background: "#d1d5db", borderRadius: 4 }} />
+                        </div>
+                      </td>
+                    </tr>
+                    <tr style={{ fontWeight: 700, background: "#f3f4f6" }}>
+                      <td style={tdS}>Total</td>
+                      <td style={{ ...tdS, textAlign: "right" }}>{filtTotal}</td>
+                      <td style={{ ...tdS, textAlign: "right" }}>100%</td>
+                      <td style={tdS} />
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* By church */}
+            {immDim === "church" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {churchBreakdown.map((c) => (
+                  <div key={c.church} className="card" style={{ padding: 0, overflow: "hidden" }}>
+                    <div style={{ padding: "8px 14px", background: "var(--bg2)", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontWeight: 700, fontSize: 13 }}>{c.church}</span>
+                      <span className="badge badge-blue">{c.total}</span>
+                    </div>
+                    <div style={{ padding: "6px 14px 8px", display: "flex", flexWrap: "wrap", gap: 10 }}>
+                      {c.rows.filter((r) => r.count > 0).map((r) => (
+                        <span key={r.label} style={{ fontSize: 12 }}>
+                          <span style={{ color: "var(--muted)" }}>{r.label}: </span>
+                          <strong>{r.count}</strong>
+                          <span style={{ color: "var(--muted)" }}> ({Math.round(r.count / c.total * 100)}%)</span>
+                        </span>
+                      ))}
+                      {c.notInformed > 0 && (
+                        <span style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>
+                          Não informado: <strong style={{ color: "var(--text)" }}>{c.notInformed}</strong> ({Math.round(c.notInformed / c.total * 100)}%)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* By GA */}
+            {immDim === "ga" && (
+              <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr>
+                    <th style={thS}>Grupo</th>
+                    <th style={thS}>Igreja</th>
+                    {STATUSES.map((s) => <th key={s} style={{ ...thS, textAlign: "right" }}>{s}</th>)}
+                    <th style={{ ...thS, textAlign: "right", fontStyle: "italic" }}>N/I</th>
+                    <th style={{ ...thS, textAlign: "right" }}>Total</th>
+                  </tr></thead>
+                  <tbody>
+                    {gaBreakdown.map((g) => (
+                      <tr key={g.name}>
+                        <td style={{ ...tdS, fontWeight: 600 }}>{g.name}</td>
+                        <td style={{ ...tdS, fontSize: 12, color: "var(--muted)" }}>{g.church}</td>
+                        {g.rows.map((r) => (
+                          <td key={r.label} style={{ ...tdS, textAlign: "right" }}>{r.count > 0 ? r.count : <span style={{ color: "var(--border)" }}>—</span>}</td>
+                        ))}
+                        <td style={{ ...tdS, textAlign: "right", color: "var(--muted)", fontStyle: "italic" }}>{g.notInformed > 0 ? g.notInformed : <span style={{ color: "var(--border)" }}>—</span>}</td>
+                        <td style={{ ...tdS, textAlign: "right", fontWeight: 600 }}>{g.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         );
       })()}

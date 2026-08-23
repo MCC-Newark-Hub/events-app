@@ -12,6 +12,7 @@ export const ROLE_OPTIONS = [
   "Instrumentista",
   "Instrumentista Aprendiz",
   "Operador de Som",
+  "Operador de Projeção",
   "Grupo de Intercessão",
   "Grupo de Oração",
   "Grupo de Limpeza",
@@ -20,6 +21,7 @@ export const ROLE_OPTIONS = [
   "Professor(a) de Crianças",
   "Professor(a) de Intermediários",
   "Professor(a) de Jovens",
+  "Professor(a) - Acessibilidade",
   "Secretário(a) de GA",
   "Secretário(a) de Igreja",
   "Responsável - Grupo de Louvor",
@@ -42,8 +44,10 @@ export const ROLE_GROUPS = [
   { group: "Obreiro", roles: ["Pastor", "Ungido", "Diácono", "Obreiro"] },
   {
     group: "Louvor",
-    roles: ["Grupo de Louvor", "Instrumentista", "Instrumentista Aprendiz", "Operador de Som"],
+    roles: ["Grupo de Louvor", "Instrumentista", "Instrumentista Aprendiz", "Operador de Som", "Operador de Projeção"],
   },
+  { group: "Louvor — Vocal", roles: ["Soprano", "Mezzo", "Contralto", "Tenor", "Barítono", "Baixo"] },
+  { group: "Louvor — Instrumento", roles: ["Violão", "Guitarra", "Baixo Elétrico", "Bateria", "Teclado", "Piano", "Flauta", "Saxofone", "Trompete", "Violino", "Percussão"] },
   { group: "Intercessão", roles: ["Grupo de Intercessão", "Grupo de Oração"] },
   { group: "Limpeza", roles: ["Grupo de Limpeza"] },
   {
@@ -54,6 +58,7 @@ export const ROLE_GROUPS = [
       "Professor(a) de Crianças",
       "Professor(a) de Intermediários",
       "Professor(a) de Jovens",
+      "Professor(a) - Acessibilidade",
     ],
   },
   { group: "Secretaria", roles: ["Secretário(a) de GA", "Secretário(a) de Igreja"] },
@@ -225,6 +230,30 @@ export const remainingDeadlineDays = (reg, event, allEventRegs = []) => {
 export const deadlineStatus = (reg, event, allEventRegs = []) => {
   const remaining = remainingDeadlineDays(reg, event, allEventRegs);
   return remaining === null ? null : statusFromRemaining(remaining);
+};
+
+// Natural notes E2–C6 in ascending order (covers all 6 standard voice ranges)
+export const VOICE_NOTES = [
+  "E2","F2","G2","A2","B2",
+  "C3","D3","E3","F3","G3","A3","B3",
+  "C4","D4","E4","F4","G4","A4","B4",
+  "C5","D5","E5","F5","G5","A5","B5",
+  "C6",
+];
+
+// Returns voice type names that overlap with the member's range
+export const classifyVoice = (lowestNote, highestNote, voiceTypes) => {
+  if (!lowestNote || !highestNote || !voiceTypes?.length) return [];
+  const low  = VOICE_NOTES.indexOf(lowestNote);
+  const high = VOICE_NOTES.indexOf(highestNote);
+  if (low < 0 || high < 0 || low > high) return [];
+  return voiceTypes
+    .filter((v) => {
+      const vMin = VOICE_NOTES.indexOf(v.minNote || v.min_note);
+      const vMax = VOICE_NOTES.indexOf(v.maxNote || v.max_note);
+      return vMin >= 0 && vMax >= 0 && low <= vMax && high >= vMin;
+    })
+    .map((v) => v.name);
 };
 
 export const ROLE_BADGE = {

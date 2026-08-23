@@ -162,7 +162,7 @@ function GALeaderView(props) {
 
           {showReports && (
             <div style={{ marginBottom: 20 }}>
-              <ReportsTab regs={myEventRegs} event={event} wlRegs={myWlRegsForReports} exRegs={myExRegsForReports} lang={lang} />
+              <ReportsTab regs={myEventRegs} event={event} wlRegs={myWlRegsForReports} exRegs={myExRegsForReports} lang={lang} members={allMyMembers} gas={myGAs} />
             </div>
           )}
 

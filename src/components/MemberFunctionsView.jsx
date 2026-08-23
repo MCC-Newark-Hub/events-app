@@ -7,10 +7,14 @@ const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,
 
 const FUNC_GROUPS = [
   { id: "intercessao", label: "Grupo de Intercessão",              roles: ["Grupo de Intercessão", "Grupo de Oração"] },
-  { id: "louvor",      label: "Grupo de Louvor e Instrumentistas", roles: ["Grupo de Louvor", "Instrumentista", "Instrumentista Aprendiz", "Operador de Som"] },
-  { id: "professoras", label: "Professoras",                       roles: ["Professor(a) de Crianças", "Professor(a) de Crianças 0-3", "Professor(a) de Intermediários", "Professor(a) de Adolescentes", "Professor(a) de Jovens", "Professor de Seminário"] },
+  { id: "louvor",      label: "Grupo de Louvor e Instrumentistas", roles: ["Grupo de Louvor", "Instrumentista", "Instrumentista Aprendiz"] },
+  { id: "som",         label: "Som & Projeção",                    roles: ["Operador de Som", "Operador de Projeção"] },
+  { id: "cias",        label: "Prof. de CIAs",                     roles: ["Professor(a) de Crianças", "Professor(a) de Crianças 0-3", "Professor(a) de Intermediários", "Professor(a) de Adolescentes", "Professor(a) - Acessibilidade"] },
+  { id: "jovens",      label: "Prof. de Jovens",                   roles: ["Professor(a) de Jovens"] },
+  { id: "seminario",   label: "Prof. de Seminário",                roles: ["Professor de Seminário"] },
   { id: "ga",          label: "Responsáveis de GA",                gaLeaders: true },
-  { id: "secretaria",  label: "Secretaria",                        roles: ["Secretário(a) de Igreja", "Secretário(a) de GA"] },
+  { id: "sec_igreja",  label: "Sec. de Igreja",                    roles: ["Secretário(a) de Igreja"] },
+  { id: "sec_ga",      label: "Sec. de GA",                        roles: ["Secretário(a) de GA"] },
   { id: "tesouraria",  label: "Tesouraria",                        roles: ["Primeiro Tesoureiro", "Segundo Tesoureiro", "Comissão de Contas"] },
   { id: "traducao",    label: "Tradutores",                        roles: ["Tradutor", "Intérprete de Libras"] },
 ];
