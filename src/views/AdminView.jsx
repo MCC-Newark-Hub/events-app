@@ -1,7 +1,7 @@
 import { useState, useRef, Fragment } from "react";
 import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X, ShieldCheck, IdCard, UtensilsCrossed, Star } from "lucide-react";
 import { useT } from "@/i18n/strings";
-import { CATEGORIES, TEAMS, ROLE_BADGE, ROLE_GROUPS, fmt, VOICE_NOTES, classifyVoice } from "@/constants";
+import { CATEGORIES, TEAMS, ROLE_BADGE, ROLE_GROUPS, fmt, classifyVoice, normalizeNote, isValidNote } from "@/constants";
 import { sb } from "@/lib/supabase";
 import { eventSubtitle } from "@/lib/registrationDeadline";
 import Topbar from "@/components/Topbar";
@@ -1588,15 +1588,21 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                           <div>
                             <label>Alcance de Voz</label>
                             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                              <select value={formData.voiceLowestNote || ""} onChange={(e) => setFormData({ ...formData, voiceLowestNote: e.target.value })} style={{ flex: 1, minWidth: 110 }}>
-                                <option value="">Nota mais baixa…</option>
-                                {VOICE_NOTES.map((n) => <option key={n}>{n}</option>)}
-                              </select>
+                              <input
+                                value={formData.voiceLowestNote || ""}
+                                onChange={(e) => setFormData({ ...formData, voiceLowestNote: normalizeNote(e.target.value) })}
+                                placeholder="Ex: E2"
+                                maxLength={3}
+                                style={{ flex: 1, minWidth: 80, fontFamily: "monospace", borderColor: formData.voiceLowestNote && !isValidNote(formData.voiceLowestNote) ? "#ef4444" : undefined }}
+                              />
                               <span style={{ color: "var(--muted)", fontSize: 14 }}>—</span>
-                              <select value={formData.voiceHighestNote || ""} onChange={(e) => setFormData({ ...formData, voiceHighestNote: e.target.value })} style={{ flex: 1, minWidth: 110 }}>
-                                <option value="">Nota mais alta…</option>
-                                {VOICE_NOTES.map((n) => <option key={n}>{n}</option>)}
-                              </select>
+                              <input
+                                value={formData.voiceHighestNote || ""}
+                                onChange={(e) => setFormData({ ...formData, voiceHighestNote: normalizeNote(e.target.value) })}
+                                placeholder="Ex: C5"
+                                maxLength={3}
+                                style={{ flex: 1, minWidth: 80, fontFamily: "monospace", borderColor: formData.voiceHighestNote && !isValidNote(formData.voiceHighestNote) ? "#ef4444" : undefined }}
+                              />
                             </div>
                             {(() => {
                               const classified = classifyVoice(formData.voiceLowestNote, formData.voiceHighestNote, dbVoiceTypes);
@@ -2105,14 +2111,22 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     </div>
                     <div className="fr">
                       <div><label>Nota mínima</label>
-                        <select value={formData.minNote || ""} onChange={(e) => setFormData({ ...formData, minNote: e.target.value })}>
-                          <option value="">—</option>{VOICE_NOTES.map((n) => <option key={n}>{n}</option>)}
-                        </select>
+                        <input
+                          value={formData.minNote || ""}
+                          onChange={(e) => setFormData({ ...formData, minNote: normalizeNote(e.target.value) })}
+                          placeholder="Ex: C3"
+                          maxLength={3}
+                          style={{ fontFamily: "monospace", borderColor: formData.minNote && !isValidNote(formData.minNote) ? "#ef4444" : undefined }}
+                        />
                       </div>
                       <div><label>Nota máxima</label>
-                        <select value={formData.maxNote || ""} onChange={(e) => setFormData({ ...formData, maxNote: e.target.value })}>
-                          <option value="">—</option>{VOICE_NOTES.map((n) => <option key={n}>{n}</option>)}
-                        </select>
+                        <input
+                          value={formData.maxNote || ""}
+                          onChange={(e) => setFormData({ ...formData, maxNote: normalizeNote(e.target.value) })}
+                          placeholder="Ex: A4"
+                          maxLength={3}
+                          style={{ fontFamily: "monospace", borderColor: formData.maxNote && !isValidNote(formData.maxNote) ? "#ef4444" : undefined }}
+                        />
                       </div>
                       <div><label>Ordem</label><input type="number" value={formData.sortOrder ?? 0} onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })} /></div>
                     </div>

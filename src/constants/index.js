@@ -232,29 +232,35 @@ export const deadlineStatus = (reg, event, allEventRegs = []) => {
   return remaining === null ? null : statusFromRemaining(remaining);
 };
 
-// Natural notes A0–C8 in ascending order
-export const VOICE_NOTES = [
-  "A0","B0",
-  "C1","D1","E1","F1","G1","A1","B1",
-  "C2","D2","E2","F2","G2","A2","B2",
-  "C3","D3","E3","F3","G3","A3","B3",
-  "C4","D4","E4","F4","G4","A4","B4",
-  "C5","D5","E5","F5","G5","A5","B5",
-  "C6","D6","E6","F6","G6","A6","B6",
-  "C7","D7","E7","F7","G7","A7","B7",
-  "C8",
-];
+// Semitone value of a note string like "C4", "F#3", "Bb2"
+// Returns -1 for invalid input so callers can guard on >= 0.
+const _NOTE_ST = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+export const noteToSemitones = (note) => {
+  const m = (note || "").match(/^([A-G])([#b]?)([0-8])$/);
+  if (!m) return -1;
+  return parseInt(m[3]) * 12 + _NOTE_ST[m[1]] + (m[2] === "#" ? 1 : m[2] === "b" ? -1 : 0);
+};
 
-// Returns voice type names that overlap with the member's range
+// Valid note: letter A-G (uppercase), optional # or b, octave digit 0-8
+export const NOTE_REGEX = /^[A-G][#b]?[0-8]$/;
+export const isValidNote = (s) => NOTE_REGEX.test(s || "");
+
+// Normalise raw typed input: uppercase first letter, strip illegal chars, cap at 3 chars
+export const normalizeNote = (raw) => {
+  const s = (raw || "").replace(/[^A-Ga-g#b0-8]/g, "").slice(0, 3);
+  return s ? s[0].toUpperCase() + s.slice(1) : "";
+};
+
+// Returns voice type names whose range overlaps with the member's [lowestNote, highestNote]
 export const classifyVoice = (lowestNote, highestNote, voiceTypes) => {
   if (!lowestNote || !highestNote || !voiceTypes?.length) return [];
-  const low  = VOICE_NOTES.indexOf(lowestNote);
-  const high = VOICE_NOTES.indexOf(highestNote);
+  const low  = noteToSemitones(lowestNote);
+  const high = noteToSemitones(highestNote);
   if (low < 0 || high < 0 || low > high) return [];
   return voiceTypes
     .filter((v) => {
-      const vMin = VOICE_NOTES.indexOf(v.minNote || v.min_note);
-      const vMax = VOICE_NOTES.indexOf(v.maxNote || v.max_note);
+      const vMin = noteToSemitones(v.minNote || v.min_note);
+      const vMax = noteToSemitones(v.maxNote || v.max_note);
       return vMin >= 0 && vMax >= 0 && low <= vMax && high >= vMin;
     })
     .map((v) => v.name);
