@@ -86,6 +86,15 @@ export default function RegistrationsTab(props) {
   const all = regs.filter((r) => r.eventId === event?.id);
   const active = all.filter((r) => !r.cancelled && !r.waitlisted);
   const isOverdue = (r) => !r.cancelled && !r.waitlisted && deadlineStatus(r, event, all)?.overdue;
+
+  // Chronological position among active registrations (used for over-capacity tracking)
+  const ORIG_CAPACITY = 200;
+  const activeByTime = [...active].sort((a, b) =>
+    new Date(a.registeredAtTs || a.registeredAt || 0) - new Date(b.registeredAtTs || b.registeredAt || 0)
+  );
+  const positionOf = Object.fromEntries(activeByTime.map((r, i) => [r.id, i + 1]));
+  const reg200 = activeByTime[ORIG_CAPACITY - 1] ?? null;
+  const overOriginal = activeByTime.slice(ORIG_CAPACITY);
   const preFiltered = all.filter((r) => {
     const q = norm(search);
     const ms =
@@ -175,6 +184,31 @@ export default function RegistrationsTab(props) {
           ))}
         </div>
       </div>
+      {/* Capacity history strip */}
+      {active.length > 0 && (
+        <div style={{ display: "flex", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+          {reg200 && (
+            <div style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, background: "#fef3c7", border: "1px solid #f59e0b", color: "#92400e" }}>
+              <strong>#{ORIG_CAPACITY}</strong>: {reg200.memberName}
+              {reg200.registeredAtTs && (
+                <span style={{ marginLeft: 6, opacity: .8 }}>
+                  — {new Date(reg200.registeredAtTs).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </span>
+              )}
+            </div>
+          )}
+          {overOriginal.length > 0 && (
+            <div style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, background: "#fce7f3", border: "1px solid #ec4899", color: "#9d174d" }}>
+              <strong>{overOriginal.length}</strong> além dos {ORIG_CAPACITY} originais
+            </div>
+          )}
+          {event?.registrations_locked && (
+            <div style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, background: "#f1f5f9", border: "1px solid var(--border)", color: "var(--muted)" }}>
+              Encerrado com <strong>{active.length}</strong> inscrição(ões) ativa(s)
+            </div>
+          )}
+        </div>
+      )}
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         <div className="table-wrap">
           <table className="table">
@@ -185,6 +219,7 @@ export default function RegistrationsTab(props) {
                     checked={filtered.length > 0 && filtered.every((r) => bulkSel.includes(r.id))}
                     onChange={(e) => setBulkSel(e.target.checked ? filtered.map((r) => r.id) : [])} />
                 </th>
+                <th style={{ width: 36, textAlign: "right", color: "var(--muted)", fontSize: 11 }}>#</th>
                 <th>{t.regNum}</th>
                 <Th k="memberName">{t.memberName}</Th>
                 <Th k="role">{t.cargo}</Th>
@@ -201,6 +236,19 @@ export default function RegistrationsTab(props) {
               {filtered.map((r) => (
                 <tr key={r.id} style={{ opacity: r.cancelled ? 0.5 : 1, background: bulkSel.includes(r.id) ? "var(--sidebar-active-bg)" : "" }}>
                   <td><input type="checkbox" checked={bulkSel.includes(r.id)} onChange={() => toggleBulk(r.id)} /></td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    {positionOf[r.id] != null && (
+                      <span style={{
+                        fontFamily: "monospace", fontSize: 11, fontWeight: 700,
+                        color: positionOf[r.id] > ORIG_CAPACITY ? "#9d174d" : "var(--muted)",
+                        background: positionOf[r.id] > ORIG_CAPACITY ? "#fce7f3" : "transparent",
+                        padding: positionOf[r.id] > ORIG_CAPACITY ? "1px 5px" : undefined,
+                        borderRadius: positionOf[r.id] > ORIG_CAPACITY ? 4 : undefined,
+                      }}>
+                        {positionOf[r.id]}
+                      </span>
+                    )}
+                  </td>
                   <td
                     style={{
                       fontFamily: "monospace",
