@@ -127,10 +127,14 @@ function TeamLeaderView(props) {
         member_ids: newRoster.memberIds, leader_id: null,
       }).select().single().then(({ data }) => {
         if (data) {
-          setRosters((prev) => prev.map((r) =>
-            r.eventId === newRoster.eventId && r.team === newRoster.team && !r.id
-              ? { ...r, id: data.id } : r
-          ));
+          setRosters((prev) => {
+            const cur = prev.find((r) => r.eventId === newRoster.eventId && r.team === newRoster.team && !r.id);
+            if (cur) sb.from("rosters").update({ member_ids: cur.memberIds }).eq("id", data.id);
+            return prev.map((r) =>
+              r.eventId === newRoster.eventId && r.team === newRoster.team && !r.id
+                ? { ...r, id: data.id } : r
+            );
+          });
           logAudit?.("roster_member_added", "roster", data.id, team, { memberId: mid, memberName: members.find((m) => m.id === mid)?.name });
         }
       });
@@ -144,9 +148,20 @@ function TeamLeaderView(props) {
     setRosters((prev) => prev.map((r) =>
       r.eventId === event?.id && r.team === team ? { ...r, memberIds: updatedIds } : r
     ));
+    const memberName = members.find((m) => m.id === mid)?.name;
     if (roster.id) {
-      sb.from("rosters").update({ member_ids: updatedIds }).eq("id", roster.id);
-      logAudit?.("roster_member_removed", "roster", roster.id, team, { memberId: mid, memberName: members.find((m) => m.id === mid)?.name });
+      sb.from("rosters").update({ member_ids: updatedIds }).eq("id", roster.id).select()
+        .then(({ data, error }) => {
+          if (error) { if (!silent) notify("Erro ao remover da equipe: " + error.message); return; }
+          if (!data?.length) { if (!silent) notify("Erro: escalação não encontrada ao remover membro."); return; }
+          logAudit?.("roster_member_removed", "roster", roster.id, team, { memberId: mid, memberName });
+        });
+    } else {
+      sb.from("rosters").update({ member_ids: updatedIds }).eq("event_id", event?.id).eq("team", team).select()
+        .then(({ data, error }) => {
+          if (error && !silent) notify("Erro ao remover da equipe: " + error.message);
+          else if (data?.[0]) logAudit?.("roster_member_removed", "roster", data[0].id, team, { memberId: mid, memberName });
+        });
     }
     if (!silent) notify("Removed.");
   };

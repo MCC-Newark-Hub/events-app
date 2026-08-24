@@ -63,10 +63,16 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
         member_ids: newRoster.memberIds, leader_id: null,
       }).select().single().then(({ data }) => {
         if (data) {
-          setRosters((p) => p.map((r) =>
-            r.eventId === newRoster.eventId && r.team === newRoster.team && !r.id
-              ? { ...r, id: data.id } : r
-          ));
+          // Sync current local memberIds back to DB to catch any removes that
+          // happened between the insert call and this response (race condition).
+          setRosters((p) => {
+            const cur = p.find((r) => r.eventId === newRoster.eventId && r.team === newRoster.team && !r.id);
+            if (cur) sb.from("rosters").update({ member_ids: cur.memberIds }).eq("id", data.id);
+            return p.map((r) =>
+              r.eventId === newRoster.eventId && r.team === newRoster.team && !r.id
+                ? { ...r, id: data.id } : r
+            );
+          });
         }
       });
     }
@@ -80,9 +86,21 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
     setRosters((prev) => prev.map((r) =>
       r.eventId === event?.id && r.team === team ? { ...r, memberIds: updatedIds } : r
     ));
+    const memberName = members.find((m) => m.id === mid)?.name;
     if (roster.id) {
-      sb.from("rosters").update({ member_ids: updatedIds }).eq("id", roster.id);
-      logAudit?.("roster_member_removed", "roster", roster.id, team, { memberId: mid, memberName: members.find((m) => m.id === mid)?.name });
+      sb.from("rosters").update({ member_ids: updatedIds }).eq("id", roster.id).select()
+        .then(({ data, error }) => {
+          if (error) { notify("Erro ao remover da equipe: " + error.message); return; }
+          if (!data?.length) notify("Erro: escalação não encontrada ao remover membro.");
+          else logAudit?.("roster_member_removed", "roster", roster.id, team, { memberId: mid, memberName });
+        });
+    } else {
+      // Roster has no ID yet (insert still in flight) — fall back to event+team lookup.
+      sb.from("rosters").update({ member_ids: updatedIds }).eq("event_id", event?.id).eq("team", team).select()
+        .then(({ data, error }) => {
+          if (error) notify("Erro ao remover da equipe: " + error.message);
+          else if (data?.[0]) logAudit?.("roster_member_removed", "roster", data[0].id, team, { memberId: mid, memberName });
+        });
     }
   };
 
