@@ -25,6 +25,60 @@ import { groupByFamily, familyIdOf } from "@/lib/family";
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const statusSortOf = (r) => r.cancelled ? "cancelado" : r.waitlisted ? "lista de espera" : r.excedente ? "excedente" : r.exempt ? "isento" : r.paid ? "pago" : "pendente";
 
+function PaymentStatusStrip({ paid, exempt, pend, total, wlPaid, wlExempt, wlPend, wlTotal, cancelled, lang }) {
+  const pt = lang !== "en";
+  const sumTotal = total + wlTotal;
+  const sep = <div style={{ width: 1, background: "var(--border)", alignSelf: "stretch" }} />;
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 20, flexWrap: "wrap", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 10, padding: "11px 16px", marginBottom: 12 }}>
+      <div>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em", display: "block", marginBottom: 4 }}>{pt ? "Inscritos" : "Registered"} ({total})</span>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+          <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 18, fontWeight: 800, color: "#2d8a4e" }}>{paid}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "pago" : "paid"}</span></span>
+          <span style={{ color: "var(--muted)" }}>\u00b7</span>
+          <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 18, fontWeight: 800, color: "#6b7280" }}>{exempt}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "isento" : "exempt"}</span></span>
+          <span style={{ color: "var(--muted)" }}>\u00b7</span>
+          <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 18, fontWeight: 800, color: "#d4820a" }}>{pend}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "pendente" : "pending"}</span></span>
+        </div>
+      </div>
+      {wlTotal > 0 && (
+        <>
+          {sep}
+          <div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em", display: "block", marginBottom: 4 }}>{pt ? "Espera" : "Waitlist"} ({wlTotal})</span>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+              <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 18, fontWeight: 800, color: "#2d8a4e" }}>{wlPaid}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "pago" : "paid"}</span></span>
+              {wlExempt > 0 && <><span style={{ color: "var(--muted)" }}>\u00b7</span><span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 18, fontWeight: 800, color: "#6b7280" }}>{wlExempt}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "isento" : "exempt"}</span></span></>}
+              <span style={{ color: "var(--muted)" }}>\u00b7</span>
+              <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 18, fontWeight: 800, color: "#d4820a" }}>{wlPend}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "pendente" : "pending"}</span></span>
+            </div>
+          </div>
+        </>
+      )}
+      {sep}
+      <div>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em", display: "block", marginBottom: 4 }}>Total</span>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+          <strong style={{ fontSize: 18, fontWeight: 800, color: "#1a3a6b" }}>{sumTotal}</strong>
+          <span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "interessados" : "interested"}</span>
+        </div>
+      </div>
+      {cancelled > 0 && (
+        <>
+          {sep}
+          <div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em", display: "block", marginBottom: 4 }}>{pt ? "Cancelados" : "Cancelled"}</span>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+              <strong style={{ fontSize: 18, fontWeight: 800, color: "#9ca3af" }}>{cancelled}</strong>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "cancelados" : "cancelled"}</span>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ClerkView(props) {
   const { event, regs, setRegs, members, setMembers, families, setFamilies, gas, setGas, churches, dbTeams, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify, logAudit } = props;
   const t = useT();
@@ -166,6 +220,18 @@ function ClerkView(props) {
                   </div>
                 ))}
               </div>
+              <PaymentStatusStrip
+                paid={allActive.filter((r) => r.paid && !r.exempt).length}
+                exempt={allActive.filter((r) => r.exempt).length}
+                pend={allActive.filter((r) => !r.paid && !r.exempt).length}
+                total={allActive.length}
+                wlPaid={myWlRegs.filter((r) => r.paid).length}
+                wlExempt={myWlRegs.filter((r) => r.exempt).length}
+                wlPend={myWlRegs.filter((r) => !r.paid && !r.exempt).length}
+                wlTotal={myWlRegs.length}
+                cancelled={regs.filter((r) => r.eventId === event?.id && r.cancelled && cityOf(r.church) === myCity).length}
+                lang={lang}
+              />
 
               {tab !== "approvals" && (
                 <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>

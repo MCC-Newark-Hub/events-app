@@ -11,17 +11,56 @@ import RegistrationsTab from "./admin/RegistrationsTab";
 import ReportsTab from "./admin/ReportsTab";
 import { eventSubtitle } from "@/lib/registrationDeadline";
 
-function PaymentStatusStrip({ paid, exempt, pend, total, lang }) {
+function PaymentStatusStrip({ paid, exempt, pend, total, wlPaid, wlExempt, wlPend, wlTotal, cancelled, lang }) {
   const pt = lang !== "en";
+  const sumTotal = total + wlTotal;
+  const sep = <div style={{ width: 1, background: "var(--border)", alignSelf: "stretch" }} />;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 10, padding: "11px 16px", marginBottom: 18 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em", marginRight: 6 }}>{pt ? "Por pagamento" : "By payment"}</span>
-      <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 20, fontWeight: 800, color: "#2d8a4e" }}>{paid}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "pagantes" : "paying"}</span></span>
-      <span style={{ color: "var(--muted)" }}>·</span>
-      <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 20, fontWeight: 800, color: "#6b7280" }}>{exempt}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "isentos" : "exempt"}</span></span>
-      <span style={{ color: "var(--muted)" }}>·</span>
-      <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 20, fontWeight: 800, color: "#d4820a" }}>{pend}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "pendentes" : "pending"}</span></span>
-      <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>= {total} total</span>
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 20, flexWrap: "wrap", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 10, padding: "11px 16px", marginBottom: 18 }}>
+      <div>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em", display: "block", marginBottom: 4 }}>{pt ? "Inscritos" : "Registered"} ({total})</span>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+          <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 18, fontWeight: 800, color: "#2d8a4e" }}>{paid}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "pago" : "paid"}</span></span>
+          <span style={{ color: "var(--muted)" }}>·</span>
+          <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 18, fontWeight: 800, color: "#6b7280" }}>{exempt}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "isento" : "exempt"}</span></span>
+          <span style={{ color: "var(--muted)" }}>·</span>
+          <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 18, fontWeight: 800, color: "#d4820a" }}>{pend}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "pendente" : "pending"}</span></span>
+        </div>
+      </div>
+      {wlTotal > 0 && (
+        <>
+          {sep}
+          <div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em", display: "block", marginBottom: 4 }}>{pt ? "Espera" : "Waitlist"} ({wlTotal})</span>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+              <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 18, fontWeight: 800, color: "#2d8a4e" }}>{wlPaid}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "pago" : "paid"}</span></span>
+              {wlExempt > 0 && <><span style={{ color: "var(--muted)" }}>·</span><span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 18, fontWeight: 800, color: "#6b7280" }}>{wlExempt}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "isento" : "exempt"}</span></span></>}
+              <span style={{ color: "var(--muted)" }}>·</span>
+              <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}><strong style={{ fontSize: 18, fontWeight: 800, color: "#d4820a" }}>{wlPend}</strong><span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "pendente" : "pending"}</span></span>
+            </div>
+          </div>
+        </>
+      )}
+      {sep}
+      <div>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em", display: "block", marginBottom: 4 }}>Total</span>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+          <strong style={{ fontSize: 18, fontWeight: 800, color: "#1a3a6b" }}>{sumTotal}</strong>
+          <span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "interessados" : "interested"}</span>
+        </div>
+      </div>
+      {cancelled > 0 && (
+        <>
+          {sep}
+          <div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em", display: "block", marginBottom: 4 }}>{pt ? "Cancelados" : "Cancelled"}</span>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+              <strong style={{ fontSize: 18, fontWeight: 800, color: "#9ca3af" }}>{cancelled}</strong>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>{pt ? "cancelados" : "cancelled"}</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -48,6 +87,10 @@ function PastorView(props) {
   const coll = paid.reduce((s, r) => s + r.fee, 0);
   const pendA = pend.reduce((s, r) => s + r.fee, 0);
   const pct = Math.round((coll / (coll + pendA)) * 100 || 0);
+  const wlPaidCount = (wlRegs || []).filter((r) => r.paid).length;
+  const wlExemptCount = (wlRegs || []).filter((r) => r.exempt).length;
+  const wlPendCount = (wlRegs || []).filter((r) => !r.paid && !r.exempt).length;
+  const cancelledCount = regs.filter((r) => r.eventId === event?.id && r.cancelled).length;
   const workers = er.filter((r) => r.team && r.team !== "Participante");
   // Includes cancelled rows too, unlike er — deadlineStatus needs a member's full
   // history to anchor the payment countdown to their earliest attempt.
@@ -166,7 +209,7 @@ function PastorView(props) {
                     </div>
                   ))}
                 </div>
-                <PaymentStatusStrip paid={paid.length} exempt={exempt.length} pend={pend.length} total={er.length} lang={lang} />
+                <PaymentStatusStrip paid={paid.length} exempt={exempt.length} pend={pend.length} total={er.length} wlPaid={wlPaidCount} wlExempt={wlExemptCount} wlPend={wlPendCount} wlTotal={(wlRegs || []).length} cancelled={cancelledCount} lang={lang} />
                 <div className="stat-grid-4" style={{ marginBottom: 18 }}>
                   {[
                     { label: lang === "en" ? "Near cancellation" : "Perto do cancelamento", value: nearCancellation.length, color: "#d4820a", detail: lang === "en" ? "Deadline within 3 days" : "Vencendo em até 3 dias" },

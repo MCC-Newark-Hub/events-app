@@ -15,7 +15,7 @@ function familyGas(family, members, gas) {
   return ids.map((id) => (gas || []).find((g) => g.id === id)).filter(Boolean);
 }
 
-export default function FamiliesPanel({ members, families, setFamilies, gas, showGroup, showChurch, notify }) {
+export default function FamiliesPanel({ members, families, setFamilies, gas, showGroup, showChurch, notify, logAudit }) {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("name");   // "name" | "group" | "church"
   const [groupBy, setGroupBy] = useState("none"); // "none" | "group" | "church"
@@ -43,12 +43,14 @@ export default function FamiliesPanel({ members, families, setFamilies, gas, sho
       const { data, error } = await sb.from("families").insert(row).select().single();
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setFamilies((prev) => [...prev, mapFamily(data)].sort((a, b) => (a.name || "").localeCompare(b.name || "", "pt", { sensitivity: "base" })));
+      logAudit?.("family_created", "family", data.id, row.name, null);
       notify("Criado!");
     } else {
       row.id = editing.id;
       const { error } = await sb.from("families").update(row).eq("id", row.id);
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setFamilies((prev) => prev.map((f) => f.id === row.id ? mapFamily({ ...f, ...row }) : f));
+      logAudit?.("family_updated", "family", row.id, row.name, null);
       notify("Atualizado!");
     }
     setSaving(false);
@@ -59,7 +61,9 @@ export default function FamiliesPanel({ members, families, setFamilies, gas, sho
   const deleteFamilies = async (ids) => {
     const { error } = await sb.from("families").delete().in("id", ids);
     if (error) { notify("Erro: " + error.message); setDeleting(null); return; }
+    const labels = ids.map((id) => (families || []).find((f) => f.id === id)?.name).filter(Boolean).join(", ");
     setFamilies((prev) => prev.filter((f) => !ids.includes(f.id)));
+    logAudit?.("family_deleted", "family", ids.join(","), labels, { count: ids.length });
     notify(`${ids.length} item(s) excluído(s).`);
     setDeleting(null);
     clearSel();

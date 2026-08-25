@@ -58,8 +58,16 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
   const reportGas = [...new Set(pend.map(gaNameOf).filter(Boolean))].sort();
   const reportDates = [...new Set(reportFilterPool.map((r) => r.registeredAt).filter(Boolean))].sort();
 
+  const wlWithPos = wl.map((r, i) => ({ ...r, wlPosition: i + 1 }));
+  const wlPend = wlWithPos.filter((r) => !r.paid && !r.exempt);
   const pendView = applyReportFilters(pend).sort(byName);
-  const wlView = applyReportFilters(wl.map((r, i) => ({ ...r, wlPosition: i + 1 }))).sort(byName);
+  const wlPendView = applyReportFilters(wlPend).sort((a, b) => a.wlPosition - b.wlPosition);
+  // Paid waitlisters shown first (priority), then remaining by queue position
+  const wlView = applyReportFilters(wlWithPos).sort((a, b) => {
+    if (a.paid && !b.paid) return -1;
+    if (!a.paid && b.paid) return 1;
+    return a.wlPosition - b.wlPosition;
+  });
   const erView = applyReportFilters(er).sort(byName);
   const expiringView = applyReportFilters(expiring).sort(byName);
   const cancelledNonpaymentView = applyReportFilters(cancelledNonpayment).sort(byName);
@@ -442,49 +450,98 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
       )}
 
       {type === "pending" && (
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          <div
-            style={{
-              padding: "11px 18px",
-              borderBottom: "1px solid var(--border)",
-              display: "flex",
-              justifyContent: "space-between",
-            }}
-          >
-            <span style={{ fontWeight: 700 }}>{t.pendPayTab}</span>
-            <span className="badge badge-yellow">
-              {pend.length} · {fmt(pend.reduce((s, r) => s + r.fee, 0))}
-            </span>
-          </div>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t.memberName}</th>
-                  <th>{t.cat}</th>
-                  <th>{t.churchH}</th>
-                  <th>Grupo</th>
-                  <th>{t.feeH}</th>
-                  <th>{t.date}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendView.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "#6b7280", padding: 20 }}>{t.noRecords}</td></tr>}
-                {pendView.map((r) => (
-                  <tr key={r.id}>
-                    <td style={{ fontWeight: 600 }}>{r.memberName}</td>
-                    <td>
-                      <span className="badge badge-blue">{r.category}</span>
-                    </td>
-                    <td style={{ fontSize: 12, color: "#6b7280" }}>{liveChurch(r)}</td>
-                    <td style={{ fontSize: 12, color: "#6b7280" }}>{gaNameOf(r) || "—"}</td>
-                    <td style={{ color: "#d4820a", fontWeight: 600 }}>{fmt(r.fee)}</td>
-                    <td style={{ fontSize: 12, color: "#6b7280" }}>{r.registeredAt}</td>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+            <div
+              style={{
+                padding: "11px 18px",
+                borderBottom: "1px solid var(--border)",
+                display: "flex",
+                justifyContent: "space-between",
+              }}
+            >
+              <span style={{ fontWeight: 700 }}>{t.pendPayTab} — Inscritos</span>
+              <span className="badge badge-yellow">
+                {pend.length} · {fmt(pend.reduce((s, r) => s + r.fee, 0))}
+              </span>
+            </div>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t.memberName}</th>
+                    <th>{t.cat}</th>
+                    <th>{t.churchH}</th>
+                    <th>Grupo</th>
+                    <th>{t.feeH}</th>
+                    <th>{t.date}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {pendView.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "#6b7280", padding: 20 }}>{t.noRecords}</td></tr>}
+                  {pendView.map((r) => (
+                    <tr key={r.id}>
+                      <td style={{ fontWeight: 600 }}>{r.memberName}</td>
+                      <td>
+                        <span className="badge badge-blue">{r.category}</span>
+                      </td>
+                      <td style={{ fontSize: 12, color: "#6b7280" }}>{liveChurch(r)}</td>
+                      <td style={{ fontSize: 12, color: "#6b7280" }}>{gaNameOf(r) || "—"}</td>
+                      <td style={{ color: "#d4820a", fontWeight: 600 }}>{fmt(r.fee)}</td>
+                      <td style={{ fontSize: 12, color: "#6b7280" }}>{r.registeredAt}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
+          {wlPendView.length > 0 && (
+            <div className="card" style={{ padding: 0, overflow: "hidden", borderColor: "#f59e0b" }}>
+              <div
+                style={{
+                  padding: "11px 18px",
+                  borderBottom: "1px solid #f59e0b",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  background: "#fef9f0",
+                }}
+              >
+                <span style={{ fontWeight: 700, color: "#92400e" }}>Lista de Espera — Pendente</span>
+                <span className="badge badge-yellow">
+                  {wlPendView.length} · {fmt(wlPendView.reduce((s, r) => s + r.fee, 0))}
+                </span>
+              </div>
+              <div style={{ padding: "6px 18px", background: "#fef9f0", fontSize: 12, color: "#92400e", fontStyle: "italic" }}>
+                Pode nunca pagar — não conta no total a receber.
+              </div>
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>{t.memberName}</th>
+                      <th>{t.cat}</th>
+                      <th>{t.churchH}</th>
+                      <th>{t.feeH}</th>
+                      <th>{t.date}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {wlPendView.map((r) => (
+                      <tr key={r.id}>
+                        <td style={{ fontWeight: 700, color: "#92400e" }}>#{r.wlPosition}</td>
+                        <td style={{ fontWeight: 600 }}>{r.memberName}</td>
+                        <td><span className="badge badge-blue">{r.category}</span></td>
+                        <td style={{ fontSize: 12, color: "#6b7280" }}>{liveChurch(r)}</td>
+                        <td style={{ color: "#d4820a", fontWeight: 600 }}>{fmt(r.fee)}</td>
+                        <td style={{ fontSize: 12, color: "#6b7280" }}>{r.registeredAt}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -499,8 +556,17 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
             }}
           >
             <span style={{ fontWeight: 700 }}>{t.waitlistTab}</span>
-            <span className="wl">{wl.length}</span>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span className="badge badge-green">{wl.filter((r) => r.paid).length} pago</span>
+              <span className="badge badge-yellow">{wl.filter((r) => !r.paid && !r.exempt).length} pendente</span>
+              <span className="wl">{wl.length}</span>
+            </div>
           </div>
+          {wl.length > 0 && (
+            <div style={{ padding: "6px 18px", fontSize: 12, color: "#6b7280", fontStyle: "italic", background: "var(--bg2)", borderBottom: "1px solid var(--border)" }}>
+              Quem pagou tem prioridade — aparece primeiro.
+            </div>
+          )}
           {wl.length === 0 ? (
             <p style={{ padding: 24, color: "#6b7280", textAlign: "center" }}>{t.emptyWaitlist}</p>
           ) : (
@@ -513,13 +579,14 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
                     <th>{t.cat}</th>
                     <th>{t.churchH}</th>
                     <th>{t.feeH}</th>
+                    <th>Status</th>
                     <th>{t.date}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {wlView.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "#6b7280", padding: 20 }}>{t.noRecords}</td></tr>}
+                  {wlView.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "#6b7280", padding: 20 }}>{t.noRecords}</td></tr>}
                   {wlView.map((r) => (
-                    <tr key={r.id}>
+                    <tr key={r.id} style={r.paid ? { background: "#f0fdf4" } : {}}>
                       <td style={{ fontWeight: 700, color: "#92400e" }}>#{r.wlPosition}</td>
                       <td style={{ fontWeight: 600 }}>{r.memberName}</td>
                       <td>
@@ -527,6 +594,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
                       </td>
                       <td style={{ fontSize: 12, color: "#6b7280" }}>{r.church}</td>
                       <td style={{ fontWeight: 600 }}>{fmt(r.fee)}</td>
+                      <td>{r.paid ? <span className="badge badge-green">Pago ✓</span> : <span className="badge badge-yellow">Pendente</span>}</td>
                       <td style={{ fontSize: 12, color: "#6b7280" }}>{r.registeredAt}</td>
                     </tr>
                   ))}

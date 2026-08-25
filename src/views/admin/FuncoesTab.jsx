@@ -24,7 +24,7 @@ const FUNC_GROUPS = [
   { id: "traducao",    label: "Tradutores",     roles: ["Tradutor", "Intérprete de Libras"] },
 ];
 
-export default function FuncoesTab({ members, setMembers, gas, notify, churchLock, filterMemberIds }) {
+export default function FuncoesTab({ members, setMembers, gas, notify, logAudit, churchLock, filterMemberIds }) {
   const [activeGroup, setActiveGroup] = useState("louvor");
   const [groupByChurch, setGroupByChurch] = useState(false);
   const [groupByClass, setGroupByClass] = useState(false);
@@ -100,6 +100,7 @@ export default function FuncoesTab({ members, setMembers, gas, notify, churchLoc
     const { error } = await sb.from("members").update({ roles: editingRoles }).eq("id", roleEditing.id).select();
     if (error) { notify("Erro: " + error.message); return; }
     setMembers((p) => p.map((m) => m.id === roleEditing.id ? { ...m, roles: editingRoles } : m));
+    logAudit?.("member_roles_updated", "member", roleEditing.id, roleEditing.name, { roles: editingRoles });
     notify("Funções atualizadas!");
     setRoleEditing(null);
   };
@@ -116,6 +117,7 @@ export default function FuncoesTab({ members, setMembers, gas, notify, churchLoc
     const { error } = await sb.from("members").update({ roles: newRoles }).eq("id", m.id).select();
     if (error) { notify("Erro: " + error.message); return; }
     setMembers((p) => p.map((x) => x.id === m.id ? { ...x, roles: newRoles } : x));
+    logAudit?.("member_role_added", "member", m.id, m.name, { role });
     notify(`${m.name} adicionado(a) como ${role}!`);
     setAddSearch("");
   };

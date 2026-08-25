@@ -105,6 +105,9 @@ function LoginScreen({ login, lang, setLang, event, activeCount, waitlistedCount
             {(() => {
               const spotsLeft = event?.capacity ? Math.max(0, event.capacity - activeCount) : 1;
               const full = event?.capacity && spotsLeft === 0;
+              const paused = !!event?.registration_paused;
+              const locked = !!event?.registrations_locked;
+              const isBlocked = paused || locked;
               const pt = lang !== "en";
               return (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -114,11 +117,18 @@ function LoginScreen({ login, lang, setLang, event, activeCount, waitlistedCount
                     onClick={onPublicRegister}
                   >
                     <ClipboardList size={18} />
-                    {full
+                    {(full || isBlocked)
                       ? (pt ? "Entrar na Lista de Espera" : "Join the Waitlist")
                       : t.myReg}
                   </button>
-                  {full && (
+                  {isBlocked && (
+                    <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,.75)", textAlign: "center", lineHeight: 1.5 }}>
+                      {pt
+                        ? "As inscrições estão encerradas. Você ainda pode entrar na lista de espera."
+                        : "Registrations are closed. You can still join the waitlist."}
+                    </p>
+                  )}
+                  {!isBlocked && full && (
                     <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,.75)", textAlign: "center", lineHeight: 1.5 }}>
                       {pt
                         ? "O evento está lotado, mas você ainda pode se inscrever. Sua vaga será garantida se houver cancelamentos ou aumento de capacidade."

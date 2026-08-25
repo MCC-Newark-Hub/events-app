@@ -354,6 +354,10 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
   const activeRegCount = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted).length;
   const eventIsFull = event?.capacity ? activeRegCount >= event.capacity : false;
   const registrationPaused = !!event?.registration_paused;
+  const registrationLocked = !!event?.registrations_locked;
+  const isBlocked = registrationPaused || registrationLocked;
+  // When blocked (paused or locked), treat as effectively full so the form uses waitlist mode
+  const effectivelyFull = eventIsFull || isBlocked;
 
   const allMembers = propMembers || [];
   const existingMemberIds = (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled && r.memberId !== "GUEST").map((r) => r.memberId);
@@ -519,6 +523,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
           needsTranslation: translations.en || translations.es,
           note: sharedNote,
           invitedByMemberId: invitedByMemberId || null,
+          forceWaitlist: isBlocked || undefined,
         });
         const result = optimisticReg.confirmed ? await optimisticReg.confirmed : { ok: true, reg: optimisticReg };
         if (result.ok) {
@@ -631,22 +636,45 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
         <div style={{ background: "#fff", borderRadius: 20, padding: "24px 20px" }}>
           {step === 0 && (
             <div>
-              {/* Paused notice — blocks all new registrations */}
-              {registrationPaused && (
-                <div style={{ background: "#fef3c7", border: "2px solid #f59e0b", borderRadius: 14, padding: "28px 18px", marginBottom: 24, textAlign: "center" }}>
-                  <div style={{ fontSize: 40, marginBottom: 10 }}>⏸</div>
-                  <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 700, color: "#78350f", marginBottom: 8 }}>
-                    {lang === "en" ? "Registrations Temporarily Paused" : "Inscrições Temporariamente Pausadas"}
-                  </h3>
-                  <p style={{ fontSize: 14, color: "#92400e", lineHeight: 1.6, margin: 0 }}>
+              {/* Closed/paused notice — shown when registrations are locked or paused */}
+              {isBlocked && (
+                <div style={{ background: "#fef3c7", border: "2px solid #f59e0b", borderRadius: 14, padding: "20px 18px", marginBottom: 24 }}>
+                  <div style={{ textAlign: "center", marginBottom: 14 }}>
+                    <div style={{ fontSize: 40, marginBottom: 8 }}>🔒</div>
+                    <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 700, color: "#78350f", marginBottom: 6 }}>
+                      {lang === "en" ? "Registrations Closed" : "Inscrições Encerradas"}
+                    </h3>
+                    <p style={{ fontSize: 13, color: "#92400e", lineHeight: 1.6, margin: 0 }}>
+                      {lang === "en"
+                        ? "Registrations are closed. You can still join the waitlist and will be notified if a spot opens up."
+                        : "As inscrições estão encerradas. Você ainda pode entrar na lista de espera e será avisado(a) caso uma vaga se abra."}
+                    </p>
+                  </div>
+                  <div style={{ background: "#fff", border: "1px solid #fcd34d", borderRadius: 10, padding: "12px 14px", marginBottom: 14, fontSize: 13, color: "#78350f", lineHeight: 1.6 }}>
                     {lang === "en"
-                      ? "Registrations are currently paused by the organizers. Please check back shortly."
-                      : "As inscrições estão temporariamente pausadas pela organização. Por favor, tente novamente em breve."}
-                  </p>
+                      ? <>You will be moved to the <strong>main list automatically</strong> if spots open up due to <strong>cancellations</strong> or an <strong>increase in capacity</strong>.</>
+                      : <>Você será transferido(a) para a <strong>lista principal automaticamente</strong> caso haja <strong>cancelamentos</strong> ou <strong>aumento de capacidade</strong>.</>}
+                  </div>
+                  <div className="cb" style={{ padding: "12px 14px", background: waitlistAcknowledged ? "#fef9c3" : "#fffbeb", border: `1.5px solid ${waitlistAcknowledged ? "#f59e0b" : "#fcd34d"}`, borderRadius: 10 }}>
+                    <input type="checkbox" id="waitlist-ack" checked={waitlistAcknowledged} onChange={(e) => setWaitlistAcknowledged(e.target.checked)} />
+                    <label htmlFor="waitlist-ack" style={{ fontSize: 14, fontWeight: 600, color: "#78350f", cursor: "pointer" }}>
+                      {lang === "en"
+                        ? "I understand I will be on the waiting list and I wish to continue."
+                        : "Entendo que estarei na lista de espera e desejo continuar."}
+                    </label>
+                  </div>
+                  <button
+                    className="btn btn-accent"
+                    style={{ width: "100%", marginTop: 12, padding: 14, fontSize: 16, opacity: waitlistAcknowledged ? 1 : 0.45 }}
+                    disabled={!waitlistAcknowledged}
+                    onClick={() => setStep(1)}
+                  >
+                    {lang === "en" ? "Join Waitlist →" : "Entrar na Lista de Espera →"}
+                  </button>
                 </div>
               )}
-              {/* Waitlist notice — shown FIRST when event is full */}
-              {!registrationPaused && eventIsFull && (
+              {/* Waitlist notice — shown FIRST when event is full but open */}
+              {!isBlocked && eventIsFull && (
                 <div style={{ background: "#fef3c7", border: "2px solid #f59e0b", borderRadius: 14, padding: "20px 18px", marginBottom: 24 }}>
                   <div style={{ textAlign: "center", marginBottom: 14 }}>
                     <div style={{ fontSize: 40, marginBottom: 8 }}>⏳</div>
@@ -675,7 +703,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
                 </div>
               )}
 
-              {!registrationPaused && (
+              {!isBlocked && (
                 <>
                   <div style={{ textAlign: "center", marginBottom: 24 }}>
                     <div style={{ fontSize: 48, marginBottom: 12 }}>💵</div>
@@ -720,11 +748,11 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
 
                   <button
                     className="btn btn-accent"
-                    style={{ width: "100%", padding: 14, fontSize: 16, opacity: (introAgreed && (!eventIsFull || waitlistAcknowledged)) ? 1 : 0.45 }}
-                    disabled={!introAgreed || (eventIsFull && !waitlistAcknowledged)}
+                    style={{ width: "100%", padding: 14, fontSize: 16, opacity: (introAgreed && (!effectivelyFull || waitlistAcknowledged)) ? 1 : 0.45 }}
+                    disabled={!introAgreed || (effectivelyFull && !waitlistAcknowledged)}
                     onClick={() => setStep(1)}
                   >
-                    {eventIsFull
+                    {effectivelyFull
                       ? (lang === "en" ? "Join Waitlist →" : "Entrar na Lista de Espera →")
                       : (lang === "en" ? "Proceed to Registration →" : "Prosseguir com a Inscrição →")}
                   </button>
@@ -1232,7 +1260,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
               </div>
               {termsError && <p style={{ color: "#c0392b", fontSize: 13, marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={13} /> {t.termsRequired}</p>}
 
-              {eventIsFull && (
+              {effectivelyFull && (
                 <div style={{ background: "#fef3c7", border: "1.5px solid #f59e0b", borderRadius: 10, padding: "14px 16px", marginBottom: 14 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#92400e", marginBottom: 6 }}>
                     ⏳ {lang === "en" ? "This event is at full capacity" : "Este evento está com capacidade esgotada"}
@@ -1248,8 +1276,8 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
               <div style={{ background: "var(--sidebar-active-bg,#fdf5f5)", borderRadius: 10, padding: "12px 14px", marginBottom: 14, fontSize: 13 }}>
                 <div style={{ fontWeight: 700, marginBottom: 6 }}>{lang === "en" ? "Registration Summary:" : "Resumo da Inscrição:"}</div>
                 <div>{primary?.name} {familyMembers.length > 0 && `+ ${familyMembers.length} ${t.familyMembers.toLowerCase()}`}</div>
-                {!eventIsFull && <div style={{ marginTop: 4 }}>{t.totalFee}: <strong>{totalFee === 0 ? t.free : fmt(totalFee)}</strong></div>}
-                <div style={{ marginTop: 4, color: "#6b7280" }}>{eventIsFull ? (lang === "en" ? "Waitlist — no payment until moved to main list." : "Lista de espera — pagamento somente após transferência para a lista principal.") : t.pendingPaymentNote}</div>
+                {!effectivelyFull && <div style={{ marginTop: 4 }}>{t.totalFee}: <strong>{totalFee === 0 ? t.free : fmt(totalFee)}</strong></div>}
+                <div style={{ marginTop: 4, color: "#6b7280" }}>{effectivelyFull ? (lang === "en" ? "Waitlist — no payment until moved to main list." : "Lista de espera — pagamento somente após transferência para a lista principal.") : t.pendingPaymentNote}</div>
               </div>
 
               {submitError && <p style={{ color: "#c0392b", fontSize: 13, marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={13} /> {submitError}</p>}
@@ -1257,7 +1285,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
               <div style={{ display: "flex", gap: 10 }}>
                 <button className="btn btn-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }} onClick={() => setStep(3)} disabled={submitting}><ArrowLeft size={14} /> {t.back}</button>
                 <button className="btn btn-accent" style={{ flex: 2, fontSize: 15 }} onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? (lang === "en" ? "Submitting…" : "Enviando…") : eventIsFull ? (lang === "en" ? "Join Waitlist →" : "Entrar na Lista de Espera →") : `${lang === "en" ? "Submit Registration" : "Confirmar Inscrição"} →`}
+                  {submitting ? (lang === "en" ? "Submitting…" : "Enviando…") : effectivelyFull ? (lang === "en" ? "Join Waitlist →" : "Entrar na Lista de Espera →") : `${lang === "en" ? "Submit Registration" : "Confirmar Inscrição"} →`}
                 </button>
               </div>
             </div>

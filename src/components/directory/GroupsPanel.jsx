@@ -16,7 +16,7 @@ function sortData(data, sk, sd) {
   });
 }
 
-export default function GroupsPanel({ members, setMembers, gas, setGas, churches, notify, defaultChurch, lockChurch }) {
+export default function GroupsPanel({ members, setMembers, gas, setGas, churches, notify, logAudit, defaultChurch, lockChurch }) {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({});
@@ -49,12 +49,14 @@ export default function GroupsPanel({ members, setMembers, gas, setGas, churches
       const { data, error } = await sb.from("assistance_groups").insert(row).select().single();
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setGas((prev) => [...prev, mapGA(data)]);
+      logAudit?.("ga_created", "assistance_group", data.id, row.name, null);
       notify("Criado!");
     } else {
       row.id = editing.id;
       const { error } = await sb.from("assistance_groups").update(row).eq("id", row.id);
       if (error) { notify("Erro: " + error.message); setSaving(false); return; }
       setGas((prev) => prev.map((g) => g.id === row.id ? mapGA({ ...g, ...row }) : g));
+      logAudit?.("ga_updated", "assistance_group", row.id, row.name, null);
       notify("Atualizado!");
     }
     setSaving(false);
@@ -65,7 +67,9 @@ export default function GroupsPanel({ members, setMembers, gas, setGas, churches
   const deleteGroups = async (ids) => {
     const { error } = await sb.from("assistance_groups").delete().in("id", ids);
     if (error) { notify("Erro: " + error.message); setDeleting(null); return; }
+    const labels = ids.map((id) => (gas || []).find((g) => g.id === id)?.name).filter(Boolean).join(", ");
     setGas((prev) => prev.filter((g) => !ids.includes(g.id)));
+    logAudit?.("ga_deleted", "assistance_group", ids.join(","), labels, { count: ids.length });
     notify(`${ids.length} item(s) excluído(s).`);
     setDeleting(null);
     clearSel();
@@ -150,7 +154,9 @@ export default function GroupsPanel({ members, setMembers, gas, setGas, churches
                     if (!memberId) return;
                     const { error } = await sb.from("members").update({ ga_id: managingGA.id }).eq("id", memberId);
                     if (error) { notify("Erro: " + error.message); return; }
+                    const mName = (members || []).find((m) => m.id === memberId)?.name;
                     setMembers((prev) => prev.map((m) => m.id === memberId ? { ...m, gaId: managingGA.id } : m));
+                    logAudit?.("member_ga_assigned", "member", memberId, mName, { ga: managingGA.name });
                   }}
                   items={unassigned}
                   getLabel={(m) => m.name}
@@ -171,6 +177,7 @@ export default function GroupsPanel({ members, setMembers, gas, setGas, churches
                       const { error } = await sb.from("members").update({ ga_id: null }).eq("id", m.id);
                       if (error) { notify("Erro: " + error.message); return; }
                       setMembers((prev) => prev.map((x) => x.id === m.id ? { ...x, gaId: null } : x));
+                      logAudit?.("member_ga_removed", "member", m.id, m.name, { ga: managingGA.name });
                     }}>✕</button>
                   </div>
                 ))}

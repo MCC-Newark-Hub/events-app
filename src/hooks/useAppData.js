@@ -380,7 +380,7 @@ export function useAppData({ getUserRef, notify }) {
     // but unlike role/manual exemption, they still count against event capacity.
     var isExempt = isRoleExempt || fee === 0 || data.exempt || false;
     var bypassesCapacity = isRoleExempt || data.exempt || false;
-    var isWaitlisted = !forceExcedente && isFull && !bypassesCapacity;
+    var isWaitlisted = !forceExcedente && (isFull || !!data.forceWaitlist) && !bypassesCapacity;
     var today = new Date().toISOString().slice(0, 10);
     var byName = getUser() ? getUser().name : "Sistema";
     var timeline = [

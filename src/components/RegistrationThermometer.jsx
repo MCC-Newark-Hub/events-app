@@ -17,6 +17,7 @@ export default function RegistrationThermometer({ event, activeCount, waitlisted
   const color = { green: "#2d8a4e", yellow: "#eab308", orange: "#d4820a", red: "#c0392b" }[stage];
 
   const pt = lang !== "en";
+  const isBlocked = !!event?.registration_paused || !!event?.registrations_locked;
 
   return (
     <div style={{ marginTop: 10 }}>
@@ -32,7 +33,7 @@ export default function RegistrationThermometer({ event, activeCount, waitlisted
             </span>
           )}
         </span>
-        {isFull ? (
+        {isBlocked ? null : isFull ? (
           <span style={{ fontWeight: 700, color: "#c0392b" }}>
             ⚠ {pt ? "Não há mais vagas disponíveis" : "No spots available"}
           </span>
