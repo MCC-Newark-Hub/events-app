@@ -140,6 +140,7 @@ export default function App() {
             regNumber={checkinParam}
             regs={appData.regs}
             updatePresence={appData.updatePresence}
+            event={appData.event}
             lang={lang}
             setLang={setLang}
           />

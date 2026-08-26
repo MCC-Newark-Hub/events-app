@@ -31,6 +31,7 @@ export default function RegistrationsTab(props) {
     replaceReg,
     promoteFromWaitlist,
     sendToWaitlist,
+    updatePresence,
     event,
     user,
     isFull,
@@ -229,6 +230,7 @@ export default function RegistrationsTab(props) {
                 <Th k="fee">{t.feeH}</Th>
                 <Th k="registeredAtTs">{t.regDate}</Th>
                 <Th k="statusSort">{t.statusH}</Th>
+                <th>Presença</th>
                 <th></th>
               </tr>
             </thead>
@@ -288,6 +290,18 @@ export default function RegistrationsTab(props) {
                   </td>
                   <td>
                     <StatusBadge r={r} event={event} allRegs={all} />
+                  </td>
+                  <td>
+                    <select
+                      value={r.presence || 'unknown'}
+                      onChange={(e) => updatePresence && updatePresence(r.id, e.target.value, 'manual')}
+                      style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--border)", background: r.presence === 'present' ? '#d1fae5' : r.presence === 'absent' ? '#fee2e2' : r.presence === 'walk_in' ? '#dbeafe' : '#f3f4f6', color: r.presence === 'present' ? '#065f46' : r.presence === 'absent' ? '#991b1b' : r.presence === 'walk_in' ? '#1e3a8a' : '#374151' }}
+                    >
+                      <option value="unknown">🔲 Desconhecida</option>
+                      <option value="present">✅ Presente</option>
+                      <option value="absent">❌ Ausente</option>
+                      <option value="walk_in">🚶 Walk-in</option>
+                    </select>
                   </td>
                   <td>
                     {r.waitlisted && (

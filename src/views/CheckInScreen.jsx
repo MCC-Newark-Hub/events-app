@@ -2,17 +2,21 @@ import { useState, useEffect } from 'react';
 import ICMLogo from '@/components/ICMLogo';
 import { useT } from '@/i18n/strings';
 
-export default function CheckInScreen({ regNumber, regs, updatePresence, lang, setLang }) {
+export default function CheckInScreen({ regNumber, regs, updatePresence, event, lang, setLang }) {
   const t = useT();
-  const [status, setStatus] = useState('loading'); // loading | found | already | done | notfound
+  const [status, setStatus] = useState('loading'); // loading | found | already | done | notfound | locked
   const [reg, setReg] = useState(null);
 
   useEffect(() => {
+    if (event?.date) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (today < event.date) { setStatus('locked'); return; }
+    }
     const found = regs.find((r) => r.regNumber === regNumber);
     if (!found) { setStatus('notfound'); return; }
     setReg(found);
     setStatus(found.presence === 'present' ? 'already' : 'found');
-  }, [regs, regNumber]);
+  }, [regs, regNumber, event]);
 
   const confirm = async () => {
     setStatus('loading');
@@ -45,6 +49,20 @@ export default function CheckInScreen({ regNumber, regs, updatePresence, lang, s
 
         {status === 'loading' && (
           <p style={{ color: '#6b7280', fontSize: 15 }}>{t.checkinLoading}</p>
+        )}
+
+        {status === 'locked' && (
+          <>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+            <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, marginBottom: 8 }}>
+              {lang === 'en' ? 'Check-in not open yet' : 'Check-in ainda não disponível'}
+            </h2>
+            <p style={{ color: '#6b7280', fontSize: 13, lineHeight: 1.6 }}>
+              {lang === 'en'
+                ? <>Check-in opens on <strong>{event?.date}</strong>.</>
+                : <>O check-in abre no dia <strong>{event?.date}</strong>.</>}
+            </p>
+          </>
         )}
 
         {status === 'notfound' && (
