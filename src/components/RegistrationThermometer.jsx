@@ -25,17 +25,19 @@ export default function RegistrationThermometer({ event, activeCount, waitlisted
         <div style={{ width: `${pct}%`, height: "100%", borderRadius: 99, background: color, transition: "width .5s, background .5s" }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, fontSize: 12, color: "#6b7280" }}>
-        <span>
-          {base}/{event.capacity} {pt ? "inscritos" : "registered"}
-          {capacityExpanded && (
-            <span style={{ marginLeft: 6, fontSize: 11, color: "#2d8a4e", fontWeight: 600 }}>
-              ({pt ? "capacidade aumentada" : "capacity expanded"})
-            </span>
-          )}
-        </span>
+        {isFull ? null : (
+          <span>
+            {base}/{event.capacity} {pt ? "inscritos" : "registered"}
+            {capacityExpanded && (
+              <span style={{ marginLeft: 6, fontSize: 11, color: "#2d8a4e", fontWeight: 600 }}>
+                ({pt ? "capacidade aumentada" : "capacity expanded"})
+              </span>
+            )}
+          </span>
+        )}
         {isBlocked ? null : isFull ? (
-          <span style={{ fontWeight: 700, color: "#c0392b" }}>
-            ⚠ {pt ? "Não há mais vagas disponíveis" : "No spots available"}
+          <span style={{ fontWeight: 700, color: "#c0392b", width: "100%", textAlign: "center" }}>
+            ⚠ {pt ? "Evento lotado" : "Event is full"}
           </span>
         ) : stage === "orange" || stage === "red" ? (
           <span style={{ fontWeight: 700, color }}>
