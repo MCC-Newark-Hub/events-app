@@ -1874,10 +1874,33 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                 )}
               </BulkBar>
             )}
+            <div style={{ display: "flex", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ firstName: "", lastName: "", name: "", badgeName: "", gender: "M", category: "Adulto", church: "", roles: [], role: "", familyId: "", gaId: "", allergies: "", specialNeeds: "", notes: "", isGuest: false, invitedBy: "", translationLanguages: [], voiceType: "", voiceLowestNote: "", voiceHighestNote: "", instruments: [], immigrationStatus: "" })}><Plus size={14} /> Novo Membro</button>
+              <button className="btn btn-ghost btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => {
+                const cols = ["Nome", "Nome Crachá", "Gênero", "Categoria", "Cargo(s)", "Igreja", "Grupo", "Família", "Notas"];
+                const esc = (v) => `"${String(v || "").replace(/"/g, '""')}"`;
+                const rows = list.map((m) => [
+                  m.name, m.badgeName || "", m.gender || "", m.category || "",
+                  (m.roles?.length ? m.roles : m.role ? [m.role] : []).join("; "),
+                  m.church || "", m.gaName || "", m.familyName || "", m.notes || "",
+                ].map(esc).join(","));
+                const csv = [cols.map(esc).join(","), ...rows].join("\n");
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" }));
+                a.download = `membros_${new Date().toISOString().slice(0,10)}.csv`;
+                a.click();
+              }}><Download size={13} /> Exportar CSV ({list.length})</button>
+              {(members || []).length > 0 && (
+                <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  onClick={() => setDeleting({ ids: (members || []).map((m) => m.id).filter(Boolean), label: "" })}>
+                  <Trash2 size={13} /> Excluir TODOS ({(members || []).length})
+                </button>
+              )}
+            </div>
             <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-              <div style={{ overflowX: "auto" }}>
+              <div style={{ overflow: "auto", maxHeight: "calc(100vh - 320px)" }}>
                 <table className="table" style={{ minWidth: 640 }}>
-                  <thead>
+                  <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}>
                     <tr>
                       <th style={{ width: 36 }}>
                         <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
@@ -1907,29 +1930,6 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                   </tbody>
                 </table>
               </div>
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ firstName: "", lastName: "", name: "", badgeName: "", gender: "M", category: "Adulto", church: "", roles: [], role: "", familyId: "", gaId: "", allergies: "", specialNeeds: "", notes: "", isGuest: false, invitedBy: "", translationLanguages: [], voiceType: "", voiceLowestNote: "", voiceHighestNote: "", instruments: [], immigrationStatus: "" })}><Plus size={14} /> Novo Membro</button>
-              <button className="btn btn-ghost btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => {
-                const cols = ["Nome", "Nome Crachá", "Gênero", "Categoria", "Cargo(s)", "Igreja", "Grupo", "Família", "Notas"];
-                const esc = (v) => `"${String(v || "").replace(/"/g, '""')}"`;
-                const rows = list.map((m) => [
-                  m.name, m.badgeName || "", m.gender || "", m.category || "",
-                  (m.roles?.length ? m.roles : m.role ? [m.role] : []).join("; "),
-                  m.church || "", m.gaName || "", m.familyName || "", m.notes || "",
-                ].map(esc).join(","));
-                const csv = [cols.map(esc).join(","), ...rows].join("\n");
-                const a = document.createElement("a");
-                a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" }));
-                a.download = `membros_${new Date().toISOString().slice(0,10)}.csv`;
-                a.click();
-              }}><Download size={13} /> Exportar CSV ({list.length})</button>
-              {(members || []).length > 0 && (
-                <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
-                  onClick={() => setDeleting({ ids: (members || []).map((m) => m.id).filter(Boolean), label: "" })}>
-                  <Trash2 size={13} /> Excluir TODOS ({(members || []).length})
-                </button>
-              )}
             </div>
           </>
         );
