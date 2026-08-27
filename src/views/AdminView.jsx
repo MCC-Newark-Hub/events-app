@@ -1,5 +1,5 @@
 import { useState, useRef, Fragment } from "react";
-import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X, ShieldCheck, IdCard, UtensilsCrossed, Star } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X, ShieldCheck, IdCard, UtensilsCrossed, Star, Download } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, TEAMS, ROLE_BADGE, ROLE_GROUPS, fmt, classifyVoice, normalizeNote, isValidNote } from "@/constants";
 import { sb } from "@/lib/supabase";
@@ -1908,8 +1908,22 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                 </table>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
               <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ firstName: "", lastName: "", name: "", badgeName: "", gender: "M", category: "Adulto", church: "", roles: [], role: "", familyId: "", gaId: "", allergies: "", specialNeeds: "", notes: "", isGuest: false, invitedBy: "", translationLanguages: [], voiceType: "", voiceLowestNote: "", voiceHighestNote: "", instruments: [], immigrationStatus: "" })}><Plus size={14} /> Novo Membro</button>
+              <button className="btn btn-ghost btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => {
+                const cols = ["Nome", "Nome Crachá", "Gênero", "Categoria", "Cargo(s)", "Igreja", "Grupo", "Família", "Notas"];
+                const esc = (v) => `"${String(v || "").replace(/"/g, '""')}"`;
+                const rows = list.map((m) => [
+                  m.name, m.badgeName || "", m.gender || "", m.category || "",
+                  (m.roles?.length ? m.roles : m.role ? [m.role] : []).join("; "),
+                  m.church || "", m.gaName || "", m.familyName || "", m.notes || "",
+                ].map(esc).join(","));
+                const csv = [cols.map(esc).join(","), ...rows].join("\n");
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" }));
+                a.download = `membros_${new Date().toISOString().slice(0,10)}.csv`;
+                a.click();
+              }}><Download size={13} /> Exportar CSV ({list.length})</button>
               {(members || []).length > 0 && (
                 <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
                   onClick={() => setDeleting({ ids: (members || []).map((m) => m.id).filter(Boolean), label: "" })}>
