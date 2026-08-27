@@ -1429,9 +1429,19 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                 Agrupar por Estado
               </button>
             </div>
+            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ display: "", city: "", stateCode: "", stateName: "", countryCode: "EUA", country: "", address: "", churchName: "", pastorId: null, isHub: false, churchType: "Igreja", propertyOwnership: "" })}><Plus size={14} /> Nova Igreja</button>
+              {(churches || []).filter((c) => c.id).length > 0 && (
+                <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  onClick={() => setDeleting({ ids: (churches || []).map((c) => c.id).filter(Boolean), label: "" })}>
+                  <Trash2 size={13} /> Excluir TODAS ({(churches || []).filter((c) => c.id).length})
+                </button>
+              )}
+            </div>
             <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <div style={{ overflow: "auto", maxHeight: "calc(100vh - 320px)" }}>
               <table className="table">
-                <thead>
+                <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}>
                   <tr>
                     <th style={{ width: 36 }}>
                       <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
@@ -1483,15 +1493,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                   })()}
                 </tbody>
               </table>
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ display: "", city: "", stateCode: "", stateName: "", countryCode: "EUA", country: "", address: "", churchName: "", pastorId: null, isHub: false, churchType: "Igreja", propertyOwnership: "" })}><Plus size={14} /> Nova Igreja</button>
-              {(churches || []).filter((c) => c.id).length > 0 && (
-                <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
-                  onClick={() => setDeleting({ ids: (churches || []).map((c) => c.id).filter(Boolean), label: "" })}>
-                  <Trash2 size={13} /> Excluir TODAS ({(churches || []).filter((c) => c.id).length})
-                </button>
-              )}
+              </div>
             </div>
           </>
         );
@@ -2034,10 +2036,16 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                 onSelectAll={() => selAll(allIds)} onClearAll={clearSel}
                 onDeleteSelected={() => setDeleting({ ids: selected, label: "" })} />
             )}
+            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }}
+                onClick={() => openNew({ name: "", sortOrder: (dbTeams || []).length, isService: true, description: "", leaderId: null, responsibilities: "" })}>
+                <Plus size={14} /> Nova Equipe
+              </button>
+            </div>
             <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-              <div style={{ overflowX: "auto" }}>
+              <div style={{ overflow: "auto", maxHeight: "calc(100vh - 320px)" }}>
                 <table className="table" style={{ minWidth: 560 }}>
-                  <thead>
+                  <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}>
                     <tr>
                       <th style={{ width: 36 }}>
                         <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
@@ -2082,12 +2090,6 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                 </table>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }}
-                onClick={() => openNew({ name: "", sortOrder: (dbTeams || []).length, isService: true, description: "", leaderId: null, responsibilities: "" })}>
-                <Plus size={14} /> Nova Equipe
-              </button>
-            </div>
           </>
         );
       })()}
@@ -2122,9 +2124,13 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
               </div>
             )}
             {deleting && <ConfirmDelete label={deleting.label} count={deleting.ids.length} onCancel={() => setDeleting(null)} onConfirm={() => deleteRows("instruments", deleting.ids, dbInstruments, setDbInstruments)} />}
+            <div style={{ marginBottom: 10 }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", sortOrder: (dbInstruments || []).length })}><Plus size={14} /> Novo Instrumento</button>
+            </div>
             <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <div style={{ overflow: "auto", maxHeight: "calc(100vh - 320px)" }}>
               <table className="table">
-                <thead><tr><th>Nome</th><th style={{ width: 80 }}>Ordem</th><th style={{ width: 90 }}></th></tr></thead>
+                <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}><tr><th>Nome</th><th style={{ width: 80 }}>Ordem</th><th style={{ width: 90 }}></th></tr></thead>
                 <tbody>
                   {list.map((i) => (
                     <tr key={i.id || i.name}>
@@ -2139,9 +2145,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                   {list.length === 0 && <tr><td colSpan={3} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum instrumento. Execute a migration 019.</td></tr>}
                 </tbody>
               </table>
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", sortOrder: (dbInstruments || []).length })}><Plus size={14} /> Novo Instrumento</button>
+              </div>
             </div>
           </>
         );
@@ -2201,9 +2205,13 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
               </div>
             )}
             {deleting && <ConfirmDelete label={deleting.label} count={deleting.ids.length} onCancel={() => setDeleting(null)} onConfirm={() => deleteRows("voice_types", deleting.ids, dbVoiceTypes, setDbVoiceTypes)} />}
+            <div style={{ marginBottom: 10 }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", gender: "F", minNote: "", maxNote: "", sortOrder: (dbVoiceTypes || []).length })}><Plus size={14} /> Nova Voz</button>
+            </div>
             <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <div style={{ overflow: "auto", maxHeight: "calc(100vh - 320px)" }}>
               <table className="table">
-                <thead><tr><th>Nome</th><th style={{ width: 90 }}>Gênero</th><th style={{ width: 80 }}>Nota mín.</th><th style={{ width: 80 }}>Nota máx.</th><th style={{ width: 90 }}></th></tr></thead>
+                <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}><tr><th>Nome</th><th style={{ width: 90 }}>Gênero</th><th style={{ width: 80 }}>Nota mín.</th><th style={{ width: 80 }}>Nota máx.</th><th style={{ width: 90 }}></th></tr></thead>
                 <tbody>
                   {[{ label: "Femininas", gender: "F" }, { label: "Masculinas", gender: "M" }].flatMap(({ label, gender }) => {
                     const rows = list.filter((v) => v.gender === gender);
@@ -2229,9 +2237,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                   {list.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhuma voz. Execute a migration 020.</td></tr>}
                 </tbody>
               </table>
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ name: "", gender: "F", minNote: "", maxNote: "", sortOrder: (dbVoiceTypes || []).length })}><Plus size={14} /> Nova Voz</button>
+              </div>
             </div>
           </>
         );
@@ -2329,9 +2335,19 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                 onSelectAll={() => selAll(allIds)} onClearAll={clearSel}
                 onDeleteSelected={() => setDeleting({ ids: selected, label: "" })} />
             )}
+            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ eventId: "", team: TEAMS[1], leaderId: "", selectedMembers: [] })}><Plus size={14} /> Nova Equipe</button>
+              {(rosters || []).length > 0 && (
+                <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  onClick={() => setDeleting({ ids: (rosters || []).map((r) => r.id).filter(Boolean), label: "" })}>
+                  <Trash2 size={13} /> Excluir TODAS ({(rosters || []).length})
+                </button>
+              )}
+            </div>
             <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <div style={{ overflow: "auto", maxHeight: "calc(100vh - 320px)" }}>
               <table className="table">
-                <thead>
+                <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}>
                   <tr>
                     <th style={{ width: 36 }}>
                       <input type="checkbox" checked={allIds.length > 0 && allIds.every((id) => selected.includes(id))}
@@ -2367,15 +2383,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                   {list.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Nenhum resultado.</td></tr>}
                 </tbody>
               </table>
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => openNew({ eventId: "", team: TEAMS[1], leaderId: "", selectedMembers: [] })}><Plus size={14} /> Nova Equipe</button>
-              {(rosters || []).length > 0 && (
-                <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}
-                  onClick={() => setDeleting({ ids: (rosters || []).map((r) => r.id).filter(Boolean), label: "" })}>
-                  <Trash2 size={13} /> Excluir TODAS ({(rosters || []).length})
-                </button>
-              )}
+              </div>
             </div>
           </>
         );
