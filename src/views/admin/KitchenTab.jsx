@@ -102,7 +102,7 @@ export default function KitchenTab({ regs, event }) {
       {/* Category table */}
       <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: byChurch ? 20 : 0 }}>
         <table className="table">
-          <thead>
+          <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}>
             <tr>
               <th>Categoria</th>
               <th style={{ textAlign: "right", width: 100 }}>Qtd</th>
@@ -144,7 +144,7 @@ export default function KitchenTab({ regs, event }) {
       {byChurch && churches.length > 0 && (
         <div className="card" style={{ padding: 0, overflow: "auto" }}>
           <table className="table" style={{ minWidth: 500, whiteSpace: "nowrap" }}>
-            <thead>
+            <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}>
               <tr>
                 <th>Igreja</th>
                 {CATEGORIES.map((c) => <th key={c} style={{ textAlign: "right", width: 70 }}>{SHORT[c] || c}</th>)}

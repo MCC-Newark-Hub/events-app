@@ -1054,14 +1054,22 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
 
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         <table className="table" style={{ tableLayout: "fixed" }}>
-          <thead>
+          <colgroup>
+            <col style={{ width: 40 }} />
+            <col style={{ width: 160 }} />
+            <col style={{ width: 220 }} />
+            <col style={{ width: 150 }} />
+            <col style={{ width: 100 }} />
+            <col style={{ width: 80 }} />
+          </colgroup>
+          <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}>
             <tr>
-              <th style={{ width: 40 }}></th>
+              <th></th>
               <Th k="name">Nome</Th>
-              <Th k="sys_role" style={{ width: 130 }}>Função</Th>
-              <Th k="church" style={{ width: 160 }}>Igreja</Th>
-              <Th k="pin" style={{ width: 80 }}>PIN</Th>
-              <th style={{ width: 80 }}></th>
+              <Th k="sys_role">Função</Th>
+              <Th k="church">Igreja</Th>
+              <Th k="pin">PIN</Th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -1090,11 +1098,13 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
                     </div>
                   )}
                 </td>
-                <td style={{ fontFamily: "monospace", letterSpacing: 2, display: "flex", alignItems: "center", gap: 6 }}>
-                  {revealPins[u.id] ? (u.pin || "—") : "••••"}
-                  <button onClick={() => setRevealPins((p) => ({ ...p, [u.id]: !p[u.id] }))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0, lineHeight: 1 }}>
-                    {revealPins[u.id] ? <EyeOff size={13} /> : <Eye size={13} />}
-                  </button>
+                <td>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "monospace", letterSpacing: 2 }}>
+                    {revealPins[u.id] ? (u.pin || "—") : "••••"}
+                    <button onClick={() => setRevealPins((p) => ({ ...p, [u.id]: !p[u.id] }))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0, lineHeight: 1 }}>
+                      {revealPins[u.id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                    </button>
+                  </div>
                 </td>
                 <td>
                   <button className="btn btn-ghost btn-sm" onClick={() => startEdit(u)}>

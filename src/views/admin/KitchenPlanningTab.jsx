@@ -216,7 +216,7 @@ export default function KitchenPlanningTab({ regs, event, events, notify, logAud
       {view === "plano" && (
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
           <table className="table">
-            <thead>
+            <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}>
               <tr>
                 <th>Item</th>
                 <th style={{ textAlign: "right", width: 80 }}>Qtd.</th>
@@ -266,7 +266,7 @@ export default function KitchenPlanningTab({ regs, event, events, notify, logAud
       {view === "compras" && (
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
           <table className="table">
-            <thead>
+            <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}>
               <tr>
                 <th style={{ width: 40 }}></th>
                 <th>Item</th>

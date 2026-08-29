@@ -185,7 +185,7 @@ export default function RegistrationDashboard({ regs, wlRegs, event, members, ch
           Composição dos Inscritos
         </div>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
+          <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}>
             <tr>
               <th style={thS}>Grupo</th>
               <th style={{ ...thS, textAlign: "right" }}>Total</th>
@@ -345,7 +345,7 @@ export default function RegistrationDashboard({ regs, wlRegs, event, members, ch
             Por Categoria
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
+            <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}>
               <tr>
                 <th style={thS}>Categoria</th>
                 <th style={{ ...thS, textAlign: "right" }}>Total</th>

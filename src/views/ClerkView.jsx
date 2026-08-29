@@ -293,7 +293,7 @@ function ClerkView(props) {
                 ) : (
                   <div className="table-wrap">
                     <table className="table">
-                      <thead><tr>
+                      <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}><tr>
                         <th style={{ width: 32 }}>
                           <input type="checkbox"
                             checked={viewRegs.length > 0 && viewRegs.every((r) => bulkSel.includes(r.id))}
@@ -379,7 +379,7 @@ function ClerkView(props) {
                 </div>
                 <div className="table-wrap">
                   <table className="table">
-                    <thead><tr><th>{t.memberName}</th><th>{t.cargo}</th><th>{t.cat}</th><th>Família</th><th>{t.actions}</th></tr></thead>
+                    <thead style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card-bg, #fff)" }}><tr><th>{t.memberName}</th><th>{t.cargo}</th><th>{t.cat}</th><th>Família</th><th>{t.actions}</th></tr></thead>
                     <tbody>
                       {memberList.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "#6b7280", padding: 28 }}>{t.noRecords}</td></tr>}
                       {(() => {
