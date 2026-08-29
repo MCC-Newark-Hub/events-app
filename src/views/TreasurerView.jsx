@@ -170,29 +170,14 @@ function RegsTab({ eventRegs, updateReg, notify }) {
 function ExpensesTab({ event, expenses, setExpenses, notify, logAudit }) {
   const [editing,    setEditing]    = useState(null);
   const [saving,     setSaving]     = useState(false);
-  const [uploading,  setUploading]  = useState(false);
   const [filterCat,  setFilterCat]  = useState("all");
 
   const filtered = filterCat === "all" ? expenses : expenses.filter((e) => e.category === filterCat);
 
-  const openNew  = () => setEditing({ date: today(), description: "", category: EXPENSE_CATS[0], amount: "", beneficiary: "", receipt_path: null, notes: "" });
+  const openNew  = () => setEditing({ date: today(), description: "", category: EXPENSE_CATS[0], amount: "", beneficiary: "", receipt_path: "", notes: "" });
   const openEdit = (e) => setEditing({ ...e });
 
-  const uploadReceipt = async (file) => {
-    if (!file) return null;
-    setUploading(true);
-    const path = `${event.id}/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
-    const { data, error } = await sb.storage.from("receipts").upload(path, file, { upsert: false });
-    setUploading(false);
-    if (error) { notify("Erro no upload: " + error.message); return null; }
-    return data.path;
-  };
-
-  const openReceipt = async (path) => {
-    const { data, error } = await sb.storage.from("receipts").createSignedUrl(path, 300);
-    if (error || !data?.signedUrl) { notify("Erro ao abrir recibo."); return; }
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-  };
+  const openReceipt = (url) => window.open(url, "_blank", "noopener,noreferrer");
 
   const save = async () => {
     if (!editing.description?.trim()) { notify("Descrição obrigatória."); return; }
@@ -328,17 +313,15 @@ function ExpensesTab({ event, expenses, setExpenses, notify, logAudit }) {
                 <input value={editing.beneficiary || ""} onChange={(e) => setEditing({ ...editing, beneficiary: e.target.value })} placeholder="Ex: Pr. João Silva (passagem aérea)" />
               </div>
               <div>
-                <label>Recibo (imagem ou PDF)</label>
-                <input type="file" accept="image/*,.pdf"
-                  onChange={async (e) => {
-                    const path = await uploadReceipt(e.target.files[0]);
-                    if (path) setEditing({ ...editing, receipt_path: path });
-                  }}
+                <label>Link do Recibo (Google Drive)</label>
+                <input
+                  value={editing.receipt_path || ""}
+                  onChange={(e) => setEditing({ ...editing, receipt_path: e.target.value })}
+                  placeholder="Cole o link de compartilhamento do Google Drive"
                 />
-                {uploading && <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>Enviando…</p>}
                 {editing.receipt_path && (
                   <p style={{ fontSize: 12, marginTop: 4 }}>
-                    <button className="btn btn-ghost btn-xs" onClick={() => openReceipt(editing.receipt_path)} style={{ color: "var(--primary)" }}>Ver recibo enviado ↗</button>
+                    <button className="btn btn-ghost btn-xs" onClick={() => openReceipt(editing.receipt_path)} style={{ color: "var(--primary)" }}>Abrir recibo ↗</button>
                   </p>
                 )}
               </div>
@@ -349,7 +332,7 @@ function ExpensesTab({ event, expenses, setExpenses, notify, logAudit }) {
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
               <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(null)}>Cancelar</button>
-              <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving || uploading} onClick={save}>{saving ? "Salvando…" : "Salvar"}</button>
+              <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={save}>{saving ? "Salvando…" : "Salvar"}</button>
             </div>
           </div>
         </div>
