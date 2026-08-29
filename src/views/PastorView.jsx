@@ -1,5 +1,5 @@
 import { useState, Fragment, useRef } from "react";
-import { LayoutDashboard, ClipboardList, Clock, BarChart2, BookOpen } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Clock, BarChart2, BookOpen, DollarSign } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, fmt, deadlineStatus } from "@/constants";
 import Topbar from "@/components/Topbar";
@@ -10,6 +10,7 @@ import MemberFunctionsView from "@/components/MemberFunctionsView";
 import RegistrationsTab from "./admin/RegistrationsTab";
 import ReportsTab from "./admin/ReportsTab";
 import RegistrationDashboard from "./admin/RegistrationDashboard";
+import { TesourariaSection } from "./TreasurerView";
 import { eventSubtitle } from "@/lib/registrationDeadline";
 
 function PaymentStatusStrip({ paid, exempt, pend, total, wlPaid, wlExempt, wlPend, wlTotal, cancelled, lang }) {
@@ -132,6 +133,7 @@ function PastorView(props) {
     { id: "regs", icon: <ClipboardList size={16} />, label: t.registrations },
     { id: "approvals", icon: <Clock size={16} />, label: `${t.approvals}${pendingApprovals.length > 0 ? ` (${pendingApprovals.length})` : ""}` },
     { id: "reports", icon: <BarChart2 size={16} />, label: t.reports },
+    { id: "tesouraria", icon: <DollarSign size={16} />, label: "Tesouraria" },
     { id: "functions", icon: <BookOpen size={16} />, label: "Membros com Funções" },
   ];
   return (
@@ -348,6 +350,7 @@ function PastorView(props) {
             {sec === "regs" && <RegistrationsTab {...props} initialFilter={regsInitialFilter} />}
             {sec === "approvals" && <ApprovalsPanel approvals={approvals} resolveApproval={resolveApproval} event={event} activeCount={activeCount} />}
             {sec === "reports" && <ReportsTab regs={regs} event={event} wlRegs={wlRegs} exRegs={exRegs} lang={lang} members={props.members} gas={props.gas} />}
+            {sec === "tesouraria" && <TesourariaSection event={event} regs={regs} updateReg={props.updateReg} notify={props.notify} logAudit={props.logAudit} readOnly={true} />}
             {sec === "functions" && <MemberFunctionsView members={props.members} gas={props.gas} notify={props.notify} />}
           </div>
         </div>

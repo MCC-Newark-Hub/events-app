@@ -88,7 +88,7 @@ function BalanceTab({ eventRegs, expenses, extras }) {
 }
 
 // ── Registrations tab ─────────────────────────────────────────────────────────
-function RegsTab({ eventRegs, updateReg, notify }) {
+function RegsTab({ eventRegs, updateReg, notify, readOnly }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -149,7 +149,7 @@ function RegsTab({ eventRegs, updateReg, notify }) {
                   <td style={{ textAlign: "right", fontWeight: 600 }}>{r.fee > 0 ? fmt(r.fee) : <span style={{ color: "var(--muted)" }}>—</span>}</td>
                   <td><span className={`badge ${badgeCls}`}>{status}</span></td>
                   <td>
-                    {isPending && (
+                    {isPending && !readOnly && (
                       <button className="btn btn-ok btn-sm" onClick={() => markPaid(r)}>✓ Marcar Pago</button>
                     )}
                   </td>
@@ -167,7 +167,7 @@ function RegsTab({ eventRegs, updateReg, notify }) {
 }
 
 // ── Expenses tab ──────────────────────────────────────────────────────────────
-function ExpensesTab({ event, expenses, setExpenses, notify, logAudit }) {
+function ExpensesTab({ event, expenses, setExpenses, notify, logAudit, readOnly }) {
   const [editing,    setEditing]    = useState(null);
   const [saving,     setSaving]     = useState(false);
   const [filterCat,  setFilterCat]  = useState("all");
@@ -220,7 +220,7 @@ function ExpensesTab({ event, expenses, setExpenses, notify, logAudit }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700 }}>Despesas</h2>
-        <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={openNew}><Plus size={14} /> Nova Despesa</button>
+        {!readOnly && <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={openNew}><Plus size={14} /> Nova Despesa</button>}
       </div>
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
@@ -259,29 +259,31 @@ function ExpensesTab({ event, expenses, setExpenses, notify, logAudit }) {
                     : <span style={{ color: "var(--muted)", fontSize: 11 }}>—</span>
                   }
                 </td>
-                <td>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <button className="btn btn-ghost btn-xs" onClick={() => openEdit(e)}><Pencil size={12} /></button>
-                    <button className="btn btn-danger btn-xs" onClick={() => del(e.id)}><Trash2 size={12} /></button>
-                  </div>
-                </td>
+                {!readOnly && (
+                  <td>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button className="btn btn-ghost btn-xs" onClick={() => openEdit(e)}><Pencil size={12} /></button>
+                      <button className="btn btn-danger btn-xs" onClick={() => del(e.id)}><Trash2 size={12} /></button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>Nenhuma despesa registrada.</td></tr>
+              <tr><td colSpan={readOnly ? 5 : 6} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>Nenhuma despesa registrada.</td></tr>
             )}
             {filtered.length > 0 && (
               <tr style={{ background: "var(--bg2)", fontWeight: 700 }}>
                 <td colSpan={3}>Total</td>
                 <td style={{ textAlign: "right" }}>{fmtCur(filtered.reduce((s, e) => s + (e.amount || 0), 0))}</td>
-                <td colSpan={2} />
+                <td colSpan={readOnly ? 1 : 2} />
               </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {editing && (
+      {!readOnly && editing && (
         <div className="modal-bg" onClick={(ev) => ev.target === ev.currentTarget && setEditing(null)}>
           <div className="modal" style={{ maxWidth: 460 }}>
             <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, marginBottom: 16 }}>
@@ -342,7 +344,7 @@ function ExpensesTab({ event, expenses, setExpenses, notify, logAudit }) {
 }
 
 // ── Extra income tab ──────────────────────────────────────────────────────────
-function ExtraIncomeTab({ event, extras, setExtras, notify, logAudit }) {
+function ExtraIncomeTab({ event, extras, setExtras, notify, logAudit, readOnly }) {
   const [editing, setEditing] = useState(null);
   const [saving,  setSaving]  = useState(false);
 
@@ -392,7 +394,7 @@ function ExtraIncomeTab({ event, extras, setExtras, notify, logAudit }) {
           <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Outras Entradas</h2>
           <p style={{ fontSize: 12, color: "var(--muted)" }}>Doações, saldo de evento anterior, ofertas, ou qualquer outra entrada além das inscrições.</p>
         </div>
-        <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={openNew}><Plus size={14} /> Nova Entrada</button>
+        {!readOnly && <button className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={openNew}><Plus size={14} /> Nova Entrada</button>}
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
@@ -403,7 +405,7 @@ function ExtraIncomeTab({ event, extras, setExtras, notify, logAudit }) {
               <th style={{ width: 140 }}>Tipo</th>
               <th>Descrição</th>
               <th style={{ textAlign: "right", width: 110 }}>Valor</th>
-              <th style={{ width: 72 }}></th>
+              {!readOnly && <th style={{ width: 72 }}></th>}
             </tr>
           </thead>
           <tbody>
@@ -416,29 +418,31 @@ function ExtraIncomeTab({ event, extras, setExtras, notify, logAudit }) {
                   {e.notes && <div style={{ fontSize: 11, color: "var(--muted)" }}>{e.notes}</div>}
                 </td>
                 <td style={{ textAlign: "right", fontWeight: 700 }}>{fmtCur(e.amount)}</td>
-                <td>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <button className="btn btn-ghost btn-xs" onClick={() => openEdit(e)}><Pencil size={12} /></button>
-                    <button className="btn btn-danger btn-xs" onClick={() => del(e.id)}><Trash2 size={12} /></button>
-                  </div>
-                </td>
+                {!readOnly && (
+                  <td>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button className="btn btn-ghost btn-xs" onClick={() => openEdit(e)}><Pencil size={12} /></button>
+                      <button className="btn btn-danger btn-xs" onClick={() => del(e.id)}><Trash2 size={12} /></button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
             {extras.length === 0 && (
-              <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>Nenhuma entrada extra registrada.</td></tr>
+              <tr><td colSpan={readOnly ? 4 : 5} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>Nenhuma entrada extra registrada.</td></tr>
             )}
             {extras.length > 0 && (
               <tr style={{ background: "var(--bg2)", fontWeight: 700 }}>
                 <td colSpan={3}>Total</td>
                 <td style={{ textAlign: "right" }}>{fmtCur(extras.reduce((s, e) => s + (e.amount || 0), 0))}</td>
-                <td />
+                {!readOnly && <td />}
               </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {editing && (
+      {!readOnly && editing && (
         <div className="modal-bg" onClick={(ev) => ev.target === ev.currentTarget && setEditing(null)}>
           <div className="modal" style={{ maxWidth: 420 }}>
             <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, marginBottom: 16 }}>
@@ -476,6 +480,64 @@ function ExtraIncomeTab({ event, extras, setExtras, notify, logAudit }) {
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── Embeddable section for Admin/Pastor (self-loads treasury data) ────────────
+export function TesourariaSection({ event, regs, updateReg, notify, logAudit, readOnly = false }) {
+  const [sec,      setSec]      = useState("balanco");
+  const [expenses, setExpenses] = useState([]);
+  const [extras,   setExtras]   = useState([]);
+  const [loaded,   setLoaded]   = useState(false);
+
+  const eventRegs = useMemo(
+    () => (regs || []).filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted),
+    [regs, event?.id]
+  );
+
+  useEffect(() => {
+    if (!event?.id) return;
+    setLoaded(false);
+    Promise.all([
+      sb.from("treasury_expenses").select("*").eq("event_id", event.id).order("date", { ascending: false }),
+      sb.from("treasury_collections").select("*").eq("event_id", event.id).order("date", { ascending: false }),
+    ]).then(([{ data: exp }, { data: ext }]) => {
+      setExpenses(exp || []);
+      setExtras(ext || []);
+      setLoaded(true);
+    });
+  }, [event?.id]);
+
+  const tabs = [
+    { id: "balanco",  label: "Balanço" },
+    { id: "regs",     label: "Inscrições" },
+    { id: "despesas", label: "Despesas" },
+    { id: "extras",   label: "Outras Entradas" },
+  ];
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700 }}>
+          Tesouraria{readOnly && <span style={{ fontSize: 12, fontWeight: 400, color: "var(--muted)", marginLeft: 8 }}>leitura</span>}
+        </h2>
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+        {tabs.map((t) => (
+          <button key={t.id} className={`btn btn-sm ${sec === t.id ? "btn-primary" : "btn-ghost"}`} onClick={() => setSec(t.id)}>{t.label}</button>
+        ))}
+      </div>
+      {!loaded ? (
+        <p style={{ color: "var(--muted)" }}>Carregando…</p>
+      ) : (
+        <>
+          {sec === "balanco"  && <BalanceTab eventRegs={eventRegs} expenses={expenses} extras={extras} />}
+          {sec === "regs"     && <RegsTab eventRegs={eventRegs} updateReg={updateReg} notify={notify} readOnly={readOnly} />}
+          {sec === "despesas" && <ExpensesTab event={event} expenses={expenses} setExpenses={setExpenses} notify={notify} logAudit={logAudit} readOnly={readOnly} />}
+          {sec === "extras"   && <ExtraIncomeTab event={event} extras={extras} setExtras={setExtras} notify={notify} logAudit={logAudit} readOnly={readOnly} />}
+        </>
       )}
     </div>
   );

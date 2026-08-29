@@ -1,5 +1,5 @@
 import { useState, useRef, Fragment } from "react";
-import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X, ShieldCheck, IdCard, UtensilsCrossed, Star, Download } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Users, Building2, Clock, BarChart2, Calendar, Upload, Check, Plus, FolderOpen, KeyRound, Eye, EyeOff, BookOpen, Pencil, Trash2, ChevronDown, ChevronUp, X, ShieldCheck, IdCard, UtensilsCrossed, Star, Download, DollarSign } from "lucide-react";
 import { useT } from "@/i18n/strings";
 import { CATEGORIES, TEAMS, ROLE_BADGE, ROLE_GROUPS, fmt, classifyVoice, normalizeNote, isValidNote } from "@/constants";
 import { sb } from "@/lib/supabase";
@@ -27,6 +27,7 @@ import KitchenTab from "./admin/KitchenTab";
 import KitchenPlanningTab from "./admin/KitchenPlanningTab";
 import FuncoesTab from "./admin/FuncoesTab";
 import RegistrationDashboard from "./admin/RegistrationDashboard";
+import { TesourariaSection } from "./TreasurerView";
 import MemberFunctionsView from "@/components/MemberFunctionsView";
 import { syncRegistrationNames, syncMemberToRegistrations } from "@/lib/syncMemberName";
 import { groupByFamily, familyIdOf } from "@/lib/family";
@@ -53,6 +54,7 @@ function AdminView(props) {
     { id: "users", icon: <KeyRound size={16} />, label: "Usuários & PINs" },
     { id: "directory", icon: <BookOpen size={16} />, label: "Diretório" },
     { id: "funcoes", icon: <Star size={16} />, label: "Funções" },
+    { id: "tesouraria", icon: <DollarSign size={16} />, label: "Tesouraria" },
     { id: "audit", icon: <ShieldCheck size={16} />, label: "Auditoria" },
     { id: "kitchen", icon: <UtensilsCrossed size={16} />, label: "Cozinha" },
     { id: "badges", icon: <IdCard size={16} />, label: "Crachás" },
@@ -66,6 +68,7 @@ function AdminView(props) {
           <div className="page-pad">
             {sec === "overview" && <AdminOverview {...props} setSec={setSec} navToRegs={navToRegs} />}
             {sec === "resumo" && <RegistrationDashboard regs={props.regs} wlRegs={props.wlRegs} exRegs={props.exRegs} event={props.event} members={props.members} churches={props.churches} lang={props.lang} />}
+            {sec === "tesouraria" && <TesourariaSection event={props.event} regs={props.regs} updateReg={props.updateReg} notify={props.notify} logAudit={props.logAudit} readOnly={false} />}
             {sec === "regs" && <RegistrationsTab {...props} initialFilter={regsInitialFilter} />}
             {sec === "teams" && <TeamsTab {...props} />}
             {sec === "ga" && <AdminGA {...props} />}
