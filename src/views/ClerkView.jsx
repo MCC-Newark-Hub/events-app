@@ -17,6 +17,7 @@ import MemberEditModal from "@/components/directory/MemberEditModal";
 import FuncoesTab from "@/views/admin/FuncoesTab";
 import RoleBadges from "@/components/directory/RoleBadges";
 import ReportsTab from "./admin/ReportsTab";
+import RegistrationDashboard from "./admin/RegistrationDashboard";
 import { newMemberForm, memberToForm } from "@/lib/memberForm";
 import { resendConfirmation } from "@/lib/resendConfirmation";
 import { useSortable } from "@/hooks/useSortable";
@@ -156,6 +157,7 @@ function ClerkView(props) {
   const myGas = (gas || []).filter((g) => cityOf(g.church) === myCity);
 
   const navItems = [
+    { id: "resumo", icon: <BarChart2 size={16} />, label: "Resumo" },
     { id: "regs", icon: <ClipboardList size={16} />, label: t.registrations || "Inscrições" },
     { id: "reports", icon: <BarChart2 size={16} />, label: t.reports },
     { id: "members", icon: <Users size={16} />, label: `Membros (${myMembers.length})` },
@@ -202,6 +204,8 @@ function ClerkView(props) {
               ⏳ Você tem {pendingApprovalList.length} solicitaç{pendingApprovalList.length === 1 ? "ão pendente" : "ões pendentes"}.
             </div>
           )}
+
+          {sec === "resumo" && <RegistrationDashboard regs={regs} wlRegs={wlRegs} exRegs={exRegs} event={event} members={members} churches={churches} lang={lang} />}
 
           {sec === "regs" ? (
             <>

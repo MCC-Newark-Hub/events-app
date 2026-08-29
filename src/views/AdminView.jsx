@@ -26,6 +26,7 @@ import BadgeGeneratorTab from "./admin/BadgeGeneratorTab";
 import KitchenTab from "./admin/KitchenTab";
 import KitchenPlanningTab from "./admin/KitchenPlanningTab";
 import FuncoesTab from "./admin/FuncoesTab";
+import RegistrationDashboard from "./admin/RegistrationDashboard";
 import MemberFunctionsView from "@/components/MemberFunctionsView";
 import { syncRegistrationNames, syncMemberToRegistrations } from "@/lib/syncMemberName";
 import { groupByFamily, familyIdOf } from "@/lib/family";
@@ -41,6 +42,7 @@ function AdminView(props) {
   const navToRegs = (filter) => { setRegsInitialFilter(filter); setSec("regs"); };
   const navItems = [
     { id: "overview", icon: <LayoutDashboard size={16} />, label: t.overview },
+    { id: "resumo", icon: <BarChart2 size={16} />, label: "Resumo" },
     { id: "regs", icon: <ClipboardList size={16} />, label: t.registrations },
     { id: "teams", icon: <Users size={16} />, label: t.teams },
     { id: "ga", icon: <Building2 size={16} />, label: t.groups },
@@ -63,6 +65,7 @@ function AdminView(props) {
         <div className="main-scroll">
           <div className="page-pad">
             {sec === "overview" && <AdminOverview {...props} setSec={setSec} navToRegs={navToRegs} />}
+            {sec === "resumo" && <RegistrationDashboard regs={props.regs} wlRegs={props.wlRegs} exRegs={props.exRegs} event={props.event} members={props.members} churches={props.churches} lang={props.lang} />}
             {sec === "regs" && <RegistrationsTab {...props} initialFilter={regsInitialFilter} />}
             {sec === "teams" && <TeamsTab {...props} />}
             {sec === "ga" && <AdminGA {...props} />}
@@ -1606,103 +1609,107 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                         placeholder="Buscar igreja…"
                       />
                     </div>
-                    <div className="fr">
-                      <RolesMultiSelect
-                        roles={formData.roles}
-                        onChange={(roles) => setFormData({ ...formData, roles })}
-                      />
-                      {(formData.roles || []).includes("Tradutor") && (
+                    <RolesMultiSelect
+                      roles={formData.roles}
+                      onChange={(roles) => setFormData({ ...formData, roles })}
+                    />
+                    {(formData.roles || []).some((r) => ["Grupo de Louvor", "Instrumentista", "Instrumentista Aprendiz", "Responsável - Grupo de Louvor"].includes(r)) && (
+                      <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: -4 }}>
+                          Louvor
+                        </div>
                         <div>
-                          <label>Idiomas de Tradução</label>
+                          <label>Alcance de Voz</label>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <input
+                              value={formData.voiceLowestNote || ""}
+                              onChange={(e) => setFormData({ ...formData, voiceLowestNote: normalizeNote(e.target.value) })}
+                              placeholder="Ex: E2"
+                              maxLength={3}
+                              style={{ flex: 1, fontFamily: "monospace", borderColor: formData.voiceLowestNote && !isValidNote(formData.voiceLowestNote) ? "#ef4444" : undefined }}
+                            />
+                            <span style={{ color: "var(--muted)", fontSize: 14 }}>—</span>
+                            <input
+                              value={formData.voiceHighestNote || ""}
+                              onChange={(e) => setFormData({ ...formData, voiceHighestNote: normalizeNote(e.target.value) })}
+                              placeholder="Ex: C5"
+                              maxLength={3}
+                              style={{ flex: 1, fontFamily: "monospace", borderColor: formData.voiceHighestNote && !isValidNote(formData.voiceHighestNote) ? "#ef4444" : undefined }}
+                            />
+                          </div>
+                          {(() => {
+                            const classified = classifyVoice(formData.voiceLowestNote, formData.voiceHighestNote, dbVoiceTypes);
+                            if (!classified.length) return null;
+                            return <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Classificada como: <strong style={{ color: "var(--text)" }}>{classified.join(", ")}</strong></div>;
+                          })()}
+                        </div>
+                        <div>
+                          <label>Voz Selecionada</label>
+                          <select value={formData.voiceType || ""} onChange={(e) => setFormData({ ...formData, voiceType: e.target.value })}>
+                            <option value="">— Nenhuma —</option>
+                            {(dbVoiceTypes && dbVoiceTypes.length > 0
+                              ? dbVoiceTypes.filter((v) => !v.gender || v.gender === (formData.gender || "M"))
+                              : (formData.gender === "F"
+                                  ? ["Soprano","Mezzo-Soprano","Contralto"]
+                                  : ["Tenor","Barítono","Baixo"]
+                                ).map((n) => ({ name: n }))
+                            ).map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label>Instrumentos</label>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-                            {["Inglês", "Espanhol", "Francês", "Mandarim", "Italiano", "Alemão"].map((lang) => {
-                              const checked = (formData.translationLanguages || []).includes(lang);
+                            {(dbInstruments && dbInstruments.length > 0
+                              ? dbInstruments
+                              : ["Violão","Guitarra","Baixo Elétrico","Teclado","Bateria","Percussão","Flauta","Violino","Trompete","Saxofone"].map((n) => ({ name: n }))
+                            ).map((inst) => {
+                              const checked = (formData.instruments || []).includes(inst.name);
                               return (
-                                <label key={lang} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, cursor: "pointer", userSelect: "none" }}>
+                                <label key={inst.name} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, cursor: "pointer", userSelect: "none" }}>
                                   <input type="checkbox" checked={checked}
-                                    onChange={() => setFormData({ ...formData, translationLanguages: checked ? (formData.translationLanguages || []).filter((l) => l !== lang) : [...(formData.translationLanguages || []), lang] })} />
-                                  {lang}
+                                    onChange={() => setFormData({ ...formData, instruments: checked ? (formData.instruments || []).filter((i) => i !== inst.name) : [...(formData.instruments || []), inst.name] })} />
+                                  {inst.name}
                                 </label>
                               );
                             })}
                           </div>
                         </div>
-                      )}
-                      {(formData.roles || []).some((r) => ["Grupo de Louvor", "Instrumentista", "Instrumentista Aprendiz", "Responsável - Grupo de Louvor"].includes(r)) && (
-                        <>
-                          <div>
-                            <label>Alcance de Voz</label>
-                            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                              <input
-                                value={formData.voiceLowestNote || ""}
-                                onChange={(e) => setFormData({ ...formData, voiceLowestNote: normalizeNote(e.target.value) })}
-                                placeholder="Ex: E2"
-                                maxLength={3}
-                                style={{ flex: 1, minWidth: 80, fontFamily: "monospace", borderColor: formData.voiceLowestNote && !isValidNote(formData.voiceLowestNote) ? "#ef4444" : undefined }}
-                              />
-                              <span style={{ color: "var(--muted)", fontSize: 14 }}>—</span>
-                              <input
-                                value={formData.voiceHighestNote || ""}
-                                onChange={(e) => setFormData({ ...formData, voiceHighestNote: normalizeNote(e.target.value) })}
-                                placeholder="Ex: C5"
-                                maxLength={3}
-                                style={{ flex: 1, minWidth: 80, fontFamily: "monospace", borderColor: formData.voiceHighestNote && !isValidNote(formData.voiceHighestNote) ? "#ef4444" : undefined }}
-                              />
-                            </div>
-                            {(() => {
-                              const classified = classifyVoice(formData.voiceLowestNote, formData.voiceHighestNote, dbVoiceTypes);
-                              if (!classified.length) return null;
-                              return <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Classificada como: <strong style={{ color: "var(--text)" }}>{classified.join(", ")}</strong></div>;
-                            })()}
-                            <div style={{ marginTop: 6 }}>
-                              <label>Voz selecionada</label>
-                              <select value={formData.voiceType || ""} onChange={(e) => setFormData({ ...formData, voiceType: e.target.value })}>
-                                <option value="">— Nenhuma —</option>
-                                {(dbVoiceTypes && dbVoiceTypes.length > 0
-                                  ? dbVoiceTypes.filter((v) => !v.gender || v.gender === (formData.gender || "M"))
-                                  : (formData.gender === "F"
-                                      ? ["Soprano","Mezzo-Soprano","Contralto"]
-                                      : ["Tenor","Barítono","Baixo"]
-                                    ).map((n) => ({ name: n }))
-                                ).map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
-                              </select>
-                            </div>
-                          </div>
-                          <div>
-                            <label>Instrumentos</label>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-                              {(dbInstruments && dbInstruments.length > 0
-                                ? dbInstruments
-                                : ["Violão","Guitarra","Baixo Elétrico","Teclado","Bateria","Percussão","Flauta","Violino","Trompete","Saxofone"].map((n) => ({ name: n }))
-                              ).map((inst) => {
-                                const checked = (formData.instruments || []).includes(inst.name);
-                                return (
-                                  <label key={inst.name} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, cursor: "pointer", userSelect: "none" }}>
-                                    <input type="checkbox" checked={checked}
-                                      onChange={() => setFormData({ ...formData, instruments: checked ? (formData.instruments || []).filter((i) => i !== inst.name) : [...(formData.instruments || []), inst.name] })} />
-                                    {inst.name}
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                      <div>
-                        <label>GA (Grupo de Assistência){churches.find((c) => c.display === formData.church)?.is_hub ? " *" : " (opcional)"}</label>
-                        <SearchSelect
-                          value={formData.gaId || ""}
-                          onSelect={(v) => setFormData({ ...formData, gaId: v })}
-                          items={(gas || []).filter((g) => {
-                            if (!formData.church) return true;
-                            const gaCity = (g.church || "").split(",")[0].trim().toLowerCase();
-                            return !gaCity || formData.church.toLowerCase().includes(gaCity);
-                          })}
-                          getLabel={(g) => g.name}
-                          getId={(g) => g.id}
-                          placeholder={formData.church ? "Buscar GA…" : "Selecione a igreja primeiro…"}
-                        />
                       </div>
+                    )}
+                    {(formData.roles || []).includes("Tradutor") && (
+                      <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>
+                          Tradução
+                        </div>
+                        <label>Idiomas</label>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                          {["Inglês", "Espanhol", "Francês", "Mandarim", "Italiano", "Alemão"].map((lang) => {
+                            const checked = (formData.translationLanguages || []).includes(lang);
+                            return (
+                              <label key={lang} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, cursor: "pointer", userSelect: "none" }}>
+                                <input type="checkbox" checked={checked}
+                                  onChange={() => setFormData({ ...formData, translationLanguages: checked ? (formData.translationLanguages || []).filter((l) => l !== lang) : [...(formData.translationLanguages || []), lang] })} />
+                                {lang}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <label>GA (Grupo de Assistência){churches.find((c) => c.display === formData.church)?.is_hub ? " *" : " (opcional)"}</label>
+                      <SearchSelect
+                        value={formData.gaId || ""}
+                        onSelect={(v) => setFormData({ ...formData, gaId: v })}
+                        items={(gas || []).filter((g) => {
+                          if (!formData.church) return true;
+                          const gaCity = (g.church || "").split(",")[0].trim().toLowerCase();
+                          return !gaCity || formData.church.toLowerCase().includes(gaCity);
+                        })}
+                        getLabel={(g) => g.name}
+                        getId={(g) => g.id}
+                        placeholder={formData.church ? "Buscar GA…" : "Selecione a igreja primeiro…"}
+                      />
                     </div>
                     <div>
                       <label>Família</label>

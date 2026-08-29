@@ -7,7 +7,7 @@ import { canAssignToTeam } from "@/lib/teamAssignment";
 const norm = (s) => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
 import { SERVICE_TEAMS, STATUS_CFG } from "@/constants";
 
-export default function TeamsTab({ event, events, regs, members, rosters, setRosters, addReg, notify, logAudit }) {
+export default function TeamsTab({ event, events, regs, members, rosters, setRosters, addReg, notify, logAudit, dbTeams }) {
   const t = useT();
   const [editTeam, setEditTeam] = useState(null);
   const [msearch, setMsearch] = useState("");
@@ -29,7 +29,13 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
   // enabled and bulk-registering them again slipped past this tab's only duplicate guard.
   const eventRegs = regs.filter((r) => r.eventId === event?.id && !r.cancelled);
   const customTeamNames = customTeams.map((t) => (typeof t === "string" ? t : t.name));
-  const allTeams = [...SERVICE_TEAMS, ...customTeamNames];
+  // Use DB team order if available, fall back to hardcoded SERVICE_TEAMS constant.
+  const dbTeamNames = (dbTeams || [])
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map((t) => t.name)
+    .filter((n) => n !== "Participante");
+  const baseTeams = dbTeamNames.length > 0 ? dbTeamNames : SERVICE_TEAMS;
+  const allTeams = [...baseTeams, ...customTeamNames.filter((n) => !baseTeams.includes(n))];
 
   const getStatus = (mid) => {
     const r = eventRegs.find((x) => x.memberId === mid);

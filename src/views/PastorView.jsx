@@ -9,6 +9,7 @@ import ApprovalsPanel from "@/components/ApprovalsPanel";
 import MemberFunctionsView from "@/components/MemberFunctionsView";
 import RegistrationsTab from "./admin/RegistrationsTab";
 import ReportsTab from "./admin/ReportsTab";
+import RegistrationDashboard from "./admin/RegistrationDashboard";
 import { eventSubtitle } from "@/lib/registrationDeadline";
 
 function PaymentStatusStrip({ paid, exempt, pend, total, wlPaid, wlExempt, wlPend, wlTotal, cancelled, lang }) {
@@ -127,6 +128,7 @@ function PastorView(props) {
     .sort((a, b) => b.guests.length - a.guests.length);
   const navItems = [
     { id: "dashboard", icon: <LayoutDashboard size={16} />, label: t.dashboard },
+    { id: "resumo", icon: <BarChart2 size={16} />, label: "Resumo" },
     { id: "regs", icon: <ClipboardList size={16} />, label: t.registrations },
     { id: "approvals", icon: <Clock size={16} />, label: `${t.approvals}${pendingApprovals.length > 0 ? ` (${pendingApprovals.length})` : ""}` },
     { id: "reports", icon: <BarChart2 size={16} />, label: t.reports },
@@ -342,6 +344,7 @@ function PastorView(props) {
                 </div>
               </div>
             )}
+            {sec === "resumo" && <RegistrationDashboard regs={regs} wlRegs={wlRegs} exRegs={exRegs} event={event} members={props.members} churches={props.churches} lang={lang} />}
             {sec === "regs" && <RegistrationsTab {...props} initialFilter={regsInitialFilter} />}
             {sec === "approvals" && <ApprovalsPanel approvals={approvals} resolveApproval={resolveApproval} event={event} activeCount={activeCount} />}
             {sec === "reports" && <ReportsTab regs={regs} event={event} wlRegs={wlRegs} exRegs={exRegs} lang={lang} members={props.members} gas={props.gas} />}
