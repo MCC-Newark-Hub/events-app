@@ -59,15 +59,20 @@ export default function TeamsTab({ event, events, regs, members, rosters, setRos
       setRosters((prev) => prev.map((r) =>
         r.eventId === event?.id && r.team === team ? { ...r, memberIds: newIds } : r
       ));
-      sb.from("rosters").update({ member_ids: newIds }).eq("id", ex.id);
-      logAudit?.("roster_member_added", "roster", ex.id, team, { memberId: mid, memberName: members.find((m) => m.id === mid)?.name });
+      sb.from("rosters").update({ member_ids: newIds }).eq("id", ex.id).select()
+        .then(({ data, error }) => {
+          if (error) { notify("Erro ao salvar na equipe: " + error.message); return; }
+          if (!data?.length) notify("Erro: escalação não encontrada ao adicionar membro.");
+          else logAudit?.("roster_member_added", "roster", ex.id, team, { memberId: mid, memberName: members.find((m) => m.id === mid)?.name });
+        });
     } else {
       const newRoster = { eventId: event?.id, team, memberIds: [mid], leaderId: null };
       setRosters((prev) => [...prev, newRoster]);
       sb.from("rosters").insert({
         event_id: newRoster.eventId, team: newRoster.team,
         member_ids: newRoster.memberIds, leader_id: null,
-      }).select().single().then(({ data }) => {
+      }).select().single().then(({ data, error }) => {
+        if (error) { notify("Erro ao criar escalação: " + error.message); return; }
         if (data) {
           // Sync current local memberIds back to DB to catch any removes that
           // happened between the insert call and this response (race condition).
