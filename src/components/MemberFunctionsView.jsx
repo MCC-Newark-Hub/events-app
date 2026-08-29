@@ -21,6 +21,7 @@ const FUNC_GROUPS = [
 
 export default function MemberFunctionsView({ members, setMembers, gas, notify, churchLock, filterMemberIds }) {
   const readOnly = !setMembers;
+  const [viewMode, setViewMode] = useState("funcao"); // "funcao" | "membro"
   const [search, setSearch] = useState("");
   const [filterChurch, setFilterChurch] = useState(churchLock || "");
   const [roleEditing, setRoleEditing] = useState(null);
@@ -111,6 +112,10 @@ export default function MemberFunctionsView({ members, setMembers, gas, notify, 
             {churchOptions.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         )}
+        <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
+          <button className={`btn btn-sm ${viewMode === "funcao" ? "btn-primary" : "btn-ghost"}`} onClick={() => setViewMode("funcao")}>Por Função</button>
+          <button className={`btn btn-sm ${viewMode === "membro" ? "btn-primary" : "btn-ghost"}`} onClick={() => setViewMode("membro")}>Por Membro</button>
+        </div>
       </div>
 
       {roleEditing && !readOnly && (
@@ -150,7 +155,52 @@ export default function MemberFunctionsView({ members, setMembers, gas, notify, 
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
+      {viewMode === "membro" && (() => {
+        const gaLeaderMap = {};
+        (gas || []).filter((g) => g.leaderId).forEach((g) => { gaLeaderMap[g.leaderId] = [...(gaLeaderMap[g.leaderId] || []), g.name]; });
+        const withRoles = applyFilters(
+          (members || []).filter((m) => (m.roles || []).length > 0 || gaLeaderMap[m.id])
+        );
+        const byChurch = {};
+        withRoles.forEach((m) => {
+          const ch = m.church || "Sem Igreja";
+          if (!byChurch[ch]) byChurch[ch] = [];
+          byChurch[ch].push(m);
+        });
+        const churches = Object.keys(byChurch).sort((a, b) => a.localeCompare(b, "pt", { sensitivity: "base" }));
+        if (!churches.length) return <p style={{ color: "var(--muted)", padding: 24 }}>Nenhum membro encontrado.</p>;
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {churches.map((ch) => (
+              <div key={ch}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8, paddingBottom: 4, borderBottom: "1px solid var(--border)" }}>
+                  {ch} <span style={{ fontWeight: 400 }}>({byChurch[ch].length})</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {byChurch[ch].map((m) => {
+                    const gaNames = gaLeaderMap[m.id] || [];
+                    const allRoles = [...(m.roles || []), ...gaNames.map((n) => `Responsável GA: ${n}`)];
+                    return (
+                      <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 12px", background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 8 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{m.name}</div>
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "flex-end" }}>
+                          {allRoles.map((r) => (
+                            <span key={r} className="badge badge-blue" style={{ fontSize: 11 }}>{r}</span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
+      {viewMode === "funcao" && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
         {FUNC_GROUPS.map((group) => {
           const mems = applyFilters(
             group.gaLeaders
@@ -251,7 +301,7 @@ export default function MemberFunctionsView({ members, setMembers, gas, notify, 
             </div>
           );
         })}
-      </div>
+      </div>}
     </>
   );
 }
