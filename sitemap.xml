@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/"/>
@@ -10,7 +10,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/architecture/data-model/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/architecture/data-model/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/data-model/"/>
@@ -18,7 +18,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/architecture/integrations/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/architecture/integrations/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/integrations/"/>
@@ -26,7 +26,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/architecture/overview/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/architecture/overview/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/overview/"/>
@@ -34,7 +34,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/architecture/adrs/ADR-001-authentication/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/architecture/adrs/ADR-001-authentication/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/adrs/ADR-001-authentication/"/>
@@ -42,7 +42,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/architecture/adrs/ADR-002-permissions/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/architecture/adrs/ADR-002-permissions/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/adrs/ADR-002-permissions/"/>
@@ -50,7 +50,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/architecture/adrs/ADR-003-database/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/architecture/adrs/ADR-003-database/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/adrs/ADR-003-database/"/>
@@ -58,7 +58,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/dev/architecture/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/dev/architecture/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/dev/architecture/"/>
@@ -66,7 +66,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/dev/deployment/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/dev/deployment/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/dev/deployment/"/>
@@ -74,15 +74,31 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/dev/setup-local/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/dev/setup-local/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/dev/setup-local/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/dev/setup-local/"/>
     </url>
     <url>
+        <loc>https://mcc-newark-hub.github.io/events-app/emergency/evacuation/</loc>
+        <lastmod>2026-08-31</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/emergency/evacuation/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/emergency/evacuation/"/>
+        <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/emergency/evacuation/"/>
+    </url>
+    <url>
+        <loc>https://mcc-newark-hub.github.io/events-app/emergency/fire/</loc>
+        <lastmod>2026-08-31</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/emergency/fire/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/emergency/fire/"/>
+        <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/emergency/fire/"/>
+    </url>
+    <url>
         <loc>https://mcc-newark-hub.github.io/events-app/explanation/church-hierarchy/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/explanation/church-hierarchy/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/explanation/church-hierarchy/"/>
@@ -90,7 +106,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/explanation/event-lifecycle/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/explanation/event-lifecycle/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/explanation/event-lifecycle/"/>
@@ -98,7 +114,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/explanation/registration-rules/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/explanation/registration-rules/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/explanation/registration-rules/"/>
@@ -106,7 +122,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/explanation/security-model/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/explanation/security-model/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/explanation/security-model/"/>
@@ -114,7 +130,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/how-to/export-attendance/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/how-to/export-attendance/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/export-attendance/"/>
@@ -122,7 +138,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/how-to/print-badges/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/how-to/print-badges/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/print-badges/"/>
@@ -130,7 +146,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/how-to/process-payment/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/how-to/process-payment/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/process-payment/"/>
@@ -138,7 +154,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/how-to/reset-password/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/how-to/reset-password/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/reset-password/"/>
@@ -146,7 +162,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/how-to/reset-pin/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/how-to/reset-pin/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/reset-pin/"/>
@@ -154,7 +170,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/reference/age-categories/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/reference/age-categories/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/reference/age-categories/"/>
@@ -162,7 +178,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/reference/permissions/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/reference/permissions/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/reference/permissions/"/>
@@ -170,7 +186,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/reference/roles/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/reference/roles/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/reference/roles/"/>
@@ -178,7 +194,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/reference/statuses/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/reference/statuses/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/reference/statuses/"/>
@@ -186,7 +202,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/troubleshooting/login-issues/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/troubleshooting/login-issues/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/troubleshooting/login-issues/"/>
@@ -194,7 +210,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/troubleshooting/registration-errors/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/troubleshooting/registration-errors/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/troubleshooting/registration-errors/"/>
@@ -202,7 +218,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/troubleshooting/sync-issues/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/troubleshooting/sync-issues/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/troubleshooting/sync-issues/"/>
@@ -210,7 +226,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/tutorials/create-event/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/tutorials/create-event/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/tutorials/create-event/"/>
@@ -218,7 +234,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/tutorials/first-login/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/tutorials/first-login/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/tutorials/first-login/"/>
@@ -226,7 +242,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/tutorials/register-member/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/tutorials/register-member/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/tutorials/register-member/"/>
@@ -234,7 +250,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/"/>
@@ -242,7 +258,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/architecture/data-model/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/data-model/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/architecture/data-model/"/>
@@ -250,7 +266,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/architecture/integrations/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/integrations/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/architecture/integrations/"/>
@@ -258,7 +274,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/architecture/overview/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/overview/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/architecture/overview/"/>
@@ -266,7 +282,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/architecture/adrs/ADR-001-authentication/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/adrs/ADR-001-authentication/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/architecture/adrs/ADR-001-authentication/"/>
@@ -274,7 +290,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/architecture/adrs/ADR-002-permissions/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/adrs/ADR-002-permissions/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/architecture/adrs/ADR-002-permissions/"/>
@@ -282,7 +298,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/architecture/adrs/ADR-003-database/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/adrs/ADR-003-database/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/architecture/adrs/ADR-003-database/"/>
@@ -290,7 +306,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/dev/architecture/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/dev/architecture/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/dev/architecture/"/>
@@ -298,7 +314,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/dev/deployment/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/dev/deployment/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/dev/deployment/"/>
@@ -306,15 +322,31 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/dev/setup-local/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/dev/setup-local/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/dev/setup-local/"/>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/dev/setup-local/"/>
     </url>
     <url>
+        <loc>https://mcc-newark-hub.github.io/events-app/en/emergency/evacuation/</loc>
+        <lastmod>2026-08-31</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/emergency/evacuation/"/>
+        <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/emergency/evacuation/"/>
+        <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/emergency/evacuation/"/>
+    </url>
+    <url>
+        <loc>https://mcc-newark-hub.github.io/events-app/en/emergency/fire/</loc>
+        <lastmod>2026-08-31</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/emergency/fire/"/>
+        <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/emergency/fire/"/>
+        <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/emergency/fire/"/>
+    </url>
+    <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/explanation/church-hierarchy/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/explanation/church-hierarchy/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/explanation/church-hierarchy/"/>
@@ -322,7 +354,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/explanation/event-lifecycle/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/explanation/event-lifecycle/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/explanation/event-lifecycle/"/>
@@ -330,7 +362,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/explanation/registration-rules/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/explanation/registration-rules/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/explanation/registration-rules/"/>
@@ -338,7 +370,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/explanation/security-model/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/explanation/security-model/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/explanation/security-model/"/>
@@ -346,7 +378,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/how-to/export-attendance/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/export-attendance/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/how-to/export-attendance/"/>
@@ -354,7 +386,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/how-to/print-badges/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/print-badges/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/how-to/print-badges/"/>
@@ -362,7 +394,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/how-to/process-payment/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/process-payment/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/how-to/process-payment/"/>
@@ -370,7 +402,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/how-to/reset-password/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/reset-password/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/how-to/reset-password/"/>
@@ -378,7 +410,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/how-to/reset-pin/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/reset-pin/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/how-to/reset-pin/"/>
@@ -386,7 +418,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/reference/age-categories/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/reference/age-categories/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/reference/age-categories/"/>
@@ -394,7 +426,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/reference/permissions/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/reference/permissions/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/reference/permissions/"/>
@@ -402,7 +434,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/reference/roles/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/reference/roles/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/reference/roles/"/>
@@ -410,7 +442,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/reference/statuses/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/reference/statuses/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/reference/statuses/"/>
@@ -418,7 +450,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/troubleshooting/login-issues/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/troubleshooting/login-issues/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/troubleshooting/login-issues/"/>
@@ -426,7 +458,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/troubleshooting/registration-errors/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/troubleshooting/registration-errors/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/troubleshooting/registration-errors/"/>
@@ -434,7 +466,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/troubleshooting/sync-issues/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/troubleshooting/sync-issues/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/troubleshooting/sync-issues/"/>
@@ -442,7 +474,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/tutorials/create-event/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/tutorials/create-event/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/tutorials/create-event/"/>
@@ -450,7 +482,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/tutorials/first-login/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/tutorials/first-login/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/tutorials/first-login/"/>
@@ -458,7 +490,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/en/tutorials/register-member/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/tutorials/register-member/"/>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/tutorials/register-member/"/>
@@ -466,7 +498,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/"/>
@@ -474,7 +506,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/architecture/data-model/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/architecture/data-model/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/data-model/"/>
@@ -482,7 +514,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/architecture/integrations/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/architecture/integrations/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/integrations/"/>
@@ -490,7 +522,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/architecture/overview/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/architecture/overview/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/overview/"/>
@@ -498,7 +530,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/architecture/adrs/ADR-001-authentication/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/architecture/adrs/ADR-001-authentication/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/adrs/ADR-001-authentication/"/>
@@ -506,7 +538,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/architecture/adrs/ADR-002-permissions/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/architecture/adrs/ADR-002-permissions/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/adrs/ADR-002-permissions/"/>
@@ -514,7 +546,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/architecture/adrs/ADR-003-database/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/architecture/adrs/ADR-003-database/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/architecture/adrs/ADR-003-database/"/>
@@ -522,7 +554,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/dev/architecture/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/dev/architecture/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/dev/architecture/"/>
@@ -530,7 +562,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/dev/deployment/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/dev/deployment/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/dev/deployment/"/>
@@ -538,15 +570,31 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/dev/setup-local/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/dev/setup-local/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/dev/setup-local/"/>
         <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/dev/setup-local/"/>
     </url>
     <url>
+        <loc>https://mcc-newark-hub.github.io/events-app/es/emergency/evacuation/</loc>
+        <lastmod>2026-08-31</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/emergency/evacuation/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/emergency/evacuation/"/>
+        <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/emergency/evacuation/"/>
+    </url>
+    <url>
+        <loc>https://mcc-newark-hub.github.io/events-app/es/emergency/fire/</loc>
+        <lastmod>2026-08-31</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/emergency/fire/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/emergency/fire/"/>
+        <xhtml:link rel="alternate" hreflang="pt" href="https://mcc-newark-hub.github.io/events-app/emergency/fire/"/>
+    </url>
+    <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/explanation/church-hierarchy/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/explanation/church-hierarchy/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/explanation/church-hierarchy/"/>
@@ -554,7 +602,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/explanation/event-lifecycle/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/explanation/event-lifecycle/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/explanation/event-lifecycle/"/>
@@ -562,7 +610,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/explanation/registration-rules/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/explanation/registration-rules/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/explanation/registration-rules/"/>
@@ -570,7 +618,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/explanation/security-model/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/explanation/security-model/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/explanation/security-model/"/>
@@ -578,7 +626,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/how-to/export-attendance/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/how-to/export-attendance/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/export-attendance/"/>
@@ -586,7 +634,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/how-to/print-badges/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/how-to/print-badges/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/print-badges/"/>
@@ -594,7 +642,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/how-to/process-payment/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/how-to/process-payment/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/process-payment/"/>
@@ -602,7 +650,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/how-to/reset-password/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/how-to/reset-password/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/reset-password/"/>
@@ -610,7 +658,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/how-to/reset-pin/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/how-to/reset-pin/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/how-to/reset-pin/"/>
@@ -618,7 +666,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/reference/age-categories/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/reference/age-categories/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/reference/age-categories/"/>
@@ -626,7 +674,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/reference/permissions/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/reference/permissions/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/reference/permissions/"/>
@@ -634,7 +682,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/reference/roles/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/reference/roles/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/reference/roles/"/>
@@ -642,7 +690,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/reference/statuses/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/reference/statuses/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/reference/statuses/"/>
@@ -650,7 +698,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/troubleshooting/login-issues/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/troubleshooting/login-issues/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/troubleshooting/login-issues/"/>
@@ -658,7 +706,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/troubleshooting/registration-errors/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/troubleshooting/registration-errors/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/troubleshooting/registration-errors/"/>
@@ -666,7 +714,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/troubleshooting/sync-issues/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/troubleshooting/sync-issues/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/troubleshooting/sync-issues/"/>
@@ -674,7 +722,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/tutorials/create-event/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/tutorials/create-event/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/tutorials/create-event/"/>
@@ -682,7 +730,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/tutorials/first-login/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/tutorials/first-login/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/tutorials/first-login/"/>
@@ -690,7 +738,7 @@
     </url>
     <url>
         <loc>https://mcc-newark-hub.github.io/events-app/es/tutorials/register-member/</loc>
-        <lastmod>2026-08-30</lastmod>
+        <lastmod>2026-08-31</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="es" href="https://mcc-newark-hub.github.io/events-app/es/tutorials/register-member/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://mcc-newark-hub.github.io/events-app/en/tutorials/register-member/"/>
