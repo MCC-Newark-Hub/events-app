@@ -85,7 +85,7 @@ All 12 tables have RLS disabled (`ALTER TABLE ... DISABLE ROW LEVEL SECURITY`). 
 ## Business Logic
 
 ### Roles
-- **System roles** (for login/views): `admin`, `clerk`, `pastor`, `ga_leader`, `team_leader`
+- **System roles** (for login/views): `admin`, `clerk`, `pastor`, `ga_leader`, `team_leader`, `treasurer`
 - **Church roles** (on members/regs): 30+ ministry roles (Pastor, Ungido, Diácono, Obreiro, Grupo de Louvor, etc.)
 
 ### Auto-exempt
@@ -113,7 +113,7 @@ A reg is exempt from payment deadline if: already paid/exempt/cancelled/waitlist
 
 ---
 
-## Database Schema (12 tables)
+## Database Schema (14 tables)
 
 | Table | Purpose |
 |-------|---------|
@@ -129,6 +129,8 @@ A reg is exempt from payment deadline if: already paid/exempt/cancelled/waitlist
 | `categories` | Age categories (overrides `CATEGORIES` constant if populated) |
 | `functions` | Ministry roles (overrides `ROLE_OPTIONS` if populated) |
 | `teams` | Service teams (overrides `TEAMS` constant if populated) |
+| `treasury_expenses` | Event expenses logged by Treasurer (category, amount, Google Drive receipt link) |
+| `treasury_collections` | Extra income entries (donations, offerings, collections) per event |
 
 Migrations in `migrations/001–010`.
 
@@ -154,6 +156,7 @@ Migrations in `migrations/001–010`.
 - Admin bulk delete (checkbox column + confirmation modal in RegistrationsTab)
 - **Consultar Inscrição** — self-service lookup by reg number OR name; cancel individual or full family group; add a new family member to an existing registration; batch-token grouping keeps family submissions together even without contact info; paid regs blocked from self-cancel with "fale com um atendente" message
 - **Terms of Acceptance** — rich formatting (headings, bold, bullets, italic); pt/en language tabs; payment deadline callout (⚠️ highlighted, shows actual days from event config); separate amber acknowledgement checkbox required before submit
+- **Tesouraria** — `treasurer` sys_role with TreasurerView: Balanço (summary + breakdown by expense category), Inscrições (read-only payment status), Despesas (add/edit expenses with Google Drive receipt links), Outras Entradas (donations, offerings). Pastor sees read-only version; Admin has full access.
 
 ---
 

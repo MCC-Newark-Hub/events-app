@@ -4,6 +4,7 @@ import { CATEGORIES, ROLE_GROUPS, TEAMS, OBREIRO_ROLES, ROLE_BADGE, fmt, teamFor
 import { sb } from "@/lib/supabase";
 import { mapMember } from "@/hooks/useAppData";
 import { genMemberId } from "@/lib/genMemberId";
+import { restrictionLabel, restrictionApprovalType } from "@/lib/registrationAccess";
 import FeeBox from "./FeeBox";
 import ChurchSearch from "./ChurchSearch";
 import SearchSelect from "./SearchSelect";
@@ -25,6 +26,9 @@ function RegModal({
   onSave,
   onRequestOverride,
   prefill,
+  adminRestriction,
+  isAdmin,
+  lang,
 }) {
   // Use DB teams if loaded, fallback to hardcoded constant
   const teamList = dbTeams && dbTeams.length > 0 ? dbTeams.map((t) => t.name) : TEAMS;
@@ -83,7 +87,11 @@ function RegModal({
 
   const trySave = (data) => {
     const isExempt = ["Pastor", "Ungido"].includes(data.role) || data.exempt || false;
-    if (isFull && !isExempt) {
+    if (adminRestriction && isAdmin) {
+      // Admin registering in a restricted state — must go through Pastor approval queue.
+      setPendingData(data);
+      setShowOverride(true);
+    } else if (isFull && !isExempt) {
       setPendingData(data);
       setShowOverride(true);
     } else { onSave(data); onClose(); }
@@ -117,6 +125,56 @@ function RegModal({
     if (setMembers) setMembers((prev) => [...prev, mapMember(data)]);
     trySave({ memberId: data.id, ...f });
   };
+
+  if (showOverride && adminRestriction && isAdmin)
+    return (
+      <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <div className="modal">
+          <div style={{ fontSize: 32, textAlign: "center", marginBottom: 8 }}>🔐</div>
+          <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, textAlign: "center", marginBottom: 6 }}>
+            Inscrição Administrativa
+          </h3>
+          <p style={{ color: "#6b7280", fontSize: 13, textAlign: "center", marginBottom: 6 }}>
+            <strong>{restrictionLabel(adminRestriction, lang)}</strong>
+          </p>
+          <p style={{ color: "#6b7280", fontSize: 13, textAlign: "center", marginBottom: 18 }}>
+            Esta inscrição será enviada para aprovação do Pastor. Um comentário é obrigatório.
+          </p>
+          <div style={{ border: "1.5px solid #f59e0b", borderRadius: 10, padding: "14px 16px", background: "#fffbeb", marginBottom: 16 }}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>📝 Comentário obrigatório *</div>
+            <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 8 }}>
+              Registre a autorização recebida, ex: "Pastor ciente", "Aprovado pelo Pastor por telefone".
+            </p>
+            <textarea
+              rows={3}
+              value={overrideNote}
+              onChange={(e) => setOverrideNote(e.target.value)}
+              placeholder='Ex: "Pastor ciente" ou "Aprovado pelo Pastor em pessoa"'
+              style={{ marginBottom: 8 }}
+            />
+            <button
+              className="btn btn-accent"
+              style={{ width: "100%" }}
+              disabled={!overrideNote.trim()}
+              onClick={() => {
+                onRequestOverride({
+                  type: restrictionApprovalType(adminRestriction),
+                  eventId: event.id,
+                  ...pendingData,
+                  note: overrideNote.trim(),
+                });
+                onClose();
+              }}
+            >
+              Enviar para fila do Pastor
+            </button>
+          </div>
+          <button className="btn btn-ghost" style={{ width: "100%" }} onClick={() => setShowOverride(false)}>
+            {t.back}
+          </button>
+        </div>
+      </div>
+    );
 
   if (showOverride)
     return (

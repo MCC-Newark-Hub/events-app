@@ -88,21 +88,37 @@ Não pode:
 - Ver outras equipes
 - Editar inscrições ou configurações
 
+### Tesoureiro
+
+Módulo financeiro do evento.
+
+Pode:
+- Ver o balanço financeiro (receitas, despesas, saldo)
+- Ver status de pagamento das inscrições (somente leitura)
+- Registrar e editar despesas (com link de comprovante via Google Drive)
+- Registrar outras entradas (doações, coletas, ofertas)
+
+Não pode:
+- Editar inscrições ou configurações do evento
+- Gerenciar usuários
+
 ---
 
 ## Resumo de permissões
 
-| Ação | Público | Atendente | Pastor | Líder GA | Líder Equipe | Admin |
-|---|---|---|---|---|---|---|
-| Inscrição própria | ✓ | ✓ | | | | ✓ |
-| Inscrição de terceiros | | ✓ | | | | ✓ |
-| Ver todas as inscrições | | ✓ | ✓ | | | ✓ |
-| Ver inscrições do GA | | | | ✓ | | ✓ |
-| Ver inscrições da equipe | | | | | ✓ | ✓ |
-| Aprovar inscrições | | | ✓ | | | ✓ |
-| Gerenciar eventos | | | | | | ✓ |
-| Gerenciar usuários | | | | | | ✓ |
-| Importar dados | | | | | | ✓ |
+| Ação | Público | Atendente | Pastor | Líder GA | Líder Equipe | Tesoureiro | Admin |
+|---|---|---|---|---|---|---|---|
+| Inscrição própria | ✓ | ✓ | | | | | ✓ |
+| Inscrição de terceiros | | ✓ | | | | | ✓ |
+| Ver todas as inscrições | | ✓ | ✓ | | | | ✓ |
+| Ver inscrições do GA | | | | ✓ | | | ✓ |
+| Ver inscrições da equipe | | | | | ✓ | | ✓ |
+| Aprovar inscrições | | | ✓ | | | | ✓ |
+| Ver balanço financeiro | | | ✓ | | | ✓ | ✓ |
+| Registrar despesas / entradas | | | | | | ✓ | ✓ |
+| Gerenciar eventos | | | | | | | ✓ |
+| Gerenciar usuários | | | | | | | ✓ |
+| Importar dados | | | | | | | ✓ |
 
 ---
 

@@ -34,12 +34,16 @@ export default function MemberEditModal({
   // in a group — outside the hub, a group may not exist yet, so it stays optional.
   const isHubChurch = (churches || []).find((c) => c.display === defaultChurch)?.is_hub;
 
+  const MINOR_CATEGORIES = ["0-3", "Criança", "Intermediário", "Adolescente"];
+  const isMinor = MINOR_CATEGORIES.includes(editingMember.category);
+
   const saveMember = async () => {
     const fn = editingMember.firstName.trim();
     const ln = editingMember.lastName.trim();
     const fullName = (fn + " " + ln).trim();
     if (!fullName) { notify("Nome é obrigatório."); return; }
     if (isHubChurch && !editingMember.gaId) { notify("Grupo é obrigatório para igrejas do Pólo."); return; }
+    if (isMinor && !editingMember.emergencyContact?.trim()) { notify("Contato de emergência é obrigatório para menores."); return; }
     if (editingMember.familyId === "__new__" && !newFamilyName.trim()) { notify("Nome da família é obrigatório."); return; }
     setSavingMember(true);
     try {
@@ -63,6 +67,8 @@ export default function MemberEditModal({
         translation_languages: editingMember.translationLanguages || [],
         voice_type: editingMember.voiceType || null,
         instruments: editingMember.instruments || [],
+        emergency_contact: editingMember.emergencyContact || null,
+        emergency_phone: editingMember.emergencyPhone || null,
       };
       let memberId = editingMember.id;
       if (editingMember.id) {
@@ -238,6 +244,22 @@ export default function MemberEditModal({
         <div>
           <label>Necessidades Especiais</label>
           <textarea rows={2} value={editingMember.specialNeeds} onChange={(e) => setEditingMember({ ...editingMember, specialNeeds: e.target.value })} style={{ resize: "vertical" }} />
+        </div>
+        <div>
+          <label>Contato de Emergência{isMinor ? " *" : ""}</label>
+          <input
+            value={editingMember.emergencyContact || ""}
+            onChange={(e) => setEditingMember({ ...editingMember, emergencyContact: e.target.value })}
+            placeholder={isMinor ? "Nome completo (obrigatório)" : "Nome completo (opcional)"}
+          />
+        </div>
+        <div>
+          <label>Telefone de Emergência</label>
+          <input
+            value={editingMember.emergencyPhone || ""}
+            onChange={(e) => setEditingMember({ ...editingMember, emergencyPhone: e.target.value })}
+            placeholder="(xxx) xxx-xxxx"
+          />
         </div>
         <div>
           <label>Notas</label>

@@ -4,6 +4,7 @@ import { useT } from "@/i18n/strings";
 import { ROLE_BADGE, fmt, deadlineStatus } from "@/constants";
 import { sb } from "@/lib/supabase";
 import { eventSubtitle } from "@/lib/registrationDeadline";
+import { getRegistrationRestriction, restrictionLabel } from "@/lib/registrationAccess";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
 import CapBar from "@/components/CapBar";
@@ -83,6 +84,7 @@ function PaymentStatusStrip({ paid, exempt, pend, total, wlPaid, wlExempt, wlPen
 function ClerkView(props) {
   const { event, regs, setRegs, members, setMembers, families, setFamilies, gas, setGas, churches, dbTeams, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify, logAudit } = props;
   const t = useT();
+  const restriction = getRegistrationRestriction(event, isFull);
   const [sec, setSec] = useState("regs");
   const [search, setSearch] = useState("");
   const [groupByFam, setGroupByFam] = useState(false);
@@ -194,7 +196,7 @@ function ClerkView(props) {
 
   return (
     <div className="app-shell">
-      <Topbar title={user?.name || t.clerkTitle} sub={`${t.clerkTitle} · ${eventSubtitle(event, lang)}`} user={user} logout={logout} pendingCount={pendingApprovalList.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
+      <Topbar title={user?.name || t.clerkTitle} sub={`${t.clerkTitle} · ${eventSubtitle(event, lang)}`} user={user} logout={logout} pendingCount={pendingApprovalList.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} helpPath="tutorials/register-member" />
       <div className="body-with-sidebar">
         <Sidebar navItems={navItems} activeId={sec} onSelect={switchSec} />
         <div className="main-scroll">
@@ -248,7 +250,19 @@ function ClerkView(props) {
                       🚫 {t.bulkCancelBtn} {bulkSel.length}
                     </button>
                   )}
-                  <button className="btn btn-primary" onClick={() => { setPrefill(null); setShowReg(true); }}>{t.addNew}</button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => { setPrefill(null); setShowReg(true); }}
+                    disabled={!!restriction}
+                    title={restriction ? restrictionLabel(restriction, lang) + " — apenas o Administrador pode inscrever" : undefined}
+                  >
+                    {t.addNew}
+                  </button>
+                  {restriction && (
+                    <span style={{ fontSize: 12, color: "#dc2626", fontWeight: 600 }}>
+                      🔒 {restrictionLabel(restriction, lang)} — contate o Administrador
+                    </span>
+                  )}
                 </div>
               )}
 

@@ -127,6 +127,7 @@ function GALeaderView(props) {
         setLang={setLang}
         theme={theme}
         toggleTheme={toggleTheme}
+        helpPath="reference/roles"
       />
       <div className="main-scroll">
         <div className="page-pad">

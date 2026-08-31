@@ -582,6 +582,7 @@ export default function TreasurerView(props) {
         title="Tesouraria"
         sub={eventSubtitle(event, lang)}
         user={user} logout={logout} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme}
+        helpPath="reference/roles"
       />
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         <Sidebar navItems={navItems} activeId={sec} onSelect={setSec} />

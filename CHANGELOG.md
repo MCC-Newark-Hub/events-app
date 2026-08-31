@@ -9,6 +9,11 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Tesouraria module** — new `treasurer` sys_role with dedicated TreasurerView. Tabs: Balanço (financial summary), Inscrições (read-only payment status), Despesas (expense tracking), Outras Entradas (donations, collections). Accessible read-only by Pastor; full edit by Treasurer and Admin.
+- `treasury_expenses` and `treasury_collections` Supabase tables (RLS disabled).
+- Receipt attachments stored as Google Drive share links (replaced Supabase Storage).
+
 ### In progress
 - Export attendance to CSV
 - Password reset flow for internal users

@@ -138,7 +138,7 @@ function PastorView(props) {
   ];
   return (
     <div className="app-shell">
-      <Topbar title={t.pastorTitle} sub={eventSubtitle(event, lang)} user={user} logout={logout} pendingCount={pendingApprovals.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
+      <Topbar title={t.pastorTitle} sub={eventSubtitle(event, lang)} user={user} logout={logout} pendingCount={pendingApprovals.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} helpPath="reference/roles" />
       <div className="body-with-sidebar">
         <Sidebar navItems={navItems} activeId={sec} onSelect={setSec} />
         <div className="main-scroll">

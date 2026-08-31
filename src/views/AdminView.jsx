@@ -61,7 +61,7 @@ function AdminView(props) {
   ];
   return (
     <div className="app-shell">
-      <Topbar title={t.adminTitle} sub={eventSubtitle(event, lang)} user={user} logout={logout} pendingCount={pendingApprovals.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} />
+      <Topbar title={t.adminTitle} sub={eventSubtitle(event, lang)} user={user} logout={logout} pendingCount={pendingApprovals.length} lang={lang} setLang={setLang} theme={theme} toggleTheme={toggleTheme} helpPath="reference/roles" />
       <div className="body-with-sidebar">
         <Sidebar navItems={navItems} activeId={sec} onSelect={setSec} />
         <div className="main-scroll">
@@ -1231,7 +1231,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
     clearSel();
   };
 
-  const mapMember  = (m) => ({ id: m.id, name: m.name, firstName: m.first_name || m.firstName || '', lastName: m.last_name || m.lastName || '', badgeName: m.badge_name || m.badgeName, gender: m.gender, category: m.category, church: m.church, role: m.role || "", roles: m.roles || (m.role ? [m.role] : []), familyId: m.family_id || m.familyId, gaId: m.ga_id || m.gaId, allergies: m.allergies || '', specialNeeds: m.special_needs || m.specialNeeds || '', notes: m.notes || '', isGuest: m.is_guest || m.isGuest || false, invitedBy: m.invited_by || m.invitedBy || '', translationLanguages: m.translation_languages || m.translationLanguages || [], voiceType: m.voice_type || m.voiceType || '', instruments: m.instruments || [] });
+  const mapMember  = (m) => ({ id: m.id, name: m.name, firstName: m.first_name || m.firstName || '', lastName: m.last_name || m.lastName || '', badgeName: m.badge_name || m.badgeName, gender: m.gender, category: m.category, church: m.church, role: m.role || "", roles: m.roles || (m.role ? [m.role] : []), familyId: m.family_id || m.familyId, gaId: m.ga_id || m.gaId, allergies: m.allergies || '', specialNeeds: m.special_needs || m.specialNeeds || '', notes: m.notes || '', isGuest: m.is_guest || m.isGuest || false, invitedBy: m.invited_by || m.invitedBy || '', translationLanguages: m.translation_languages || m.translationLanguages || [], voiceType: m.voice_type || m.voiceType || '', instruments: m.instruments || [], emergencyContact: m.emergency_contact || m.emergencyContact || '', emergencyPhone: m.emergency_phone || m.emergencyPhone || '' });
   const mapFamily  = (f) => ({ id: f.id, name: f.name, memberIds: f.member_ids || f.memberIds || [] });
   const mapGA      = (g) => ({ id: g.id, name: g.name, church: g.church, leaderId: g.leader_id || g.leaderId, description: g.description || "" });
   const mapRoster  = (r) => ({ id: r.id, eventId: r.event_id || r.eventId, team: r.team, leaderId: r.leader_id || r.leaderId, memberIds: r.member_ids || r.memberIds || [] });

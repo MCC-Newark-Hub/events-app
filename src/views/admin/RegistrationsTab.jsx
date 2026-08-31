@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useT } from "@/i18n/strings";
 
 import { ROLE_BADGE, fmt, deadlineStatus, addDays } from "@/constants";
+import { getRegistrationRestriction } from "@/lib/registrationAccess";
 import { sb } from "@/lib/supabase";
 import StatusBadge from "@/components/StatusBadge";
 import RegModal from "@/components/RegModal";
@@ -80,6 +81,7 @@ export default function RegistrationsTab(props) {
     a.href = url; a.download = `crachas-${(event?.name || "evento").replace(/\s+/g,"-")}.csv`; a.click();
     URL.revokeObjectURL(url);
   };
+  const restriction = getRegistrationRestriction(event, isFull);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState(initialFilter || "all");
   const [showReg, setShowReg] = useState(false);
@@ -369,14 +371,18 @@ export default function RegistrationsTab(props) {
           isFull={isFull}
           existingRegs={active}
           prefill={null}
+          lang={lang}
+          isAdmin={true}
+          adminRestriction={restriction}
           onClose={() => setShowReg(false)}
           onSave={(d) => {
             addReg(d);
             setShowReg(false);
           }}
-          onRequestOverride={(d) =>
-            submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })
-          }
+          onRequestOverride={(d) => {
+            submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id });
+            setShowReg(false);
+          }}
         />
       )}
       {detail && (

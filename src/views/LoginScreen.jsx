@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ClipboardList, Lock, Search } from "lucide-react";
+import { ClipboardList, Lock, Search, HelpCircle } from "lucide-react";
 import { STRINGS } from "@/i18n/strings";
 import ICMLogo from "@/components/ICMLogo";
 import PinLogin from "@/components/PinLogin";
@@ -171,6 +171,18 @@ function LoginScreen({ login, lang, setLang, event, activeCount, waitlistedCount
             >
               <Lock size={18} /> {t.teamAccess}
             </button>
+            <a
+              href="https://mcc-newark-hub.github.io/events-app/tutorials/first-login/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                fontSize: 13, color: "rgba(255,255,255,.65)", textDecoration: "none", marginTop: 4,
+              }}
+            >
+              <HelpCircle size={14} />
+              {lang === "en" ? "How to use this system" : "Como usar este sistema"}
+            </a>
           </div>
         </div>
       ) : (

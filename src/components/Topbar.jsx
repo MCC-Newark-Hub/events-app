@@ -1,7 +1,8 @@
-import { useContext } from "react";
-import { Clock, Moon, Sun } from "lucide-react";
+import { useContext, useState } from "react";
+import { Clock, Moon, Sun, HelpCircle } from "lucide-react";
 import ICMLogo from "@/components/ICMLogo";
 import { SwitchRoleContext } from "@/context/switchRole";
+import HelpModal from "@/components/HelpModal";
 
 export default function Topbar({
   title,
@@ -13,9 +14,13 @@ export default function Topbar({
   setLang,
   theme,
   toggleTheme,
+  helpPath,
 }) {
   const onSwitchRole = useContext(SwitchRoleContext);
+  const [showHelp, setShowHelp] = useState(false);
   return (
+    <>
+    {showHelp && <HelpModal lang={lang} path={helpPath} onClose={() => setShowHelp(false)} />}
     <div className="topbar">
       <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 auto", overflow: "hidden" }}>
         <ICMLogo height={32} style={{ flexShrink: 0 }} />
@@ -76,6 +81,14 @@ export default function Topbar({
         )}
         <button
           className="btn btn-ghost"
+          style={{ padding: "5px 8px", borderColor: "rgba(255,255,255,.3)", color: "#fff" }}
+          onClick={() => setShowHelp(true)}
+          title="Ajuda / Help"
+        >
+          <HelpCircle size={15} />
+        </button>
+        <button
+          className="btn btn-ghost"
           style={{
             padding: "5px 10px",
             fontSize: 12,
@@ -88,5 +101,6 @@ export default function Topbar({
         </button>
       </div>
     </div>
+    </>
   );
 }

@@ -28,6 +28,8 @@ export function mapMember(m) {
     voiceHighestNote: m.voice_highest_note || '',
     instruments: m.instruments || [],
     immigrationStatus: m.immigration_status || '',
+    emergencyContact: m.emergency_contact || '',
+    emergencyPhone: m.emergency_phone || '',
   };
 }
 export function mapFamily(f) {
