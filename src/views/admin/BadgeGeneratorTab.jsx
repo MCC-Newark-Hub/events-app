@@ -20,29 +20,38 @@ async function loadJsPDF() {
 }
 
 async function loadQRLib() {
-  if (window.QRCode) return;
+  if (window.qrcode) return; // qrcode-generator sets window.qrcode
   await new Promise((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
     s.onload = resolve;
     s.onerror = reject;
     document.head.appendChild(s);
   });
 }
 
+// qrcode-generator is fully synchronous — no DOM needed, safe to call in a loop
 function makeQRDataURL(text) {
-  if (!window.QRCode) return null;
-  const div = document.createElement("div");
-  div.style.cssText = "position:fixed;left:-9999px;top:-9999px;visibility:hidden;";
-  document.body.appendChild(div);
+  if (!window.qrcode) return null;
   try {
-    new window.QRCode(div, { text, width: 128, height: 128, colorDark: "#000000", colorLight: "#ffffff" });
-    const canvas = div.querySelector("canvas");
-    return canvas ? canvas.toDataURL("image/png") : null;
+    const qr = window.qrcode(0, "L"); // typeNumber 0 = auto-detect size
+    qr.addData(text);
+    qr.make();
+    const count = qr.getModuleCount();
+    const cell = 4; // px per module — enough for sharp rendering when scaled down
+    const canvas = document.createElement("canvas");
+    canvas.width = count * cell;
+    canvas.height = count * cell;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#000000";
+    for (let r = 0; r < count; r++)
+      for (let c = 0; c < count; c++)
+        if (qr.isDark(r, c)) ctx.fillRect(c * cell, r * cell, cell, cell);
+    return canvas.toDataURL("image/png");
   } catch {
     return null;
-  } finally {
-    document.body.removeChild(div);
   }
 }
 
