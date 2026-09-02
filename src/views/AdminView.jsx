@@ -88,7 +88,7 @@ function AdminView(props) {
                 </div>
               </>
             )}
-            {sec === "badges" && <BadgeGeneratorTab regs={props.regs} event={props.event} notify={props.notify} />}
+            {sec === "badges" && <BadgeGeneratorTab regs={props.regs} event={props.event} rosters={props.rosters} notify={props.notify} />}
           </div>
         </div>
       </div>
