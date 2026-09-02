@@ -19,6 +19,33 @@ async function loadJsPDF() {
   return window.jspdf.jsPDF;
 }
 
+async function loadQRLib() {
+  if (window.QRCode) return;
+  await new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+function makeQRDataURL(text) {
+  if (!window.QRCode) return null;
+  const div = document.createElement("div");
+  div.style.cssText = "position:fixed;left:-9999px;top:-9999px;visibility:hidden;";
+  document.body.appendChild(div);
+  try {
+    new window.QRCode(div, { text, width: 128, height: 128, colorDark: "#000000", colorLight: "#ffffff" });
+    const canvas = div.querySelector("canvas");
+    return canvas ? canvas.toDataURL("image/png") : null;
+  } catch {
+    return null;
+  } finally {
+    document.body.removeChild(div);
+  }
+}
+
 // doc.text({align:"center"}) doesn't shrink or wrap to fit — a long enough
 // string just overflows past the card border at this card's tiny width. Found
 // this rendering a real long name locally before shipping (e.g. a hyphenated
@@ -33,11 +60,16 @@ function fitFontSize(doc, text, startSize, minSize, maxWidth) {
   return size;
 }
 
-function drawBadge(doc, r, event, isFirst) {
+function drawBadge(doc, r, event, isFirst, qrDataUrl) {
   const W = 144, H = 72; // 2in × 1in in points (72pt/inch)
   if (!isFirst) doc.addPage([H, W], "landscape");
-  const cx = W / 2;
-  const maxTextWidth = W - 12;
+
+  // When a QR code is present, reserve the right 30pt for it
+  const QR_SIZE = 26;
+  const QR_PAD = 4;
+  const textW = qrDataUrl ? W - QR_SIZE - QR_PAD * 2 : W;
+  const cx = textW / 2;
+  const maxTextWidth = textW - 12;
 
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, H, "F");
@@ -93,6 +125,12 @@ function drawBadge(doc, r, event, isFirst) {
   doc.setTextColor(150);
   fitFontSize(doc, footer, 4.8, 3.5, maxTextWidth);
   doc.text(footer, cx, H - 5, { align: "center" });
+
+  if (qrDataUrl) {
+    const qrX = W - QR_SIZE - QR_PAD;
+    const qrY = (H - QR_SIZE) / 2;
+    try { doc.addImage(qrDataUrl, "PNG", qrX, qrY, QR_SIZE, QR_SIZE); } catch {}
+  }
 }
 
 export default function BadgeGeneratorTab({ regs, event, rosters, notify }) {
@@ -161,11 +199,16 @@ export default function BadgeGeneratorTab({ regs, event, rosters, notify }) {
     if (toGenerate.length === 0) return;
     setGenerating(true);
     try {
-      const JsPDF = await loadJsPDF();
+      const [JsPDF] = await Promise.all([loadJsPDF(), loadQRLib()]);
+      const qrMap = {};
+      for (const r of toGenerate) {
+        const url = `${window.location.origin}?checkin=${r.regNumber}`;
+        qrMap[r.id] = makeQRDataURL(url);
+      }
       const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: [72, 144] });
       toGenerate.forEach((r, idx) => {
         const resolvedTeam = rosterTeamOf(r.memberId) || (r.team && r.team !== "Participante" ? r.team : "");
-        drawBadge(doc, { ...r, team: resolvedTeam }, event, idx === 0);
+        drawBadge(doc, { ...r, team: resolvedTeam }, event, idx === 0, qrMap[r.id]);
       });
       const filename = `crachas-${(event?.name || "evento").replace(/\s+/g, "-").toLowerCase()}.pdf`;
       doc.save(filename);
