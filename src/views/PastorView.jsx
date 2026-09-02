@@ -127,13 +127,14 @@ function PastorView(props) {
   const guestsByInviter = [...new Set(guestRegs.map((r) => r.invitedByMemberId))]
     .map((id) => ({ id, name: memberName(id), guests: guestRegs.filter((r) => r.invitedByMemberId === id) }))
     .sort((a, b) => b.guests.length - a.guests.length);
+  const showFinancials = user?.showFinancials !== false;
   const navItems = [
     { id: "dashboard", icon: <LayoutDashboard size={16} />, label: t.dashboard },
     { id: "resumo", icon: <BarChart2 size={16} />, label: "Resumo" },
     { id: "regs", icon: <ClipboardList size={16} />, label: t.registrations },
     { id: "approvals", icon: <Clock size={16} />, label: `${t.approvals}${pendingApprovals.length > 0 ? ` (${pendingApprovals.length})` : ""}` },
     { id: "reports", icon: <BarChart2 size={16} />, label: t.reports },
-    { id: "tesouraria", icon: <DollarSign size={16} />, label: "Tesouraria" },
+    ...(showFinancials ? [{ id: "tesouraria", icon: <DollarSign size={16} />, label: "Tesouraria" }] : []),
     { id: "functions", icon: <BookOpen size={16} />, label: "Membros com Funções" },
   ];
   return (
@@ -203,8 +204,10 @@ function PastorView(props) {
                   {[
                     { label: t.registered, value: er.length, color: "#1a3a6b", detail: `${t.cia}:${er.filter((r)=>["0-3","Criança","Intermediário"].includes(r.category)).length} · ${t.ya}:${er.filter((r)=>["Adolescente","Jovem","Adulto"].includes(r.category)).length}` },
                     { label: t.workers, value: workers.length, color: "#5b21b6", detail: `${er.length > 0 ? Math.round((workers.length / er.length) * 100) : 0}% ${t.ofTotal}` },
-                    { label: t.collected, value: fmt(coll), color: "#2d8a4e", detail: `${paid.length} ${t.payers}` },
-                    { label: t.pendingAmt, value: fmt(pendA), color: "#d4820a", detail: `${pend.length} ${t.people}` },
+                    ...(showFinancials ? [
+                      { label: t.collected, value: fmt(coll), color: "#2d8a4e", detail: `${paid.length} ${t.payers}` },
+                      { label: t.pendingAmt, value: fmt(pendA), color: "#d4820a", detail: `${pend.length} ${t.people}` },
+                    ] : []),
                   ].map((s) => (
                     <div className="stat-card" key={s.label} style={{ borderTop: `4px solid ${s.color}`, textAlign: "center", padding: "20px 14px" }}>
                       <div style={{ fontSize: 26, fontWeight: 700, color: s.color }}>{s.value}</div>
@@ -213,19 +216,21 @@ function PastorView(props) {
                     </div>
                   ))}
                 </div>
-                <PaymentStatusStrip paid={paid.length} exempt={exempt.length} pend={pend.length} total={er.length} wlPaid={wlPaidCount} wlExempt={wlExemptCount} wlPend={wlPendCount} wlTotal={(wlRegs || []).length} cancelled={cancelledCount} lang={lang} />
-                <div className="stat-grid-4" style={{ marginBottom: 18 }}>
-                  {[
-                    { label: lang === "en" ? "Near cancellation" : "Perto do cancelamento", value: nearCancellation.length, color: "#d4820a", detail: lang === "en" ? "Deadline within 3 days" : "Vencendo em até 3 dias" },
-                    { label: lang === "en" ? "Cancelled for non-payment" : "Cancelados por atraso", value: cancelledNonpayment.length, color: "#c0392b", detail: `${cancelledNonpayment.filter((r) => r.cancelReason === "nonpayment_auto").length} ${lang === "en" ? "auto" : "auto"} · ${cancelledNonpayment.filter((r) => r.cancelReason === "nonpayment_manual").length} ${lang === "en" ? "manual" : "manual"}` },
-                  ].map((s) => (
-                    <div className="stat-card" key={s.label} style={{ borderTop: `4px solid ${s.color}`, textAlign: "center", padding: "20px 14px" }}>
-                      <div style={{ fontSize: 26, fontWeight: 700, color: s.color }}>{s.value}</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, marginTop: 4 }}>{s.label}</div>
-                      <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>{s.detail}</div>
-                    </div>
-                  ))}
-                </div>
+                {showFinancials && <PaymentStatusStrip paid={paid.length} exempt={exempt.length} pend={pend.length} total={er.length} wlPaid={wlPaidCount} wlExempt={wlExemptCount} wlPend={wlPendCount} wlTotal={(wlRegs || []).length} cancelled={cancelledCount} lang={lang} />}
+                {showFinancials && (
+                  <div className="stat-grid-4" style={{ marginBottom: 18 }}>
+                    {[
+                      { label: lang === "en" ? "Near cancellation" : "Perto do cancelamento", value: nearCancellation.length, color: "#d4820a", detail: lang === "en" ? "Deadline within 3 days" : "Vencendo em até 3 dias" },
+                      { label: lang === "en" ? "Cancelled for non-payment" : "Cancelados por atraso", value: cancelledNonpayment.length, color: "#c0392b", detail: `${cancelledNonpayment.filter((r) => r.cancelReason === "nonpayment_auto").length} ${lang === "en" ? "auto" : "auto"} · ${cancelledNonpayment.filter((r) => r.cancelReason === "nonpayment_manual").length} ${lang === "en" ? "manual" : "manual"}` },
+                    ].map((s) => (
+                      <div className="stat-card" key={s.label} style={{ borderTop: `4px solid ${s.color}`, textAlign: "center", padding: "20px 14px" }}>
+                        <div style={{ fontSize: 26, fontWeight: 700, color: s.color }}>{s.value}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, marginTop: 4 }}>{s.label}</div>
+                        <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>{s.detail}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="two-col" style={{ marginBottom: 14 }}>
                   <div className="card">
                     <h4 style={{ fontWeight: 700, marginBottom: 10 }}>{t.category}</h4>
@@ -244,7 +249,7 @@ function PastorView(props) {
                           {subRows.map((sr) => (
                             <div key={x.c + ":" + sr.ch} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0 5px 22px", borderBottom: "1px solid var(--border)", background: "var(--bg2)" }}>
                               <span style={{ fontSize: 12, color: "var(--muted)" }}>{sr.ch}</span>
-                              <div style={{ display: "flex", gap: 6 }}><span className="badge badge-green" style={{ fontSize: 11 }}>{sr.paid}✓</span><span className="badge badge-blue" style={{ fontSize: 11 }}>{sr.total}</span></div>
+                              <div style={{ display: "flex", gap: 6 }}>{showFinancials && <span className="badge badge-green" style={{ fontSize: 11 }}>{sr.paid}✓</span>}<span className="badge badge-blue" style={{ fontSize: 11 }}>{sr.total}</span></div>
                             </div>
                           ))}
                         </Fragment>
@@ -263,7 +268,7 @@ function PastorView(props) {
                               <span style={{ display: "inline-block", width: 14, color: "#9ca3af" }}>{isOpen ? "▾" : "▸"}</span>
                               {x.ch}
                             </span>
-                            <div style={{ display: "flex", gap: 5 }}><span className="badge badge-green">{x.paid}✓</span><span className="badge badge-blue">{x.total}</span></div>
+                            <div style={{ display: "flex", gap: 5 }}>{showFinancials && <span className="badge badge-green">{x.paid}✓</span>}<span className="badge badge-blue">{x.total}</span></div>
                           </div>
                           {subRows.map((sr) => (
                             <div key={x.ch + ":" + sr.c} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0 5px 22px", borderBottom: "1px solid var(--border)", background: "var(--bg2)" }}>
@@ -290,12 +295,12 @@ function PastorView(props) {
                                 <span style={{ display: "inline-block", width: 14, color: "#9ca3af" }}>{isOpen ? "▾" : "▸"}</span>
                                 {x.key}
                               </span>
-                              <div style={{ display: "flex", gap: 5 }}><span className="badge badge-green">{x.paid}✓</span><span className="badge badge-blue">{x.total}</span></div>
+                              <div style={{ display: "flex", gap: 5 }}>{showFinancials && <span className="badge badge-green">{x.paid}✓</span>}<span className="badge badge-blue">{x.total}</span></div>
                             </div>
                             {subRows.map((sr) => (
                               <div key={x.key + ":" + sr.ch} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0 5px 22px", borderBottom: "1px solid var(--border)", background: "var(--bg2)" }}>
                                 <span style={{ fontSize: 12, color: "var(--muted)" }}>{sr.ch}</span>
-                                <div style={{ display: "flex", gap: 6 }}><span className="badge badge-green" style={{ fontSize: 11 }}>{sr.paid}✓</span><span className="badge badge-blue" style={{ fontSize: 11 }}>{sr.total}</span></div>
+                                <div style={{ display: "flex", gap: 6 }}>{showFinancials && <span className="badge badge-green" style={{ fontSize: 11 }}>{sr.paid}✓</span>}<span className="badge badge-blue" style={{ fontSize: 11 }}>{sr.total}</span></div>
                               </div>
                             ))}
                           </Fragment>
@@ -329,7 +334,7 @@ function PastorView(props) {
                     </div>
                   </div>
                 )}
-                <div className="card">
+                {showFinancials && <div className="card">
                   <h4 style={{ fontWeight: 700, marginBottom: 12 }}>{t.collected}</h4>
                   <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
                     {[{label:t.expected,value:fmt(coll+pendA),color:"#1a3a6b"},{label:t.received,value:fmt(coll),color:"#2d8a4e"},{label:t.pendingAmt,value:fmt(pendA),color:"#d4820a"},{label:t.exempted,value:`${er.filter(r=>r.exempt).length}`,color:"#6b7280"}].map((x) => (
@@ -343,14 +348,14 @@ function PastorView(props) {
                     <div style={{ background: "#2d8a4e", height: "100%", width: `${pct}%`, borderRadius: 99 }} />
                   </div>
                   <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, textAlign: "right" }}>{pct}% {t.received}</div>
-                </div>
+                </div>}
               </div>
             )}
             {sec === "resumo" && <RegistrationDashboard regs={regs} wlRegs={wlRegs} exRegs={exRegs} event={event} members={props.members} churches={props.churches} lang={lang} />}
             {sec === "regs" && <RegistrationsTab {...props} initialFilter={regsInitialFilter} />}
             {sec === "approvals" && <ApprovalsPanel approvals={approvals} resolveApproval={resolveApproval} event={event} activeCount={activeCount} />}
-            {sec === "reports" && <ReportsTab regs={regs} event={event} wlRegs={wlRegs} exRegs={exRegs} lang={lang} members={props.members} gas={props.gas} />}
-            {sec === "tesouraria" && <TesourariaSection event={event} regs={regs} updateReg={props.updateReg} notify={props.notify} logAudit={props.logAudit} readOnly={true} />}
+            {sec === "reports" && <ReportsTab regs={regs} event={event} wlRegs={wlRegs} exRegs={exRegs} lang={lang} members={props.members} gas={props.gas} showFinancials={showFinancials} />}
+            {sec === "tesouraria" && showFinancials && <TesourariaSection event={event} regs={regs} updateReg={props.updateReg} notify={props.notify} logAudit={props.logAudit} readOnly={true} />}
             {sec === "functions" && <MemberFunctionsView members={props.members} gas={props.gas} notify={props.notify} />}
           </div>
         </div>

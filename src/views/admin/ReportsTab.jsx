@@ -5,7 +5,7 @@ import { fmt, ROLE_BADGE, CATEGORIES, deadlineStatus } from "@/constants";
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const byName = (a, b) => norm(a.memberName).localeCompare(norm(b.memberName));
 
-export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members, gas }) {
+export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members, gas, showFinancials = true }) {
   const t = useT();
   const [type, setType] = useState("summary");
   const [repSearch, setRepSearch] = useState("");
@@ -385,10 +385,9 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
       <div style={{ display: "flex", gap: 5, marginBottom: 16, flexWrap: "wrap" }}>
         {[
           [t.summaryTab, "summary"],
-          [t.pendPayTab, "pending"],
+          ...(showFinancials ? [[t.pendPayTab, "pending"]] : []),
           [t.waitlistTab, "waitlist"],
-          [t.expiringTab, "expiring"],
-          [t.cancelledNonpaymentTab, "cancelled_nonpayment"],
+          ...(showFinancials ? [[t.expiringTab, "expiring"], [t.cancelledNonpaymentTab, "cancelled_nonpayment"]] : []),
           [t.rosterTab, "roster"],
           [t.badgesTab, "badges"],
           ["Check-in", "checkin"],
@@ -451,11 +450,11 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
                   <tr>
                     <th>{summaryDim === "church" ? t.church : t.category}</th>
                     <th>{t.total}</th>
-                    <th>{t.paid}</th>
-                    <th>{t.pending}</th>
-                    <th>{t.exempt}</th>
-                    <th>{t.collected}</th>
-                    <th>{t.toReceive}</th>
+                    {showFinancials && <th>{t.paid}</th>}
+                    {showFinancials && <th>{t.pending}</th>}
+                    {showFinancials && <th>{t.exempt}</th>}
+                    {showFinancials && <th>{t.collected}</th>}
+                    {showFinancials && <th>{t.toReceive}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -470,21 +469,21 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
                             {g.key}
                           </td>
                           <td>{g.total}</td>
-                          <td style={{ color: "#2d8a4e", fontWeight: 600 }}>{g.paid}</td>
-                          <td style={{ color: "#d4820a", fontWeight: 600 }}>{g.pendN}</td>
-                          <td style={{ color: "#6b7280" }}>{g.exempt}</td>
-                          <td style={{ color: "#2d8a4e", fontWeight: 600 }}>{fmt(g.coll)}</td>
-                          <td style={{ color: "#d4820a", fontWeight: 600 }}>{fmt(g.pendA)}</td>
+                          {showFinancials && <td style={{ color: "#2d8a4e", fontWeight: 600 }}>{g.paid}</td>}
+                          {showFinancials && <td style={{ color: "#d4820a", fontWeight: 600 }}>{g.pendN}</td>}
+                          {showFinancials && <td style={{ color: "#6b7280" }}>{g.exempt}</td>}
+                          {showFinancials && <td style={{ color: "#2d8a4e", fontWeight: 600 }}>{fmt(g.coll)}</td>}
+                          {showFinancials && <td style={{ color: "#d4820a", fontWeight: 600 }}>{fmt(g.pendA)}</td>}
                         </tr>
                         {subGroups.map((sg) => (
                           <tr key={g.key + ":" + sg.key} style={{ background: "#f8f9fb" }}>
                             <td style={{ paddingLeft: 34, fontSize: 13, color: "#374151" }}>{sg.key}</td>
                             <td style={{ fontSize: 13 }}>{sg.total}</td>
-                            <td style={{ color: "#2d8a4e", fontSize: 13 }}>{sg.paid}</td>
-                            <td style={{ color: "#d4820a", fontSize: 13 }}>{sg.pendN}</td>
-                            <td style={{ color: "#6b7280", fontSize: 13 }}>{sg.exempt}</td>
-                            <td style={{ color: "#2d8a4e", fontSize: 13 }}>{fmt(sg.coll)}</td>
-                            <td style={{ color: "#d4820a", fontSize: 13 }}>{fmt(sg.pendA)}</td>
+                            {showFinancials && <td style={{ color: "#2d8a4e", fontSize: 13 }}>{sg.paid}</td>}
+                            {showFinancials && <td style={{ color: "#d4820a", fontSize: 13 }}>{sg.pendN}</td>}
+                            {showFinancials && <td style={{ color: "#6b7280", fontSize: 13 }}>{sg.exempt}</td>}
+                            {showFinancials && <td style={{ color: "#2d8a4e", fontSize: 13 }}>{fmt(sg.coll)}</td>}
+                            {showFinancials && <td style={{ color: "#d4820a", fontSize: 13 }}>{fmt(sg.pendA)}</td>}
                           </tr>
                         ))}
                       </Fragment>
@@ -493,11 +492,11 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
                   <tr style={{ background: "#f8f9fb", fontWeight: 700 }}>
                     <td>{t.total}</td>
                     <td>{er.length}</td>
-                    <td>{er.filter((r) => r.paid).length}</td>
-                    <td>{pend.length}</td>
-                    <td>{er.filter((r) => r.exempt).length}</td>
-                    <td>{fmt(er.filter((r) => r.paid).reduce((s, r) => s + r.fee, 0))}</td>
-                    <td>{fmt(pend.reduce((s, r) => s + r.fee, 0))}</td>
+                    {showFinancials && <td>{er.filter((r) => r.paid).length}</td>}
+                    {showFinancials && <td>{pend.length}</td>}
+                    {showFinancials && <td>{er.filter((r) => r.exempt).length}</td>}
+                    {showFinancials && <td>{fmt(er.filter((r) => r.paid).reduce((s, r) => s + r.fee, 0))}</td>}
+                    {showFinancials && <td>{fmt(pend.reduce((s, r) => s + r.fee, 0))}</td>}
                   </tr>
                 </tbody>
               </table>
@@ -766,7 +765,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
                   <th>M/F</th>
                   <th>{t.churchH}</th>
                   <th>{t.teamH}</th>
-                  <th>{t.statusH}</th>
+                  {showFinancials && <th>{t.statusH}</th>}
                   <th>🏷</th>
                   <th>{t.presH}</th>
                 </tr>
@@ -793,7 +792,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
                     <td style={{ fontSize: 12, textAlign: "center" }}>{r.gender || "—"}</td>
                     <td style={{ fontSize: 12, color: "#6b7280" }}>{r.church}</td>
                     <td style={{ fontSize: 12 }}>{r.team}</td>
-                    <td>{r.exempt ? t.exempt : r.paid ? `✓ ${t.paid}` : "⏳"}</td>
+                    {showFinancials && <td>{r.exempt ? t.exempt : r.paid ? `✓ ${t.paid}` : "⏳"}</td>}
                     <td style={{ fontSize: 14, textAlign: "center" }}>
                       {r.badgePrinted ? "✓" : "○"}
                     </td>

@@ -24,6 +24,7 @@ export function useAuth(dbUsers) {
         church: u.church,
         gaIds: u.ga_ids || u.gaIds || [],
         teamLeads: u.team_leads || u.teamLeads || [],
+        showFinancials: u.show_financials !== false,
       };
       setUser(mapped);
       return mapped;

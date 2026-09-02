@@ -838,13 +838,14 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
       primaryRole: u.primary_role || u.sys_role || u.sysRole,
       teamLeads: u.team_leads || u.teamLeads || [],
       gaIds: u.ga_ids || u.gaIds || [],
+      showFinancials: u.show_financials !== false,
       newPin: "",
       confirmPin: "",
     });
     setShowPin(false);
   };
   const startNew = () => {
-    setEditing({ id: null, name: "", sysRoles: ["clerk"], primaryRole: "clerk", initials: "", church: "", teamLeads: [], gaIds: [], newPin: "", confirmPin: "" });
+    setEditing({ id: null, name: "", sysRoles: ["clerk"], primaryRole: "clerk", initials: "", church: "", teamLeads: [], gaIds: [], showFinancials: true, newPin: "", confirmPin: "" });
     setShowPin(false);
   };
   const cancel = () => setEditing(null);
@@ -866,6 +867,7 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
         church: editing.church || null,
         team_leads: sysRoles.includes("team_leader") ? (editing.teamLeads || []) : [],
         ga_ids: sysRoles.includes("ga_leader") ? (editing.gaIds || []) : [],
+        show_financials: editing.showFinancials !== false,
         ...(editing.newPin ? { pin: editing.newPin } : {}),
       };
       if (editing.id) {
@@ -947,6 +949,19 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
                   <select value={editing.primaryRole} onChange={(e) => setEditing({ ...editing, primaryRole: e.target.value })}>
                     {(editing.sysRoles || []).map((v) => <option key={v} value={v}>{ROLE_LABELS[v] || v}</option>)}
                   </select>
+                </div>
+              )}
+              {(editing.sysRoles || []).includes("pastor") && (
+                <div>
+                  <label>Acesso a dados financeiros</label>
+                  <label className="cb" style={{ fontWeight: 400, textTransform: "none", fontSize: 13, marginTop: 4 }}>
+                    <input
+                      type="checkbox"
+                      checked={editing.showFinancials !== false}
+                      onChange={(e) => setEditing({ ...editing, showFinancials: e.target.checked })}
+                    />
+                    Ver valores arrecadados, pendentes e Tesouraria
+                  </label>
                 </div>
               )}
               <div>
