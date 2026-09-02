@@ -355,8 +355,6 @@ function TeamLeaderView(props) {
             const ciaRegs = eventRegs.filter((r) => baseCats.includes(r.category));
             // ciaClassOverride only moves between age classes now (not to Acessibilidade)
             const classOf = (r) => r.ciaClassOverride || r.category;
-            const totalConf = ciaRegs.filter((r) => r.paid || r.exempt).length;
-            const totalPend = ciaRegs.filter((r) => !r.paid && !r.exempt).length;
             const accRegs = ciaRegs.filter((r) => r.acessibilidade);
 
             // Teacher assignments from Professoras roster
@@ -395,25 +393,18 @@ function TeamLeaderView(props) {
                     </div>
                   )}
                 </div>
-                {/* Overall summary */}
-                <div className="stat-grid-3" style={{ marginBottom: 20 }}>
-                  {[
-                    { label: "Total CIA", value: ciaRegs.length, color: "#1a3a6b" },
-                    { label: "Confirmados", value: totalConf, color: "#16a34a" },
-                    { label: "Pendentes",   value: totalPend, color: "#d97706" },
-                  ].map((s) => (
-                    <div key={s.label} className="card" style={{ textAlign: "center", borderTop: `3px solid ${s.color}`, padding: "12px 10px" }}>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
-                      <div style={{ fontSize: 12, color: "#6b7280" }}>{s.label}</div>
-                    </div>
-                  ))}
+                {/* Overall total */}
+                <div style={{ marginBottom: 20 }}>
+                  <div className="card" style={{ textAlign: "center", borderTop: "3px solid #1a3a6b", padding: "12px 10px", display: "inline-block", minWidth: 100 }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: "#1a3a6b" }}>{ciaRegs.length}</div>
+                    <div style={{ fontSize: 12, color: "#6b7280" }}>Total CIA</div>
+                  </div>
                 </div>
 
                 {/* Per-category sections */}
                 {CIA_CATS.map(({ cat, label, color }) => {
                   const rows = ciaRegs.filter((r) => classOf(r) === cat).sort((a, b) => norm(a.memberName).localeCompare(norm(b.memberName)));
                   const teachers = teachersForCat(cat);
-                  const conf = rows.filter((r) => r.paid || r.exempt).length;
                   const accCount = rows.filter((r) => r.acessibilidade).length;
                   const open = ciaExpanded[cat] !== false;
                   return (
@@ -423,7 +414,6 @@ function TeamLeaderView(props) {
                           <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, display: "inline-block", flexShrink: 0 }} />
                           <span style={{ fontWeight: 700, fontSize: 15 }}>{label}</span>
                           <span className="badge badge-blue" style={{ fontSize: 10 }}>{rows.length} total</span>
-                          {conf > 0 && <span className="badge badge-green" style={{ fontSize: 10 }}>{conf}✓</span>}
                           {rows.filter((r) => r.presence === "present").length > 0 && (
                             <span className="badge badge-green" style={{ fontSize: 10 }}>{rows.filter((r) => r.presence === "present").length} presentes</span>
                           )}
@@ -451,20 +441,18 @@ function TeamLeaderView(props) {
                           <p style={{ padding: "14px 16px", color: "var(--muted)", fontSize: 13 }}>Nenhum inscrito nesta classe.</p>
                         ) : (
                           <div style={{ overflowX: "auto" }}>
-                            <table className="table" style={{ minWidth: 520 }}>
+                            <table className="table" style={{ minWidth: 420 }}>
                               <thead>
                                 <tr>
                                   <th style={{ width: 44 }}>Presença</th>
                                   <th>Nome</th>
                                   <th>Igreja</th>
-                                  <th>Status</th>
                                   <th style={{ width: 44, textAlign: "center" }}>♾</th>
                                   <th>Mover</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {rows.map((r) => {
-                                  const paid = r.paid || r.exempt;
                                   const present = r.presence === "present";
                                   return (
                                     <tr key={r.id}>
@@ -479,11 +467,6 @@ function TeamLeaderView(props) {
                                         {r.acessibilidade && <span style={{ marginLeft: 5, fontSize: 12, color: ACC_COLOR }}>♾</span>}
                                       </td>
                                       <td style={{ fontSize: 12, color: "#6b7280" }}>{r.church || "—"}</td>
-                                      <td>
-                                        <span className={`badge ${paid ? "badge-green" : "badge-yellow"}`} style={{ fontSize: 10 }}>
-                                          {paid ? "Confirmado" : "Pendente"}
-                                        </span>
-                                      </td>
                                       <td style={{ textAlign: "center" }}>
                                         <button
                                           title={r.acessibilidade ? "Remover tag Acessibilidade" : "Marcar como Acessibilidade"}
