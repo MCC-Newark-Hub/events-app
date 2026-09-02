@@ -113,7 +113,7 @@ export default function RegistrationsTab(props) {
       (filter === "paid" && r.paid) ||
       (filter === "pending" && !r.paid && !r.exempt && !r.cancelled && !r.waitlisted) ||
       (filter === "exempt" && r.exempt) ||
-      (filter === "waitlist" && r.waitlisted) ||
+      (filter === "waitlist" && r.waitlisted && !r.cancelled) ||
       (filter === "excedente" && r.excedente) ||
       (filter === "cancelled" && r.cancelled) ||
       (filter === "overdue" && isOverdue(r));

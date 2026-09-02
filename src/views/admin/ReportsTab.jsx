@@ -17,6 +17,10 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
   const [immGa, setImmGa] = useState("");
   const [immDim, setImmDim] = useState("overview"); // "overview" | "church" | "ga"
   const [summaryDim, setSummaryDim] = useState("church"); // "church" | "category"
+  const [ciaChurch, setCiaChurch] = useState("");
+  const [ciaClassFilter, setCiaClassFilter] = useState("all");
+  const [ciaCols, setCiaCols] = useState({ church: true, status: true });
+  const toggleCiaCol = (col) => setCiaCols((p) => ({ ...p, [col]: !p[col] }));
   const [expandedGroups, setExpandedGroups] = useState({});
   const toggleGroup = (key) => setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   const switchSummaryDim = (dim) => { setSummaryDim(dim); setExpandedGroups({}); };
@@ -33,6 +37,26 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
     return s && !s.overdue && s.remaining <= 3;
   });
   const cancelledNonpayment = all.filter((r) => r.cancelled && (r.cancelReason === "nonpayment_auto" || r.cancelReason === "nonpayment_manual"));
+
+  const CIA_CATS = [
+    { cat: "0-3",           label: "0-3",            color: "#db2777" },
+    { cat: "Criança",       label: "Crianças",       color: "#dc2626" },
+    { cat: "Intermediário", label: "Intermediários", color: "#2563eb" },
+    { cat: "Adolescente",   label: "Adolescentes",   color: "#ca8a04" },
+  ];
+  const baseCiaCats = CIA_CATS.map((c) => c.cat);
+  const ciaClassOf = (r) => r.ciaClassOverride || r.category;
+  const ciaAll = er.filter((r) => baseCiaCats.includes(r.category));
+  const ciaChurches = [...new Set(ciaAll.map((r) => {
+    const live = (members || []).find((m) => m.id === r.memberId)?.church || r.church;
+    return (!live || live === "Sem Igreja") ? "Outra / Não Listada" : live;
+  }).filter(Boolean))].sort();
+  const ciaFiltered = ciaAll.filter((r) => {
+    if (!ciaChurch) return true;
+    const live = (members || []).find((m) => m.id === r.memberId)?.church || r.church;
+    const ch = (!live || live === "Sem Igreja") ? "Outra / Não Listada" : live;
+    return ch === ciaChurch;
+  });
 
   const gaNameOf = (r) => {
     const gaId = (members || []).find((m) => m.id === r.memberId)?.gaId;
@@ -278,6 +302,38 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
             </tr>`).join("")}
           </tbody>
         </table>`;
+    } else if (type === "cia") {
+      const classesToPrint = ciaClassFilter === "all" ? CIA_CATS : CIA_CATS.filter((c) => c.cat === ciaClassFilter);
+      title = `CIA${ciaChurch ? ` — ${ciaChurch}` : ""}${ciaClassFilter !== "all" ? ` — ${CIA_CATS.find((c) => c.cat === ciaClassFilter)?.label || ""}` : ""}`;
+      const classBlocks = classesToPrint.map(({ cat, label, color }) => {
+        const rows = ciaFiltered.filter((r) => ciaClassOf(r) === cat).sort((a, b) => norm(a.memberName).localeCompare(norm(b.memberName)));
+        if (rows.length === 0) return "";
+        const headerCells = [
+          `<th style="${S.th}">#</th>`,
+          `<th style="${S.th}">Nome</th>`,
+          ciaCols.church ? `<th style="${S.th}">Igreja</th>` : "",
+          ciaCols.status ? `<th style="${S.th}">Status</th>` : "",
+          `<th style="${S.th}">Presença</th>`,
+        ].join("");
+        const dataCells = (r, i) => [
+          `<td style="${S.tdMuted}">${i + 1}</td>`,
+          `<td style="${S.tdBold}">${r.memberName}${r.acessibilidade ? " ♾" : ""}</td>`,
+          ciaCols.church ? `<td style="${S.tdMuted}">${liveChurch(r)}</td>` : "",
+          ciaCols.status ? `<td style="${S.td};color:${r.paid || r.exempt ? "#2d8a4e" : "#d4820a"};">${r.exempt ? "Isento" : r.paid ? "✓ Pago" : "Pendente"}</td>` : "",
+          `<td style="${S.td};font-size:16px;text-align:center;">☐</td>`,
+        ].join("");
+        return `
+          <div style="margin-bottom:28px;page-break-inside:avoid;">
+            <h2 style="color:${color};font-size:14px;font-weight:700;border-bottom:2px solid ${color};padding-bottom:4px;margin-bottom:8px;">${label} — ${rows.length} inscritos · ${rows.filter((r) => r.paid || r.exempt).length} confirmados</h2>
+            <table style="${S.table}">
+              <thead><tr>${headerCells}</tr></thead>
+              <tbody>
+                ${rows.map((r, i) => `<tr ${stripe(i)} ${dataCells(r, i)}</tr>`).join("")}
+              </tbody>
+            </table>
+          </div>`;
+      }).join("");
+      body = classBlocks.trim() || "<p>Nenhum inscrito encontrado.</p>";
     } else {
       window.print();
       return;
@@ -337,6 +393,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
           [t.badgesTab, "badges"],
           ["Check-in", "checkin"],
           ["Imigração", "immigration"],
+          ["CIA", "cia"],
         ].map(([l, k]) => (
           <button
             key={k}
@@ -1105,6 +1162,116 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
           </div>
         </div>
       )}
+
+      {type === "cia" && (() => {
+        const classesToShow = ciaClassFilter === "all" ? CIA_CATS : CIA_CATS.filter((c) => c.cat === ciaClassFilter);
+        return (
+          <div>
+            {/* Filters */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14, alignItems: "center" }}>
+              <select value={ciaChurch} onChange={(e) => setCiaChurch(e.target.value)}>
+                <option value="">Todas as igrejas</option>
+                {ciaChurches.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+                <button className={`tab ${ciaClassFilter === "all" ? "active" : ""}`} onClick={() => setCiaClassFilter("all")}>Todas</button>
+                {CIA_CATS.map(({ cat, label }) => (
+                  <button key={cat} className={`tab ${ciaClassFilter === cat ? "active" : ""}`} onClick={() => setCiaClassFilter(cat)}>{label}</button>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 4, marginLeft: "auto", alignItems: "center" }}>
+                <span style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap" }}>Colunas:</span>
+                {[{ key: "church", label: "Igreja" }, { key: "status", label: "Status" }].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => toggleCiaCol(key)}
+                    style={{
+                      fontSize: 11, padding: "3px 9px", borderRadius: 99, border: "1px solid var(--border)", cursor: "pointer",
+                      background: ciaCols[key] ? "var(--primary)" : "var(--bg2)",
+                      color: ciaCols[key] ? "#fff" : "var(--muted)",
+                      fontWeight: ciaCols[key] ? 700 : 400,
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Summary cards */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+              {CIA_CATS.map(({ cat, label, color }) => {
+                const count = ciaFiltered.filter((r) => ciaClassOf(r) === cat).length;
+                const conf = ciaFiltered.filter((r) => ciaClassOf(r) === cat && (r.paid || r.exempt)).length;
+                return (
+                  <div key={cat} className="card" style={{ textAlign: "center", borderTop: `3px solid ${color}`, padding: "10px 14px", flex: "1 1 80px", cursor: "pointer" }} onClick={() => setCiaClassFilter(ciaClassFilter === cat ? "all" : cat)}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color }}>{count}</div>
+                    <div style={{ fontSize: 11, color: "#6b7280" }}>{label}</div>
+                    <div style={{ fontSize: 10, color: "#2d8a4e", marginTop: 2 }}>{conf}✓</div>
+                  </div>
+                );
+              })}
+              <div className="card" style={{ textAlign: "center", borderTop: "3px solid #1a3a6b", padding: "10px 14px", flex: "1 1 80px" }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#1a3a6b" }}>{ciaFiltered.length}</div>
+                <div style={{ fontSize: 11, color: "#6b7280" }}>Total</div>
+                <div style={{ fontSize: 10, color: "#2d8a4e", marginTop: 2 }}>{ciaFiltered.filter((r) => r.paid || r.exempt).length}✓</div>
+              </div>
+            </div>
+
+            {/* Per-class name lists */}
+            {classesToShow.map(({ cat, label, color }) => {
+              const rows = ciaFiltered.filter((r) => ciaClassOf(r) === cat).sort((a, b) => norm(a.memberName).localeCompare(norm(b.memberName)));
+              if (rows.length === 0 && ciaClassFilter === "all") return null;
+              return (
+                <div key={cat} className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 14, borderTop: `3px solid ${color}` }}>
+                  <div style={{ padding: "10px 16px", background: "var(--bg2)", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontWeight: 700, fontSize: 14, color }}>{label}</span>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <span className="badge badge-green">{rows.filter((r) => r.paid || r.exempt).length}✓</span>
+                      <span className="badge badge-blue">{rows.length}</span>
+                    </div>
+                  </div>
+                  {rows.length === 0 ? (
+                    <p style={{ padding: "12px 16px", color: "var(--muted)", fontSize: 13 }}>Nenhum inscrito nesta classe.</p>
+                  ) : (
+                    <div style={{ overflowX: "auto" }}>
+                      <table className="table" style={{ minWidth: ciaCols.church || ciaCols.status ? 420 : 260 }}>
+                        <thead>
+                          <tr>
+                            <th style={{ width: 36 }}>#</th>
+                            <th>Nome</th>
+                            {ciaCols.church && <th>Igreja</th>}
+                            {ciaCols.status && <th>Status</th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((r, i) => (
+                            <tr key={r.id}>
+                              <td style={{ color: "#9ca3af", fontSize: 12 }}>{i + 1}</td>
+                              <td style={{ fontWeight: 600 }}>
+                                {r.memberName}
+                                {r.acessibilidade && <span style={{ marginLeft: 5, fontSize: 12, color: "#0891b2" }}>♾</span>}
+                              </td>
+                              {ciaCols.church && <td style={{ fontSize: 12, color: "#6b7280" }}>{liveChurch(r)}</td>}
+                              {ciaCols.status && (
+                                <td>
+                                  <span className={`badge ${r.paid || r.exempt ? "badge-green" : "badge-yellow"}`} style={{ fontSize: 10 }}>
+                                    {r.exempt ? "Isento" : r.paid ? "✓ Pago" : "Pendente"}
+                                  </span>
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
     </div>
   );
 }

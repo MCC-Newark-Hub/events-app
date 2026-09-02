@@ -497,6 +497,12 @@ function TeamLeaderView(props) {
                                           const target = e.target.value;
                                           if (!target) return;
                                           updateReg(r.id, { ciaClassOverride: target === r.category ? null : target }, null, { silent: true });
+                                          const member = members.find((m) => m.id === r.memberId);
+                                          if (member && member.category !== target) {
+                                            setMembers((prev) => prev.map((m) => m.id === r.memberId ? { ...m, category: target } : m));
+                                            sb.from("members").update({ category: target }).eq("id", r.memberId)
+                                              .then(({ error }) => { if (error) notify("Erro ao atualizar categoria do membro."); });
+                                          }
                                           e.target.value = "";
                                         }} style={{ fontSize: 11, padding: "3px 6px", width: "auto" }}>
                                           <option value="">Mover…</option>
