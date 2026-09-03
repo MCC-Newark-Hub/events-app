@@ -239,7 +239,7 @@ function TeamLeaderView(props) {
             ))}
           </div>
 
-          {mainView === "funcoes" && (
+          {mainView === "funcoes" && !isCIALeader && (
             <MemberFunctionsView
               members={members}
               setMembers={setMembers}

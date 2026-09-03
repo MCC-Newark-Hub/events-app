@@ -839,13 +839,14 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
       teamLeads: u.team_leads || u.teamLeads || [],
       gaIds: u.ga_ids || u.gaIds || [],
       showFinancials: u.show_financials !== false,
+      churches: u.churches || [],
       newPin: "",
       confirmPin: "",
     });
     setShowPin(false);
   };
   const startNew = () => {
-    setEditing({ id: null, name: "", sysRoles: ["clerk"], primaryRole: "clerk", initials: "", church: "", teamLeads: [], gaIds: [], showFinancials: true, newPin: "", confirmPin: "" });
+    setEditing({ id: null, name: "", sysRoles: ["clerk"], primaryRole: "clerk", initials: "", church: "", teamLeads: [], gaIds: [], showFinancials: true, churches: [], newPin: "", confirmPin: "" });
     setShowPin(false);
   };
   const cancel = () => setEditing(null);
@@ -873,8 +874,8 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
       if (editing.id) {
         const { error } = await sb.from("app_users").update(row).eq("id", editing.id);
         if (error) throw error;
-        // Update show_financials via RPC to bypass PostgREST schema cache validation
         await sb.rpc("set_user_show_financials", { p_id: editing.id, p_val: showFin });
+        await sb.rpc("set_user_churches", { p_id: editing.id, p_val: editing.churches || [] });
         setDbUsers((prev) => prev.map((u) => u.id === editing.id ? { ...u, ...row, show_financials: showFin, pin: editing.newPin || u.pin } : u));
         // Never log the PIN value itself — just that it changed.
         logAudit?.("app_user_updated", "app_user", editing.id, row.name, { sysRole: row.sys_role, church: row.church, pinChanged: !!editing.newPin });
@@ -966,6 +967,24 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
                   </label>
                 </div>
               )}
+              {((editing.sysRoles || []).includes("pastor") || (editing.sysRoles || []).includes("clerk")) && (() => {
+                const cityOptions = [...new Set((churches || []).map((c) => (c.display || c).split(",")[0].trim()))].sort();
+                const sel = editing.churches || [];
+                const toggle = (city) => setEditing({ ...editing, churches: sel.includes(city) ? sel.filter((x) => x !== city) : [...sel, city] });
+                return (
+                  <div>
+                    <label>Igrejas visíveis <span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 11 }}>(vazio = todas)</span></label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                      {cityOptions.map((city) => (
+                        <label key={city} className="cb" style={{ fontWeight: 400, textTransform: "none", fontSize: 13, background: sel.includes(city) ? "var(--sidebar-active-bg)" : "var(--bg2)", padding: "3px 10px", borderRadius: 99, border: "1px solid var(--border)", cursor: "pointer" }}>
+                          <input type="checkbox" checked={sel.includes(city)} onChange={() => toggle(city)} style={{ marginRight: 5 }} />
+                          {city}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
               <div>
                 <label>Igreja (opcional)</label>
                 <SearchSelect

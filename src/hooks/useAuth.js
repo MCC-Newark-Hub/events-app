@@ -22,6 +22,7 @@ export function useAuth(dbUsers) {
         pin: u.pin,
         initials: u.initials || u.name.slice(0, 2).toUpperCase(),
         church: u.church,
+        churches: u.churches || [],
         gaIds: u.ga_ids || u.gaIds || [],
         teamLeads: u.team_leads || u.teamLeads || [],
         showFinancials: u.show_financials !== false,

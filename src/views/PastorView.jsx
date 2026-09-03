@@ -82,7 +82,9 @@ function PastorView(props) {
   const toggleCh = (key) => setExpandedCh((p) => ({ ...p, [key]: !p[key] }));
   const toggleHub = (key) => setExpandedHub((p) => ({ ...p, [key]: !p[key] }));
   const toggleGuest = (key) => setExpandedGuest((p) => ({ ...p, [key]: !p[key] }));
-  const er = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted);
+  const myChurches = user?.churches?.length ? user.churches : null;
+  const inScope = (church) => !myChurches || myChurches.some((c) => (church || "").toLowerCase().startsWith(c.toLowerCase()));
+  const er = regs.filter((r) => r.eventId === event?.id && !r.cancelled && !r.waitlisted && inScope(r.church));
   const paid = er.filter((r) => r.paid && !r.exempt);
   const exempt = er.filter((r) => r.exempt);
   const pend = er.filter((r) => !r.paid && !r.exempt);
@@ -92,11 +94,11 @@ function PastorView(props) {
   const wlPaidCount = (wlRegs || []).filter((r) => r.paid).length;
   const wlExemptCount = (wlRegs || []).filter((r) => r.exempt).length;
   const wlPendCount = (wlRegs || []).filter((r) => !r.paid && !r.exempt).length;
-  const cancelledCount = regs.filter((r) => r.eventId === event?.id && r.cancelled).length;
+  const cancelledCount = regs.filter((r) => r.eventId === event?.id && r.cancelled && inScope(r.church)).length;
   const workers = er.filter((r) => r.team && r.team !== "Participante");
   // Includes cancelled rows too, unlike er — deadlineStatus needs a member's full
   // history to anchor the payment countdown to their earliest attempt.
-  const allEventRegs = regs.filter((r) => r.eventId === event?.id);
+  const allEventRegs = regs.filter((r) => r.eventId === event?.id && inScope(r.church));
   const nearCancellation = er.filter((r) => {
     const s = deadlineStatus(r, event, allEventRegs);
     return s && !s.overdue && s.remaining <= 3;
