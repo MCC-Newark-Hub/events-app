@@ -858,6 +858,7 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
     setSaving(true);
     try {
       const sysRoles = editing.sysRoles?.length ? editing.sysRoles : [editing.primaryRole];
+      const showFin = editing.showFinancials !== false;
       const row = {
         name: editing.name.trim(),
         sys_role: editing.primaryRole,
@@ -867,17 +868,18 @@ function AdminUsers({ dbUsers, setDbUsers, churches, dbTeams, gas, notify, setti
         church: editing.church || null,
         team_leads: sysRoles.includes("team_leader") ? (editing.teamLeads || []) : [],
         ga_ids: sysRoles.includes("ga_leader") ? (editing.gaIds || []) : [],
-        show_financials: editing.showFinancials !== false,
         ...(editing.newPin ? { pin: editing.newPin } : {}),
       };
       if (editing.id) {
         const { error } = await sb.from("app_users").update(row).eq("id", editing.id);
         if (error) throw error;
-        setDbUsers((prev) => prev.map((u) => u.id === editing.id ? { ...u, ...row, pin: editing.newPin || u.pin } : u));
+        // Update show_financials via RPC to bypass PostgREST schema cache validation
+        await sb.rpc("set_user_show_financials", { p_id: editing.id, p_val: showFin });
+        setDbUsers((prev) => prev.map((u) => u.id === editing.id ? { ...u, ...row, show_financials: showFin, pin: editing.newPin || u.pin } : u));
         // Never log the PIN value itself — just that it changed.
         logAudit?.("app_user_updated", "app_user", editing.id, row.name, { sysRole: row.sys_role, church: row.church, pinChanged: !!editing.newPin });
       } else {
-        const { data, error } = await sb.from("app_users").insert({ ...row, pin: editing.newPin }).select().single();
+        const { data, error } = await sb.from("app_users").insert({ ...row, show_financials: showFin, pin: editing.newPin }).select().single();
         if (error) throw error;
         setDbUsers((prev) => [...prev, data]);
         logAudit?.("app_user_created", "app_user", data.id, row.name, { sysRole: row.sys_role, church: row.church });
