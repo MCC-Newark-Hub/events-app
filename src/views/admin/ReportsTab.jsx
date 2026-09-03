@@ -382,27 +382,29 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
           {t.print}
         </button>
       </div>
-      <div style={{ display: "flex", gap: 5, marginBottom: 16, flexWrap: "wrap" }}>
-        {(ciaOnly ? [["CIA", "cia"]] : [
-          [t.summaryTab, "summary"],
-          ...(showFinancials ? [[t.pendPayTab, "pending"]] : []),
-          [t.waitlistTab, "waitlist"],
-          ...(showFinancials ? [[t.expiringTab, "expiring"], [t.cancelledNonpaymentTab, "cancelled_nonpayment"]] : []),
-          [t.rosterTab, "roster"],
-          [t.badgesTab, "badges"],
-          ["Check-in", "checkin"],
-          ["Imigração", "immigration"],
-          ["CIA", "cia"],
-        ]).map(([l, k]) => (
-          <button
-            key={k}
-            className={`tab ${type === k ? "active" : ""}`}
-            onClick={() => setType(k)}
-          >
-            {l}
-          </button>
-        ))}
-      </div>
+      {!ciaOnly && (
+        <div style={{ display: "flex", gap: 5, marginBottom: 16, flexWrap: "wrap" }}>
+          {[
+            [t.summaryTab, "summary"],
+            ...(showFinancials ? [[t.pendPayTab, "pending"]] : []),
+            [t.waitlistTab, "waitlist"],
+            ...(showFinancials ? [[t.expiringTab, "expiring"], [t.cancelledNonpaymentTab, "cancelled_nonpayment"]] : []),
+            [t.rosterTab, "roster"],
+            [t.badgesTab, "badges"],
+            ["Check-in", "checkin"],
+            ["Imigração", "immigration"],
+            ["CIA", "cia"],
+          ].map(([l, k]) => (
+            <button
+              key={k}
+              className={`tab ${type === k ? "active" : ""}`}
+              onClick={() => setType(k)}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      )}
 
       {["pending", "waitlist", "expiring", "cancelled_nonpayment", "roster", "badges"].includes(type) && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
