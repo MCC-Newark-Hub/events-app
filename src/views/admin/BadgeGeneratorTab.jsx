@@ -185,7 +185,7 @@ export default function BadgeGeneratorTab({ regs, event, rosters, notify }) {
       const nome = (parts[0] || "").toUpperCase();
       const sobrenome = parts.slice(1).join(" ").toUpperCase();
       const teamName = rosterTeamOf(r.memberId) || (r.team && r.team !== "Participante" ? r.team : null);
-      const equipe = teamName ? teamName.toUpperCase() : "";
+      const equipe = teamName ? teamName.toUpperCase() : "PARTICIPANTE";
       const checkinUrl = `${window.location.origin}?checkin=${r.regNumber}`;
       return [nome, sobrenome, equipe, r.category || "", churchCity(r.church), r.regNumber || "", local, mesEAno, checkinUrl];
     });
