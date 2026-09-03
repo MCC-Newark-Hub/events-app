@@ -5,9 +5,9 @@ import { fmt, ROLE_BADGE, CATEGORIES, deadlineStatus } from "@/constants";
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const byName = (a, b) => norm(a.memberName).localeCompare(norm(b.memberName));
 
-export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members, gas, showFinancials = true }) {
+export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members, gas, showFinancials = true, ciaOnly = false }) {
   const t = useT();
-  const [type, setType] = useState("summary");
+  const [type, setType] = useState(ciaOnly ? "cia" : "summary");
   const [repSearch, setRepSearch] = useState("");
   const [repCategory, setRepCategory] = useState("");
   const [repChurch, setRepChurch] = useState("");
@@ -383,7 +383,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
         </button>
       </div>
       <div style={{ display: "flex", gap: 5, marginBottom: 16, flexWrap: "wrap" }}>
-        {[
+        {(ciaOnly ? [["CIA", "cia"]] : [
           [t.summaryTab, "summary"],
           ...(showFinancials ? [[t.pendPayTab, "pending"]] : []),
           [t.waitlistTab, "waitlist"],
@@ -393,7 +393,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
           ["Check-in", "checkin"],
           ["Imigração", "immigration"],
           ["CIA", "cia"],
-        ].map(([l, k]) => (
+        ]).map(([l, k]) => (
           <button
             key={k}
             className={`tab ${type === k ? "active" : ""}`}

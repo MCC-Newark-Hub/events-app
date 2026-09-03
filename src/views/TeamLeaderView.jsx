@@ -664,6 +664,7 @@ function TeamLeaderView(props) {
                 members={members}
                 gas={gas}
                 showFinancials={false}
+                ciaOnly={true}
               />
             );
           })()}
