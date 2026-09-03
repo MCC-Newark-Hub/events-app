@@ -158,8 +158,8 @@ export default function ListasTab({
         {editing && (
           <div className="card" style={{ padding: "14px 16px", marginBottom: 14 }}>
             <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>
-              {editing === "new" ? "Novo" : "Editar"}&nbsp;
-              {cfg.label === "Funções" ? "Função" : cfg.label === "Igrejas" ? "Igreja" : cfg.label === "Categorias" ? "Categoria" : "Status"}
+              {editing === "new" ? "Nova" : "Editar"}&nbsp;
+              {cfg.label === "Funções" ? "Função" : cfg.label === "Categorias" ? "Categoria" : "Situação"}
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
               <div style={{ flex: 2, minWidth: 160 }}>
@@ -179,11 +179,14 @@ export default function ListasTab({
                     list="listas-groups"
                     value={form.group_name || ""}
                     onChange={(e) => setForm({ ...form, group_name: e.target.value })}
-                    placeholder="Grupo"
+                    placeholder="Selecionar ou digitar…"
                   />
                   <datalist id="listas-groups">
                     {existingGroups.map((g) => <option key={g} value={g} />)}
                   </datalist>
+                  <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>
+                    Escolha um grupo existente ou escreva um novo.
+                  </div>
                 </div>
               )}
               {cfg.extraCol && (
