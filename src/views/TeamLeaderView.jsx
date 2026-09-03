@@ -42,7 +42,8 @@ function TeamLeaderView(props) {
     names.length === 0 ? "" :
     names.length === 1 ? names[0] :
     names.slice(0, -1).join(", ") + " e " + names[names.length - 1];
-  const greetingName = joinNames(myTeams) || user?.name;
+  const firstName = (user?.name || "").split(" ")[0];
+  const teamsLabel = joinNames(myTeams) || t.teamTitle;
   // Includes cancelled rows too, unlike eventRegs — deadlineStatus needs a member's
   // full history, and reactivation needs to find the cancelled row itself.
   const allEventRegs = regs.filter((r) => r.eventId === event?.id);
@@ -201,7 +202,7 @@ function TeamLeaderView(props) {
   return (
     <div className="app-shell">
       <Topbar
-        title={t.teamTitle}
+        title={teamsLabel}
         sub={eventSubtitle(event, lang)}
         user={user}
         logout={logout}
@@ -215,7 +216,7 @@ function TeamLeaderView(props) {
         <div className="page-pad">
           <div style={{ marginBottom: 16 }}>
             <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22 }}>
-              {t.hello}, {greetingName}!
+              {t.hello}, {firstName}!
             </h2>
             <p style={{ color: "#6b7280", fontSize: 13 }}>{t.teamReadOnly}</p>
           </div>
