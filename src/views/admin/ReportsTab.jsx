@@ -306,35 +306,57 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
     } else if (type === "cia") {
       const classesToPrint = ciaClassFilter === "all" ? CIA_CATS : CIA_CATS.filter((c) => c.cat === ciaClassFilter);
       title = `CIA${ciaChurch ? ` — ${ciaChurch}` : ""}${ciaClassFilter !== "all" ? ` — ${CIA_CATS.find((c) => c.cat === ciaClassFilter)?.label || ""}` : ""}`;
+
+      const summaryCards = CIA_CATS.map(({ cat, label, color }) => {
+        const count = ciaFiltered.filter((r) => ciaClassOf(r) === cat).length;
+        const conf = ciaFiltered.filter((r) => ciaClassOf(r) === cat && (r.paid || r.exempt)).length;
+        return `<div class="stat-card" style="border-top:3px solid ${color}">
+          <div style="font-size:22px;font-weight:700;color:${color}">${count}</div>
+          <div style="font-size:11px;color:#6b7280">${label}</div>
+          <div style="font-size:10px;color:#2d8a4e;margin-top:2px">${conf}✓</div>
+        </div>`;
+      }).join("") + `<div class="stat-card" style="border-top:3px solid #1a3a6b">
+        <div style="font-size:22px;font-weight:700;color:#1a3a6b">${ciaFiltered.length}</div>
+        <div style="font-size:11px;color:#6b7280">Total</div>
+        <div style="font-size:10px;color:#2d8a4e;margin-top:2px">${ciaFiltered.filter((r) => r.paid || r.exempt).length}✓</div>
+      </div>`;
+
       const classBlocks = classesToPrint.map(({ cat, label, color }) => {
         const rows = ciaFiltered.filter((r) => ciaClassOf(r) === cat).sort((a, b) => norm(a.memberName).localeCompare(norm(b.memberName)));
         if (rows.length === 0) return "";
+        const conf = rows.filter((r) => r.paid || r.exempt).length;
         const headerCells = [
-          `<th style="${S.th}">#</th>`,
-          `<th style="${S.th}">Nome</th>`,
-          ciaCols.church ? `<th style="${S.th}">Igreja</th>` : "",
-          ciaCols.status ? `<th style="${S.th}">Status</th>` : "",
-          `<th style="${S.th}">Presença</th>`,
+          `<th style="width:36px">#</th>`,
+          `<th>Nome</th>`,
+          ciaCols.church ? `<th>Igreja</th>` : "",
+          ciaCols.status ? `<th>Status</th>` : "",
+          `<th style="text-align:center;width:60px">Presença</th>`,
         ].join("");
-        const dataCells = (r, i) => [
-          `<td style="${S.tdMuted}">${i + 1}</td>`,
-          `<td style="${S.tdBold}">${r.memberName}${r.acessibilidade ? " ♾" : ""}</td>`,
-          ciaCols.church ? `<td style="${S.tdMuted}">${liveChurch(r)}</td>` : "",
-          ciaCols.status ? `<td style="${S.td};color:${r.paid || r.exempt ? "#2d8a4e" : "#d4820a"};">${r.exempt ? "Isento" : r.paid ? "✓ Pago" : "Pendente"}</td>` : "",
-          `<td style="${S.td};font-size:16px;text-align:center;">☐</td>`,
-        ].join("");
+        const dataRows = rows.map((r, i) => [
+          `<tr class="${i % 2 === 1 ? "stripe" : ""}">`,
+          `<td style="color:#9ca3af;font-size:12px">${i + 1}</td>`,
+          `<td style="font-weight:600">${r.memberName}${r.acessibilidade ? ` <span style="font-size:12px;color:#0891b2">♾</span>` : ""}</td>`,
+          ciaCols.church ? `<td style="font-size:12px;color:#6b7280">${liveChurch(r)}</td>` : "",
+          ciaCols.status ? `<td><span class="${r.paid || r.exempt ? "bdg-green" : "bdg-yellow"}">${r.exempt ? "Isento" : r.paid ? "✓ Pago" : "Pendente"}</span></td>` : "",
+          `<td style="text-align:center;font-size:16px">☐</td>`,
+          `</tr>`,
+        ].join("")).join("");
         return `
-          <div style="margin-bottom:28px;page-break-inside:avoid;">
-            <h2 style="color:${color};font-size:14px;font-weight:700;border-bottom:2px solid ${color};padding-bottom:4px;margin-bottom:8px;">${label} — ${rows.length} inscritos · ${rows.filter((r) => r.paid || r.exempt).length} confirmados</h2>
-            <table style="${S.table}">
+          <div class="class-card" style="border-top:3px solid ${color}">
+            <div class="class-header">
+              <span style="font-weight:700;font-size:14px;color:${color};font-family:'Lora',Georgia,serif">${label}</span>
+              <div style="display:flex;gap:6px">
+                <span class="bdg-green">${conf}✓</span>
+                <span class="bdg-blue">${rows.length}</span>
+              </div>
+            </div>
+            <table class="p-table">
               <thead><tr>${headerCells}</tr></thead>
-              <tbody>
-                ${rows.map((r, i) => `<tr ${stripe(i)} ${dataCells(r, i)}</tr>`).join("")}
-              </tbody>
+              <tbody>${dataRows}</tbody>
             </table>
           </div>`;
       }).join("");
-      body = classBlocks.trim() || "<p>Nenhum inscrito encontrado.</p>";
+      body = `<div class="summary-cards">${summaryCards}</div>${classBlocks.trim() || "<p>Nenhum inscrito encontrado.</p>"}`;
     } else {
       window.print();
       return;
@@ -343,14 +365,30 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
     const html = `<!DOCTYPE html><html lang="pt-BR"><head>
       <meta charset="utf-8">
       <title>${title} — ${eventName}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link href="https://fonts.googleapis.com/css2?family=Lora:wght@700&display=swap" rel="stylesheet">
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #111; padding: 20px 24px; }
         .header { margin-bottom: 16px; border-bottom: 2px solid #8B0000; padding-bottom: 10px; }
-        .header h1 { font-size: 18px; font-weight: 700; color: #8B0000; }
+        .header h1 { font-size: 18px; font-weight: 700; color: #8B0000; font-family: 'Lora', Georgia, serif; }
         .header p { font-size: 12px; color: #6b7280; margin-top: 2px; }
         .filters { font-size: 11px; color: #374151; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 10px; margin-bottom: 12px; display: inline-block; }
-        @media print { @page { margin: 12mm; size: A4 landscape; } body { padding: 0; } }
+        /* CIA summary cards */
+        .summary-cards { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+        .stat-card { text-align:center; padding:10px 14px; flex:1 1 80px; border-radius:6px; background:#fff; border:1px solid #e5e7eb; }
+        /* CIA class sections */
+        .class-card { border-radius:6px; overflow:hidden; margin-bottom:14px; border:1px solid #e5e7eb; page-break-inside:avoid; }
+        .class-header { padding:10px 16px; background:#f9fafb; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; }
+        .p-table { width:100%; border-collapse:collapse; font-size:12px; }
+        .p-table th { padding:6px 10px; background:#f3f4f6; text-align:left; font-size:11px; color:#6b7280; font-weight:600; border-bottom:1px solid #e5e7eb; }
+        .p-table td { padding:7px 10px; border-bottom:1px solid #f3f4f6; }
+        .stripe { background:#f9fafb; }
+        /* Badges */
+        .bdg-green { display:inline-block; background:#dcfce7; color:#166534; border-radius:99px; padding:2px 8px; font-size:10px; font-weight:700; }
+        .bdg-blue  { display:inline-block; background:#dbeafe; color:#1e40af; border-radius:99px; padding:2px 8px; font-size:10px; font-weight:700; }
+        .bdg-yellow{ display:inline-block; background:#fef9c3; color:#92400e; border-radius:99px; padding:2px 8px; font-size:10px; font-weight:700; }
+        @media print { @page { margin: 12mm; size: A4 portrait; } body { padding: 0; } .class-card { page-break-inside: avoid; } }
       </style>
     </head><body>
       <div class="header">
