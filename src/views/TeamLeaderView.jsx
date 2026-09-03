@@ -220,9 +220,9 @@ function TeamLeaderView(props) {
             <p style={{ color: "#6b7280", fontSize: 13 }}>{t.teamReadOnly}</p>
           </div>
 
-          {/* Top-level view selector */}
+          {/* Top-level view selector — CIA leaders don't need Membros com Funções */}
           <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: "2px solid var(--border)", paddingBottom: 0 }}>
-            {[{ id: "equipe", label: "Equipe" }, { id: "funcoes", label: "Membros com Funções" }].map(({ id, label }) => (
+            {[{ id: "equipe", label: "Equipe" }, ...(!isCIALeader ? [{ id: "funcoes", label: "Membros com Funções" }] : [])].map(({ id, label }) => (
               <button
                 key={id}
                 onClick={() => setMainView(id)}
@@ -958,11 +958,15 @@ function TeamLeaderView(props) {
                       </div>
                       {coordenacao.map((m) => {
                         const cfg = STATUS_CFG[getStatus(m.id)];
+                        const assigned = assignments[m.id] || "";
                         return (
                           <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", borderBottom: "1px solid var(--border)" }}>
                             <span className={`dot ${cfg.dot}`} />
                             <span style={{ flex: 1, fontWeight: 500, fontSize: 13 }}>{m.name}</span>
-                            <span style={{ fontSize: 11, color: "var(--muted)" }}>Coordenação</span>
+                            <select value={assigned} onChange={(e) => setMemberAssignment("Professoras", m.id, e.target.value)} style={{ fontSize: 11, padding: "3px 6px", width: "auto" }}>
+                              <option value="">— Coordenação —</option>
+                              {CIA_CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+                            </select>
                             <button onClick={() => removeFromRoster(team, m.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 18, lineHeight: 1 }}>×</button>
                           </div>
                         );

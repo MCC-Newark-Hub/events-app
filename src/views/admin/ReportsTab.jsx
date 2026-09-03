@@ -39,14 +39,15 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
   const cancelledNonpayment = all.filter((r) => r.cancelled && (r.cancelReason === "nonpayment_auto" || r.cancelReason === "nonpayment_manual"));
 
   const CIA_CATS = [
-    { cat: "0-3",           label: "0-3",            color: "#db2777" },
-    { cat: "Criança",       label: "Crianças",       color: "#dc2626" },
-    { cat: "Intermediário", label: "Intermediários", color: "#2563eb" },
-    { cat: "Adolescente",   label: "Adolescentes",   color: "#ca8a04" },
+    { cat: "0-3",             label: "0-3",              color: "#db2777" },
+    { cat: "Criança",         label: "Crianças",         color: "#dc2626" },
+    { cat: "Intermediário",   label: "Intermediários",   color: "#2563eb" },
+    { cat: "Adolescente",     label: "Adolescentes",     color: "#ca8a04" },
+    { cat: "Acessibilidade",  label: "Acessibilidade",   color: "#0891b2" },
   ];
   const baseCiaCats = CIA_CATS.map((c) => c.cat);
   const ciaClassOf = (r) => r.ciaClassOverride || r.category;
-  const ciaAll = er.filter((r) => baseCiaCats.includes(r.category));
+  const ciaAll = er.filter((r) => baseCiaCats.includes(r.category) || r.acessibilidade);
   const ciaChurches = [...new Set(ciaAll.map((r) => {
     const live = (members || []).find((m) => m.id === r.memberId)?.church || r.church;
     return (!live || live === "Sem Igreja") ? "Outra / Não Listada" : live;
