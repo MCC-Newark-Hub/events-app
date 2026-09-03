@@ -6,8 +6,11 @@ import { ROLE_GROUPS } from "@/constants";
 // multi-role editing is available everywhere a member gets edited — a member
 // edited through a single-select role field would silently lose every role
 // but the one picked.
-export default function RolesMultiSelect({ roles, onChange, label = "Funções" }) {
+export default function RolesMultiSelect({ roles, onChange, label = "Funções", dbFunctions }) {
   const current = roles || [];
+  const roleItems = dbFunctions && dbFunctions.length > 0
+    ? dbFunctions.map((f) => ({ id: f.name, name: f.name, group: f.group_name || "Outros" }))
+    : ROLE_GROUPS.flatMap((g) => g.roles.map((r) => ({ id: r, name: r, group: g.group })));
   return (
     <div>
       <label>{label}</label>
@@ -17,7 +20,7 @@ export default function RolesMultiSelect({ roles, onChange, label = "Funções" 
           if (!r || current.includes(r)) return;
           onChange([...current, r]);
         }}
-        items={ROLE_GROUPS.flatMap((g) => g.roles.map((r) => ({ id: r, name: r, group: g.group })))
+        items={roleItems
           .filter((r) => !current.includes(r.id))
           .sort((a, b) => a.name.localeCompare(b.name))}
         getLabel={(r) => r.name}

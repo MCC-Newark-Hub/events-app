@@ -158,6 +158,7 @@ export function useAppData({ getUserRef, notify }) {
   const [seq, setSeq] = useState(0);
   const [dbCategories, setDbCategories] = useState([]);
   const [dbFunctions, setDbFunctions] = useState([]);
+  const [dbImmigrationStatuses, setDbImmigrationStatuses] = useState([]);
   const [dbUsers, setDbUsers] = useState([]);
   const [dbTeams, setDbTeams] = useState([]);
   const [dbInstruments, setDbInstruments] = useState([]);
@@ -171,7 +172,7 @@ export function useAppData({ getUserRef, notify }) {
     async function loadAll() {
       setLoading(true);
       try {
-        var [evRes, memRes, famRes, gaRes, regRes, aprRes, rosRes, chrRes, usrRes, catRes, fnRes, teamsRes, setRes, instRes, voiceRes] =
+        var [evRes, memRes, famRes, gaRes, regRes, aprRes, rosRes, chrRes, usrRes, catRes, fnRes, teamsRes, setRes, instRes, voiceRes, immiRes] =
           await Promise.all([
             sb.from("events").select("*").order("date"),
             sb.from("members").select("*").order("name"),
@@ -188,6 +189,7 @@ export function useAppData({ getUserRef, notify }) {
             sb.from("app_settings").select("*").eq("id", 1).maybeSingle(),
             sb.from("instruments").select("*").order("sort_order"),
             sb.from("voice_types").select("*").order("sort_order"),
+            sb.from("immigration_statuses").select("*").order("sort_order"),
           ]);
         if (cancelled) return;
         if (evRes.error) {
@@ -214,6 +216,7 @@ export function useAppData({ getUserRef, notify }) {
         setDbUsers(usrRes.data || []);
         if (catRes.data && catRes.data.length > 0) setDbCategories(catRes.data);
         if (fnRes.data && fnRes.data.length > 0) setDbFunctions(fnRes.data);
+        if (immiRes.data && immiRes.data.length > 0) setDbImmigrationStatuses(immiRes.data);
         setDbTeams((teamsRes.data || []).map(mapTeam));
         if (instRes.data && instRes.data.length > 0) setDbInstruments(instRes.data);
         if (voiceRes.data && voiceRes.data.length > 0) setDbVoiceTypes(voiceRes.data.map((v) => ({ id: v.id, name: v.name, gender: v.gender, minNote: v.min_note, maxNote: v.max_note, sortOrder: v.sort_order })));
@@ -1013,7 +1016,11 @@ export function useAppData({ getUserRef, notify }) {
     seq,
     setSeq,
     dbCategories,
+    setDbCategories,
     dbFunctions,
+    setDbFunctions,
+    dbImmigrationStatuses,
+    setDbImmigrationStatuses,
     dbUsers,
     setDbUsers,
     dbTeams,

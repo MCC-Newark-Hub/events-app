@@ -5,7 +5,7 @@ import { fmt, ROLE_BADGE, CATEGORIES, deadlineStatus } from "@/constants";
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const byName = (a, b) => norm(a.memberName).localeCompare(norm(b.memberName));
 
-export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members, gas, showFinancials = true, ciaOnly = false }) {
+export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members, gas, showFinancials = true, ciaOnly = false, dbImmigrationStatuses }) {
   const t = useT();
   const [type, setType] = useState(ciaOnly ? "cia" : "summary");
   const [repSearch, setRepSearch] = useState("");
@@ -966,7 +966,9 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
       })()}
 
       {type === "immigration" && (() => {
-        const STATUSES = ["Cidadão", "Residente Permanente", "Com Visto", "Em Processo", "Sem Visto"];
+        const STATUSES = dbImmigrationStatuses && dbImmigrationStatuses.length > 0
+          ? dbImmigrationStatuses.map((s) => s.name)
+          : ["Cidadão", "Residente Permanente", "Com Visto", "Em Processo", "Sem Visto"];
         const mems = members || [];
         const total = mems.length;
         const pct = (n) => total > 0 ? Math.round(n / total * 100) : 0;

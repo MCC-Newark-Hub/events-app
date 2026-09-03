@@ -20,6 +20,8 @@ function RegModal({
   churches,
   gas,
   dbTeams,
+  dbCategories,
+  dbFunctions,
   isFull,
   existingRegs,
   onClose,
@@ -30,8 +32,14 @@ function RegModal({
   isAdmin,
   lang,
 }) {
-  // Use DB teams if loaded, fallback to hardcoded constant
-  const teamList = dbTeams && dbTeams.length > 0 ? dbTeams.map((t) => t.name) : TEAMS;
+  // Use DB data if loaded, fallback to hardcoded constants
+  const teamList     = dbTeams     && dbTeams.length     > 0 ? dbTeams.map((t) => t.name)                                  : TEAMS;
+  const categoryList = dbCategories && dbCategories.length > 0 ? dbCategories.map((c) => c.name)                            : CATEGORIES;
+  const roleGroups   = dbFunctions  && dbFunctions.length  > 0
+    ? [...new Set(dbFunctions.map((f) => f.group_name || "Outros"))].sort().map((g) => ({
+        group: g, roles: dbFunctions.filter((f) => (f.group_name || "Outros") === g).map((f) => f.name),
+      }))
+    : ROLE_GROUPS;
   const t = useT();
   const [mode, setMode] = useState("member");
   const [src, setSrc] = useState(prefill?.name || "");
@@ -798,7 +806,7 @@ function RegModal({
                   value={f.category}
                   onChange={(e) => setF({ ...f, category: e.target.value })}
                 >
-                  {CATEGORIES.map((c) => (
+                  {categoryList.map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>
@@ -812,7 +820,7 @@ function RegModal({
                     <option key="" value="">
                       {t.noRole}
                     </option>,
-                    ...ROLE_GROUPS.map((g) => (
+                    ...roleGroups.map((g) => (
                       <optgroup key={g.group} label={g.group}>
                         {g.roles.map((r) => (
                           <option key={r} value={r}>

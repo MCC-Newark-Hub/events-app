@@ -82,7 +82,7 @@ function PaymentStatusStrip({ paid, exempt, pend, total, wlPaid, wlExempt, wlPen
 }
 
 function ClerkView(props) {
-  const { event, regs, setRegs, members, setMembers, families, setFamilies, gas, setGas, churches, dbTeams, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify, logAudit } = props;
+  const { event, regs, setRegs, members, setMembers, families, setFamilies, gas, setGas, churches, dbTeams, dbCategories, dbFunctions, addReg, updateReg, updatePresence, promoteFromWaitlist, submitApproval, approvals, user, logout, activeCount, isFull, wlRegs, exRegs, lang, setLang, pendingApprovals, theme, toggleTheme, notify, logAudit } = props;
   const t = useT();
   const restriction = getRegistrationRestriction(event, isFull);
   const [sec, setSec] = useState("regs");
@@ -439,7 +439,7 @@ function ClerkView(props) {
         </div>
         </div>
       </div>
-      {showReg && <RegModal event={event} members={myMembers} setMembers={setMembers} families={families} gas={gas} dbTeams={dbTeams} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
+      {showReg && <RegModal event={event} members={myMembers} setMembers={setMembers} families={families} gas={gas} dbTeams={dbTeams} dbCategories={dbCategories} dbFunctions={dbFunctions} isFull={isFull} existingRegs={allActive} prefill={prefill} onClose={() => { setShowReg(false); setPrefill(null); }} onSave={(d) => { addReg(d); setShowReg(false); setPrefill(null); }} onRequestOverride={(d) => submitApproval({ ...d, requestedBy: user?.name, requestedById: user?.id })} />}
       {detail && (
         <DetailModal
           reg={detail}

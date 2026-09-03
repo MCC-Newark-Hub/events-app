@@ -26,6 +26,7 @@ import BadgeGeneratorTab from "./admin/BadgeGeneratorTab";
 import KitchenTab from "./admin/KitchenTab";
 import KitchenPlanningTab from "./admin/KitchenPlanningTab";
 import FuncoesTab from "./admin/FuncoesTab";
+import ListasTab from "./admin/ListasTab";
 import RegistrationDashboard from "./admin/RegistrationDashboard";
 import { TesourariaSection } from "./TreasurerView";
 import MemberFunctionsView from "@/components/MemberFunctionsView";
@@ -55,6 +56,7 @@ function AdminView(props) {
     { id: "directory", icon: <BookOpen size={16} />, label: "Diretório" },
     { id: "funcoes", icon: <Star size={16} />, label: "Funções" },
     { id: "tesouraria", icon: <DollarSign size={16} />, label: "Tesouraria" },
+    { id: "listas", icon: <FolderOpen size={16} />, label: "Listas" },
     { id: "audit", icon: <ShieldCheck size={16} />, label: "Auditoria" },
     { id: "kitchen", icon: <UtensilsCrossed size={16} />, label: "Cozinha" },
     { id: "badges", icon: <IdCard size={16} />, label: "Crachás" },
@@ -79,6 +81,18 @@ function AdminView(props) {
             {sec === "users" && <AdminUsers dbUsers={props.dbUsers} setDbUsers={props.setDbUsers} churches={props.churches} dbTeams={props.dbTeams} gas={props.gas} notify={props.notify} settings={props.settings} updateSessionTtlHours={props.updateSessionTtlHours} logAudit={props.logAudit} />}
             {sec === "directory" && <AdminDirectory {...props} dbTeams={props.dbTeams} setDbTeams={props.setDbTeams} dbInstruments={props.dbInstruments} setDbInstruments={props.setDbInstruments} dbVoiceTypes={props.dbVoiceTypes} setDbVoiceTypes={props.setDbVoiceTypes} />}
             {sec === "funcoes" && <FuncoesTab members={props.members} setMembers={props.setMembers} gas={props.gas} notify={props.notify} logAudit={props.logAudit} />}
+            {sec === "listas" && (
+              <div className="card" style={{ padding: "18px 20px" }}>
+                <h2 style={{ fontWeight: 700, fontSize: 17, marginBottom: 18 }}>Listas</h2>
+                <ListasTab
+                  dbFunctions={props.dbFunctions} setDbFunctions={props.setDbFunctions}
+                  dbCategories={props.dbCategories} setDbCategories={props.setDbCategories}
+                  churches={props.churches} setChurches={props.setChurches}
+                  dbImmigrationStatuses={props.dbImmigrationStatuses} setDbImmigrationStatuses={props.setDbImmigrationStatuses}
+                  notify={props.notify}
+                />
+              </div>
+            )}
             {sec === "audit" && <AuditLogTab dbUsers={props.dbUsers} />}
             {sec === "kitchen" && (
               <>
@@ -1183,7 +1197,7 @@ function makeTh(sk, sd, toggle) {
 
 // ── Directory ─────────────────────────────────────────────────────────────────
 
-function AdminDirectory({ churches, setChurches, members, setMembers, families, setFamilies, gas, setGas, rosters, setRosters, dbTeams, setDbTeams, dbInstruments, setDbInstruments, dbVoiceTypes, setDbVoiceTypes, events, regs, setRegs, notify, logAudit }) {
+function AdminDirectory({ churches, setChurches, members, setMembers, families, setFamilies, gas, setGas, rosters, setRosters, dbTeams, setDbTeams, dbInstruments, setDbInstruments, dbVoiceTypes, setDbVoiceTypes, dbCategories, dbFunctions, dbImmigrationStatuses, events, regs, setRegs, notify, logAudit }) {
   const TABS = [
     { id: "churches",    label: "Igrejas",               count: churches?.length },
     { id: "members",     label: "Membros",               count: members?.length },
@@ -1643,7 +1657,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       </div>
                       <div><label>Categoria</label>
                         <select value={formData.category || "Adulto"} onChange={(e) => setFormData({ ...formData, category: e.target.value })}>
-                          {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                          {(dbCategories && dbCategories.length > 0 ? dbCategories.map((c) => c.name) : CATEGORIES).map((c) => <option key={c}>{c}</option>)}
                         </select>
                       </div>
                     </div>
@@ -1661,6 +1675,7 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                     <RolesMultiSelect
                       roles={formData.roles}
                       onChange={(roles) => setFormData({ ...formData, roles })}
+                      dbFunctions={dbFunctions}
                     />
                     {(formData.roles || []).some((r) => ["Grupo de Louvor", "Instrumentista", "Instrumentista Aprendiz", "Responsável - Grupo de Louvor"].includes(r)) && (
                       <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1791,11 +1806,10 @@ function AdminDirectory({ churches, setChurches, members, setMembers, families, 
                       <label>Situação Imigratória</label>
                       <select value={formData.immigrationStatus || ""} onChange={(e) => setFormData({ ...formData, immigrationStatus: e.target.value })}>
                         <option value="">—</option>
-                        <option value="Cidadão">Cidadão</option>
-                        <option value="Residente Permanente">Residente Permanente</option>
-                        <option value="Com Visto">Com Visto</option>
-                        <option value="Em Processo">Em Processo</option>
-                        <option value="Sem Visto">Sem Visto</option>
+                        {(dbImmigrationStatuses && dbImmigrationStatuses.length > 0
+                          ? dbImmigrationStatuses.map((s) => s.name)
+                          : ["Cidadão", "Residente Permanente", "Com Visto", "Em Processo", "Sem Visto"]
+                        ).map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
                     {(() => {

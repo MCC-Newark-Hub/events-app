@@ -25,6 +25,8 @@ export default function RegistrationsTab(props) {
     families,
     gas,
     dbTeams,
+    dbCategories,
+    dbFunctions,
     addReg,
     updateReg,
     reactivateReg,
@@ -368,6 +370,8 @@ export default function RegistrationsTab(props) {
           families={families}
           gas={gas}
           dbTeams={dbTeams}
+          dbCategories={dbCategories}
+          dbFunctions={dbFunctions}
           isFull={isFull}
           existingRegs={active}
           prefill={null}
