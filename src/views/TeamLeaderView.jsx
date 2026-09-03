@@ -11,6 +11,7 @@ import Topbar from "@/components/Topbar";
 import Modal from "@/components/Modal";
 import KitchenTab from "./admin/KitchenTab";
 import KitchenPlanningTab from "./admin/KitchenPlanningTab";
+import ReportsTab from "./admin/ReportsTab";
 
 function TeamLeaderView(props) {
   const {
@@ -254,7 +255,7 @@ function TeamLeaderView(props) {
           {(isCozinhaLeader || isCIALeader || isTranslationLeader || isPraiseLeader) && (
             <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: "2px solid var(--border)", paddingBottom: 0 }}>
               {(isCIALeader
-                ? [{ id: "cia", label: "📚 CIA — Classes" }, { id: "equipe", label: "Equipe" }, { id: "professores", label: "Professores" }]
+                ? [{ id: "cia", label: "📚 CIA — Classes" }, { id: "equipe", label: "Equipe" }, { id: "professores", label: "Professores" }, { id: "relatorios", label: "📋 Relatórios" }]
                 : isCozinhaLeader
                   ? [{ id: "equipe", label: "Equipe" }, { id: "planejamento", label: "🍽️ Planejamento" }]
                   : isTranslationLeader
@@ -646,6 +647,24 @@ function TeamLeaderView(props) {
                   <p style={{ color: "var(--muted)", fontSize: 13 }}>Nenhum professor cadastrado no sistema.</p>
                 )}
               </div>
+            );
+          })()}
+
+          {/* CIA Reports tab */}
+          {isCIALeader && ciaTab === "relatorios" && (() => {
+            const wlRegs = regs.filter((r) => r.eventId === event?.id && r.waitlisted && !r.cancelled);
+            const exRegs = regs.filter((r) => r.eventId === event?.id && r.exempt);
+            return (
+              <ReportsTab
+                regs={regs}
+                event={event}
+                wlRegs={wlRegs}
+                exRegs={exRegs}
+                lang={lang}
+                members={members}
+                gas={gas}
+                showFinancials={false}
+              />
             );
           })()}
 
