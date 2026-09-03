@@ -19,7 +19,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
   const [summaryDim, setSummaryDim] = useState("church"); // "church" | "category"
   const [ciaChurch, setCiaChurch] = useState("");
   const [ciaClassFilter, setCiaClassFilter] = useState("all");
-  const [ciaCols, setCiaCols] = useState({ church: true, status: true });
+  const [ciaCols, setCiaCols] = useState({ church: true, status: showFinancials });
   const toggleCiaCol = (col) => setCiaCols((p) => ({ ...p, [col]: !p[col] }));
   const [expandedGroups, setExpandedGroups] = useState({});
   const toggleGroup = (key) => setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -1180,7 +1180,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
               </div>
               <div style={{ display: "flex", gap: 4, marginLeft: "auto", alignItems: "center" }}>
                 <span style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap" }}>Colunas:</span>
-                {[{ key: "church", label: "Igreja" }, { key: "status", label: "Status" }].map(({ key, label }) => (
+                {[{ key: "church", label: "Igreja" }, ...(showFinancials ? [{ key: "status", label: "Status" }] : [])].map(({ key, label }) => (
                   <button
                     key={key}
                     onClick={() => toggleCiaCol(key)}
