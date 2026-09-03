@@ -70,75 +70,111 @@ function fitFontSize(doc, text, startSize, minSize, maxWidth) {
 }
 
 function drawBadge(doc, r, event, isFirst, qrDataUrl) {
-  const W = 144, H = 72; // 2in × 1in in points (72pt/inch)
+  const W = 216, H = 144; // 3in × 2in in points (72pt/inch)
   if (!isFirst) doc.addPage([H, W], "landscape");
 
-  // When a QR code is present, reserve the right 30pt for it
-  const QR_SIZE = 26;
-  const QR_PAD = 4;
-  const textW = qrDataUrl ? W - QR_SIZE - QR_PAD * 2 : W;
-  const cx = textW / 2;
-  const maxTextWidth = textW - 12;
+  // Right zone reserved for QR; text is left-aligned in the left portion
+  const QR_ZONE = 88;
+  const TEXT_W = qrDataUrl ? W - QR_ZONE : W;
+  const TEXT_X = 14; // left margin for text
+  const maxTW = TEXT_W - TEXT_X - 8;
+
+  // Footer strip height (separator line + 2 lines of text)
+  const FOOTER_H = 24;
+  const CONTENT_H = H - FOOTER_H;
 
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, H, "F");
-  doc.setDrawColor(200);
-  doc.setLineWidth(1);
-  doc.rect(2, 2, W - 4, H - 4);
+  doc.setDrawColor(210);
+  doc.setLineWidth(0.5);
+  doc.rect(3, 3, W - 6, H - 6);
 
-  const badgeName = r.badgeName || r.memberName || "";
-  const parts = badgeName.trim().split(/\s+/);
+  // Footer separator line
+  doc.setDrawColor(210);
+  doc.setLineWidth(0.5);
+  doc.line(3, CONTENT_H, W - 3, CONTENT_H);
+
+  const badgeName = (r.badgeName || r.memberName || "").trim();
+  const parts = badgeName.split(/\s+/);
   const nome = (parts[0] || "").toUpperCase();
   const sobrenome = parts.slice(1).join(" ").toUpperCase();
   const churchCity = (r.church || "").split(",")[0].replace(/\s*[-–]\s*(EUA|CAN|BRA|USA)$/i, "").trim();
   const team = r.team && r.team !== "Participante" ? r.team : "";
-  const catTeam = [r.category, team].filter(Boolean).join("  ·  ");
 
-  let y = 9;
-  try { doc.addImage(logoSrc, "PNG", cx - 9, y, 18, 7); } catch { /* skip logo if it fails to load */ }
-  y += 12;
+  // Logo — left-aligned to match text
+  let y = 14;
+  try { doc.addImage(logoSrc, "PNG", TEXT_X, y, 28, 11); } catch {}
+  y += 20;
 
+  // First name — large bold, left-aligned
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(0);
-  fitFontSize(doc, nome, 15, 8, maxTextWidth);
-  doc.text(nome, cx, y, { align: "center" });
-  y += 9;
+  doc.setTextColor(10);
+  fitFontSize(doc, nome, 32, 12, maxTW);
+  doc.text(nome, TEXT_X, y);
+  y += 15;
 
+  // Last name
   if (sobrenome) {
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(60);
-    fitFontSize(doc, sobrenome, 7.5, 5, maxTextWidth);
-    doc.text(sobrenome, cx, y, { align: "center" });
-    y += 7;
+    doc.setTextColor(55);
+    fitFontSize(doc, sobrenome, 15, 8, maxTW);
+    doc.text(sobrenome, TEXT_X, y);
+    y += 14;
   }
 
-  if (catTeam) {
+  // Team — bold, prominent
+  if (team) {
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(30);
-    fitFontSize(doc, catTeam, 6.5, 4.5, maxTextWidth);
-    doc.text(catTeam, cx, y, { align: "center" });
-    y += 6.5;
+    doc.setTextColor(20);
+    fitFontSize(doc, team.toUpperCase(), 14, 7, maxTW);
+    doc.text(team.toUpperCase(), TEXT_X, y);
+    y += 13;
   }
 
+  // Category
+  if (r.category) {
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(90);
+    fitFontSize(doc, r.category.toUpperCase(), 12, 7, maxTW);
+    doc.text(r.category.toUpperCase(), TEXT_X, y);
+    y += 12;
+  }
+
+  // Church city
   if (churchCity) {
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(110);
-    fitFontSize(doc, churchCity, 6, 4.5, maxTextWidth);
-    doc.text(churchCity, cx, y, { align: "center" });
+    doc.setTextColor(90);
+    fitFontSize(doc, churchCity.toUpperCase(), 12, 7, maxTW);
+    doc.text(churchCity.toUpperCase(), TEXT_X, y);
   }
 
+  // Footer — event name · month year + reg number
   const eventDate = event?.date ? new Date(event.date + "T12:00:00") : new Date();
-  const monthYear = eventDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).toUpperCase();
-  const footer = `${(event?.name || "EVENTO").toUpperCase()} · ${monthYear}`;
+  const monthYear = eventDate.toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).toUpperCase();
+  const footer1 = `${(event?.name || "EVENTO").toUpperCase()} · ${monthYear}`;
+  const footer2 = r.regNumber || "";
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(150);
-  fitFontSize(doc, footer, 4.8, 3.5, maxTextWidth);
-  doc.text(footer, cx, H - 5, { align: "center" });
+  doc.setTextColor(140);
+  fitFontSize(doc, footer1, 7.5, 5, W - 16);
+  doc.text(footer1, W / 2, CONTENT_H + 9, { align: "center" });
+  if (footer2) {
+    fitFontSize(doc, footer2, 7.5, 5, W - 16);
+    doc.text(footer2, W / 2, CONTENT_H + 18, { align: "center" });
+  }
 
+  // QR code + scan instruction
   if (qrDataUrl) {
-    const qrX = W - QR_SIZE - QR_PAD;
-    const qrY = (H - QR_SIZE) / 2;
+    const QR_SIZE = 70;
+    const qrX = TEXT_W + (QR_ZONE - QR_SIZE) / 2;
+    const qrY = (CONTENT_H - QR_SIZE) / 2 - 4;
     try { doc.addImage(qrDataUrl, "PNG", qrX, qrY, QR_SIZE, QR_SIZE); } catch {}
+    const lines = ["APONTE A CAMERA DO", "SEU TELEFONE PARA", "FAZER O CHECKIN"];
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(120);
+    doc.setFontSize(4.5);
+    const qrCx = TEXT_W + QR_ZONE / 2;
+    let iy = qrY + QR_SIZE + 5;
+    for (const line of lines) { doc.text(line, qrCx, iy, { align: "center" }); iy += 5; }
   }
 }
 
@@ -214,7 +250,7 @@ export default function BadgeGeneratorTab({ regs, event, rosters, notify }) {
         const url = `${window.location.origin}?checkin=${r.regNumber}`;
         qrMap[r.id] = makeQRDataURL(url);
       }
-      const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: [72, 144] });
+      const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: [144, 216] });
       toGenerate.forEach((r, idx) => {
         const resolvedTeam = rosterTeamOf(r.memberId) || (r.team && r.team !== "Participante" ? r.team : "");
         drawBadge(doc, { ...r, team: resolvedTeam }, event, idx === 0, qrMap[r.id]);
