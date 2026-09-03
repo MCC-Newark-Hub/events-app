@@ -3,16 +3,14 @@ import { ChevronUp, ChevronDown, Pencil, Trash2, Plus, X } from "lucide-react";
 import { sb } from "@/lib/supabase";
 
 const TYPES = [
-  { key: "functions",            label: "Funções",              table: "functions",            nameCol: "name",    hasGroup: true,  hasSort: true,  extraCol: null,   extraLabel: null },
-  { key: "categories",           label: "Categorias",           table: "categories",           nameCol: "name",    hasGroup: false, hasSort: true,  extraCol: null,   extraLabel: null },
-  { key: "churches",             label: "Igrejas",              table: "churches",             nameCol: "display", hasGroup: false, hasSort: false, extraCol: "code", extraLabel: "Código (EUA/BRA/CAN)" },
-  { key: "immigration_statuses", label: "Situação Imigratória", table: "immigration_statuses", nameCol: "name",    hasGroup: false, hasSort: true,  extraCol: null,   extraLabel: null },
+  { key: "functions",            label: "Funções",              table: "functions",            nameCol: "name", hasGroup: true,  hasSort: true, extraCol: null, extraLabel: null },
+  { key: "categories",           label: "Categorias",           table: "categories",           nameCol: "name", hasGroup: false, hasSort: true, extraCol: null, extraLabel: null },
+  { key: "immigration_statuses", label: "Situação Imigratória", table: "immigration_statuses", nameCol: "name", hasGroup: false, hasSort: true, extraCol: null, extraLabel: null },
 ];
 
 export default function ListasTab({
   dbFunctions, setDbFunctions,
   dbCategories, setDbCategories,
-  churches, setChurches,
   dbImmigrationStatuses, setDbImmigrationStatuses,
   notify,
 }) {
@@ -25,17 +23,15 @@ export default function ListasTab({
   const cfg = TYPES.find((t) => t.key === activeType);
 
   const getItems = () => {
-    if (activeType === "functions")            return dbFunctions            || [];
-    if (activeType === "categories")           return dbCategories           || [];
-    if (activeType === "churches")             return churches               || [];
-    return                                            dbImmigrationStatuses  || [];
+    if (activeType === "functions")  return dbFunctions           || [];
+    if (activeType === "categories") return dbCategories          || [];
+    return                                  dbImmigrationStatuses || [];
   };
 
   const setItems = (items) => {
-    if (activeType === "functions")            return setDbFunctions(items);
-    if (activeType === "categories")           return setDbCategories(items);
-    if (activeType === "churches")             return setChurches(items);
-    return                                            setDbImmigrationStatuses(items);
+    if (activeType === "functions")  return setDbFunctions(items);
+    if (activeType === "categories") return setDbCategories(items);
+    return                                  setDbImmigrationStatuses(items);
   };
 
   const sorted = [...getItems()].sort((a, b) =>

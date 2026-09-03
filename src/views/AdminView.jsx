@@ -87,7 +87,6 @@ function AdminView(props) {
                 <ListasTab
                   dbFunctions={props.dbFunctions} setDbFunctions={props.setDbFunctions}
                   dbCategories={props.dbCategories} setDbCategories={props.setDbCategories}
-                  churches={props.churches} setChurches={props.setChurches}
                   dbImmigrationStatuses={props.dbImmigrationStatuses} setDbImmigrationStatuses={props.setDbImmigrationStatuses}
                   notify={props.notify}
                 />
