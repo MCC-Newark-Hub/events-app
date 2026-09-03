@@ -167,14 +167,18 @@ function RegsTab({ eventRegs, updateReg, notify, readOnly }) {
 }
 
 // ── Expenses tab ──────────────────────────────────────────────────────────────
-function ExpensesTab({ event, expenses, setExpenses, notify, logAudit, readOnly }) {
+function ExpensesTab({ event, expenses, setExpenses, notify, logAudit, readOnly, dbExpenseCategories }) {
+  const expCats = dbExpenseCategories && dbExpenseCategories.length > 0
+    ? dbExpenseCategories.map((c) => c.name)
+    : EXPENSE_CATS;
+
   const [editing,    setEditing]    = useState(null);
   const [saving,     setSaving]     = useState(false);
   const [filterCat,  setFilterCat]  = useState("all");
 
   const filtered = filterCat === "all" ? expenses : expenses.filter((e) => e.category === filterCat);
 
-  const openNew  = () => setEditing({ date: today(), description: "", category: EXPENSE_CATS[0], amount: "", beneficiary: "", receipt_path: "", notes: "" });
+  const openNew  = () => setEditing({ date: today(), description: "", category: expCats[0], amount: "", beneficiary: "", receipt_path: "", notes: "" });
   const openEdit = (e) => setEditing({ ...e });
 
   const openReceipt = (url) => window.open(url, "_blank", "noopener,noreferrer");
@@ -225,7 +229,7 @@ function ExpensesTab({ event, expenses, setExpenses, notify, logAudit, readOnly 
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
         <button className={`btn btn-sm ${filterCat === "all" ? "btn-primary" : "btn-ghost"}`} onClick={() => setFilterCat("all")}>Todas</button>
-        {EXPENSE_CATS.map((c) => (
+        {expCats.map((c) => (
           <button key={c} className={`btn btn-sm ${filterCat === c ? "btn-primary" : "btn-ghost"}`} onClick={() => setFilterCat(c)}>{c}</button>
         ))}
       </div>
@@ -307,7 +311,7 @@ function ExpensesTab({ event, expenses, setExpenses, notify, logAudit, readOnly 
               <div>
                 <label>Categoria *</label>
                 <select value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })}>
-                  {EXPENSE_CATS.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {expCats.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
@@ -344,13 +348,15 @@ function ExpensesTab({ event, expenses, setExpenses, notify, logAudit, readOnly 
 }
 
 // ── Extra income tab ──────────────────────────────────────────────────────────
-function ExtraIncomeTab({ event, extras, setExtras, notify, logAudit, readOnly }) {
+function ExtraIncomeTab({ event, extras, setExtras, notify, logAudit, readOnly, dbIncomeTypes }) {
+  const incomeTypes = dbIncomeTypes && dbIncomeTypes.length > 0
+    ? dbIncomeTypes.map((t) => t.name)
+    : ["Doação", "Saldo anterior", "Oferta", "Outro"];
+
   const [editing, setEditing] = useState(null);
   const [saving,  setSaving]  = useState(false);
 
-  const TYPES = ["Doação", "Saldo anterior", "Oferta", "Outro"];
-
-  const openNew  = () => setEditing({ date: today(), amount: "", type: TYPES[0], description: "", notes: "" });
+  const openNew  = () => setEditing({ date: today(), amount: "", type: incomeTypes[0], description: "", notes: "" });
   const openEdit = (e) => setEditing({ ...e });
 
   const save = async () => {
@@ -462,7 +468,7 @@ function ExtraIncomeTab({ event, extras, setExtras, notify, logAudit, readOnly }
               <div>
                 <label>Tipo *</label>
                 <select value={editing.type} onChange={(e) => setEditing({ ...editing, type: e.target.value })}>
-                  {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {incomeTypes.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div>
@@ -486,7 +492,7 @@ function ExtraIncomeTab({ event, extras, setExtras, notify, logAudit, readOnly }
 }
 
 // ── Embeddable section for Admin/Pastor (self-loads treasury data) ────────────
-export function TesourariaSection({ event, regs, updateReg, notify, logAudit, readOnly = false }) {
+export function TesourariaSection({ event, regs, updateReg, notify, logAudit, readOnly = false, dbExpenseCategories, dbIncomeTypes }) {
   const [sec,      setSec]      = useState("balanco");
   const [expenses, setExpenses] = useState([]);
   const [extras,   setExtras]   = useState([]);
@@ -535,8 +541,8 @@ export function TesourariaSection({ event, regs, updateReg, notify, logAudit, re
         <>
           {sec === "balanco"  && <BalanceTab eventRegs={eventRegs} expenses={expenses} extras={extras} />}
           {sec === "regs"     && <RegsTab eventRegs={eventRegs} updateReg={updateReg} notify={notify} readOnly={readOnly} />}
-          {sec === "despesas" && <ExpensesTab event={event} expenses={expenses} setExpenses={setExpenses} notify={notify} logAudit={logAudit} readOnly={readOnly} />}
-          {sec === "extras"   && <ExtraIncomeTab event={event} extras={extras} setExtras={setExtras} notify={notify} logAudit={logAudit} readOnly={readOnly} />}
+          {sec === "despesas" && <ExpensesTab event={event} expenses={expenses} setExpenses={setExpenses} notify={notify} logAudit={logAudit} readOnly={readOnly} dbExpenseCategories={dbExpenseCategories} />}
+          {sec === "extras"   && <ExtraIncomeTab event={event} extras={extras} setExtras={setExtras} notify={notify} logAudit={logAudit} readOnly={readOnly} dbIncomeTypes={dbIncomeTypes} />}
         </>
       )}
     </div>
@@ -545,7 +551,7 @@ export function TesourariaSection({ event, regs, updateReg, notify, logAudit, re
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 export default function TreasurerView(props) {
-  const { event, regs, updateReg, user, logout, notify, lang, setLang, theme, toggleTheme, logAudit } = props;
+  const { event, regs, updateReg, user, logout, notify, lang, setLang, theme, toggleTheme, logAudit, dbExpenseCategories, dbIncomeTypes } = props;
   const [sec,      setSec]      = useState("balanco");
   const [expenses, setExpenses] = useState([]);
   const [extras,   setExtras]   = useState([]);
@@ -594,8 +600,8 @@ export default function TreasurerView(props) {
               <>
                 {sec === "balanco"  && <BalanceTab eventRegs={eventRegs} expenses={expenses} extras={extras} />}
                 {sec === "regs"     && <RegsTab eventRegs={eventRegs} updateReg={updateReg} notify={notify} />}
-                {sec === "despesas" && <ExpensesTab event={event} expenses={expenses} setExpenses={setExpenses} notify={notify} logAudit={logAudit} />}
-                {sec === "extras"   && <ExtraIncomeTab event={event} extras={extras} setExtras={setExtras} notify={notify} logAudit={logAudit} />}
+                {sec === "despesas" && <ExpensesTab event={event} expenses={expenses} setExpenses={setExpenses} notify={notify} logAudit={logAudit} dbExpenseCategories={dbExpenseCategories} />}
+                {sec === "extras"   && <ExtraIncomeTab event={event} extras={extras} setExtras={setExtras} notify={notify} logAudit={logAudit} dbIncomeTypes={dbIncomeTypes} />}
               </>
             )}
           </div>

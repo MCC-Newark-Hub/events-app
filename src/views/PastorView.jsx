@@ -357,7 +357,7 @@ function PastorView(props) {
             {sec === "regs" && <RegistrationsTab {...props} initialFilter={regsInitialFilter} />}
             {sec === "approvals" && <ApprovalsPanel approvals={approvals} resolveApproval={resolveApproval} event={event} activeCount={activeCount} />}
             {sec === "reports" && <ReportsTab regs={regs} event={event} wlRegs={wlRegs} exRegs={exRegs} lang={lang} members={props.members} gas={props.gas} showFinancials={showFinancials} />}
-            {sec === "tesouraria" && showFinancials && <TesourariaSection event={event} regs={regs} updateReg={props.updateReg} notify={props.notify} logAudit={props.logAudit} readOnly={true} />}
+            {sec === "tesouraria" && showFinancials && <TesourariaSection event={event} regs={regs} updateReg={props.updateReg} notify={props.notify} logAudit={props.logAudit} readOnly={true} dbExpenseCategories={props.dbExpenseCategories} dbIncomeTypes={props.dbIncomeTypes} />}
             {sec === "functions" && <MemberFunctionsView members={props.members} gas={props.gas} notify={props.notify} />}
           </div>
         </div>

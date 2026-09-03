@@ -6,12 +6,16 @@ const TYPES = [
   { key: "functions",            label: "Funções",              table: "functions",            nameCol: "name", hasGroup: true,  hasSort: true, extraCol: null, extraLabel: null },
   { key: "categories",           label: "Categorias",           table: "categories",           nameCol: "name", hasGroup: false, hasSort: true, extraCol: null, extraLabel: null },
   { key: "immigration_statuses", label: "Situação Imigratória", table: "immigration_statuses", nameCol: "name", hasGroup: false, hasSort: true, extraCol: null, extraLabel: null },
+  { key: "expense_categories",   label: "Categorias de Despesa", table: "expense_categories",  nameCol: "name", hasGroup: false, hasSort: true, extraCol: null, extraLabel: null },
+  { key: "income_types",         label: "Tipos de Entrada",     table: "income_types",         nameCol: "name", hasGroup: false, hasSort: true, extraCol: null, extraLabel: null },
 ];
 
 export default function ListasTab({
   dbFunctions, setDbFunctions,
   dbCategories, setDbCategories,
   dbImmigrationStatuses, setDbImmigrationStatuses,
+  dbExpenseCategories, setDbExpenseCategories,
+  dbIncomeTypes, setDbIncomeTypes,
   notify,
 }) {
   const [activeType, setActiveType] = useState("functions");
@@ -23,15 +27,19 @@ export default function ListasTab({
   const cfg = TYPES.find((t) => t.key === activeType);
 
   const getItems = () => {
-    if (activeType === "functions")  return dbFunctions           || [];
-    if (activeType === "categories") return dbCategories          || [];
-    return                                  dbImmigrationStatuses || [];
+    if (activeType === "functions")          return dbFunctions           || [];
+    if (activeType === "categories")         return dbCategories          || [];
+    if (activeType === "expense_categories") return dbExpenseCategories   || [];
+    if (activeType === "income_types")       return dbIncomeTypes         || [];
+    return                                          dbImmigrationStatuses || [];
   };
 
   const setItems = (items) => {
-    if (activeType === "functions")  return setDbFunctions(items);
-    if (activeType === "categories") return setDbCategories(items);
-    return                                  setDbImmigrationStatuses(items);
+    if (activeType === "functions")          return setDbFunctions(items);
+    if (activeType === "categories")         return setDbCategories(items);
+    if (activeType === "expense_categories") return setDbExpenseCategories(items);
+    if (activeType === "income_types")       return setDbIncomeTypes(items);
+    return                                          setDbImmigrationStatuses(items);
   };
 
   const sorted = [...getItems()].sort((a, b) =>
@@ -159,7 +167,7 @@ export default function ListasTab({
           <div className="card" style={{ padding: "14px 16px", marginBottom: 14 }}>
             <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>
               {editing === "new" ? "Nova" : "Editar"}&nbsp;
-              {cfg.label === "Funções" ? "Função" : cfg.label === "Categorias" ? "Categoria" : "Situação"}
+              {{ "Funções": "Função", "Categorias": "Categoria", "Situação Imigratória": "Situação", "Categorias de Despesa": "Categoria de Despesa", "Tipos de Entrada": "Tipo de Entrada" }[cfg.label] || cfg.label}
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
               <div style={{ flex: 2, minWidth: 160 }}>

@@ -70,7 +70,7 @@ function AdminView(props) {
           <div className="page-pad">
             {sec === "overview" && <AdminOverview {...props} setSec={setSec} navToRegs={navToRegs} />}
             {sec === "resumo" && <RegistrationDashboard regs={props.regs} wlRegs={props.wlRegs} exRegs={props.exRegs} event={props.event} members={props.members} churches={props.churches} lang={props.lang} />}
-            {sec === "tesouraria" && <TesourariaSection event={props.event} regs={props.regs} updateReg={props.updateReg} notify={props.notify} logAudit={props.logAudit} readOnly={false} />}
+            {sec === "tesouraria" && <TesourariaSection event={props.event} regs={props.regs} updateReg={props.updateReg} notify={props.notify} logAudit={props.logAudit} readOnly={false} dbExpenseCategories={props.dbExpenseCategories} dbIncomeTypes={props.dbIncomeTypes} />}
             {sec === "regs" && <RegistrationsTab {...props} initialFilter={regsInitialFilter} />}
             {sec === "teams" && <TeamsTab {...props} />}
             {sec === "ga" && <AdminGA {...props} />}
@@ -88,6 +88,8 @@ function AdminView(props) {
                   dbFunctions={props.dbFunctions} setDbFunctions={props.setDbFunctions}
                   dbCategories={props.dbCategories} setDbCategories={props.setDbCategories}
                   dbImmigrationStatuses={props.dbImmigrationStatuses} setDbImmigrationStatuses={props.setDbImmigrationStatuses}
+                  dbExpenseCategories={props.dbExpenseCategories} setDbExpenseCategories={props.setDbExpenseCategories}
+                  dbIncomeTypes={props.dbIncomeTypes} setDbIncomeTypes={props.setDbIncomeTypes}
                   notify={props.notify}
                 />
               </div>
