@@ -394,7 +394,7 @@ export default function ReportsTab({ regs, event, wlRegs, exRegs, lang, members,
             [t.badgesTab, "badges"],
             ["Check-in", "checkin"],
             ["Imigração", "immigration"],
-            ["CIA", "cia"],
+            ["CIA's", "cia"],
           ].map(([l, k]) => (
             <button
               key={k}
