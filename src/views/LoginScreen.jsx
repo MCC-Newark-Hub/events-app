@@ -13,6 +13,9 @@ function LoginScreen({ login, lang, setLang, event, activeCount, waitlistedCount
   const [err, setErr] = useState("");
   const [mode, setMode] = useState("choose");
 
+  const today = new Date().toISOString().slice(0, 10);
+  const isEventPast = !!(event?.date && event.date <= today);
+
   const handlePinSubmit = (p) => {
     if (!login(p)) {
       setErr(t.wrongPin);
@@ -70,7 +73,7 @@ function LoginScreen({ login, lang, setLang, event, activeCount, waitlistedCount
                 background: "#fff",
                 borderRadius: 12,
                 padding: "16px 26px",
-                marginBottom: 28,
+                marginBottom: isEventPast ? 20 : 28,
                 boxShadow: "0 10px 24px -8px rgba(0,0,0,.45)",
               }}
             >
@@ -81,7 +84,7 @@ function LoginScreen({ login, lang, setLang, event, activeCount, waitlistedCount
                 {event.date}{event.location ? ` · ${event.location}` : ""}
               </div>
               <RegistrationThermometer event={event} activeCount={activeCount} waitlistedCount={waitlistedCount} lang={lang} />
-              {event.registration_deadline && (() => {
+              {!isEventPast && event.registration_deadline && (() => {
                 const spotsLeft = event.capacity ? Math.max(0, event.capacity - activeCount) : 1;
                 const isFull = spotsLeft === 0;
                 const pt = lang !== "en";
@@ -96,13 +99,25 @@ function LoginScreen({ login, lang, setLang, event, activeCount, waitlistedCount
               })()}
             </div>
           )}
-          {event && (
+          {!isEventPast && event && (
             <div style={{ marginBottom: 20 }}>
               <DeadlineBanner event={event} t={t} />
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {(() => {
+            {isEventPast ? (
+              <div style={{ background: "rgba(255,255,255,.12)", border: "1.5px solid rgba(255,255,255,.25)", borderRadius: 14, padding: "22px 20px", textAlign: "center", marginBottom: 4 }}>
+                <div style={{ fontSize: 38, marginBottom: 10 }}>🎉</div>
+                <div style={{ color: "#fff", fontFamily: "'Lora',Georgia,serif", fontSize: 19, fontWeight: 700, marginBottom: 8 }}>
+                  {lang === "en" ? "Event concluded!" : "Evento realizado!"}
+                </div>
+                <p style={{ color: "rgba(255,255,255,.85)", fontSize: 14, lineHeight: 1.65, margin: 0 }}>
+                  {lang === "en"
+                    ? "Thank you to everyone who joined us. See you at the next event!"
+                    : "Obrigado a todos que participaram. Até o próximo evento!"}
+                </p>
+              </div>
+            ) : (() => {
               const spotsLeft = event?.capacity ? Math.max(0, event.capacity - activeCount) : 1;
               const full = event?.capacity && spotsLeft === 0;
               const paused = !!event?.registration_paused;
@@ -139,22 +154,24 @@ function LoginScreen({ login, lang, setLang, event, activeCount, waitlistedCount
               );
             })()}
 
-            <button
-              className="btn btn-ghost"
-              style={{
-                padding: "14px 24px",
-                fontSize: 15,
-                borderColor: "rgba(255,255,255,.3)",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-              }}
-              onClick={onLookup}
-            >
-              <Search size={18} /> {lang === "en" ? "Manage my registration" : "Consultar inscrição"}
-            </button>
+            {!isEventPast && (
+              <button
+                className="btn btn-ghost"
+                style={{
+                  padding: "14px 24px",
+                  fontSize: 15,
+                  borderColor: "rgba(255,255,255,.3)",
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}
+                onClick={onLookup}
+              >
+                <Search size={18} /> {lang === "en" ? "Manage my registration" : "Consultar inscrição"}
+              </button>
+            )}
             <button
               className="btn btn-ghost"
               style={{

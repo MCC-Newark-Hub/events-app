@@ -356,6 +356,7 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
   const registrationPaused = !!event?.registration_paused;
   const registrationLocked = !!event?.registrations_locked;
   const isBlocked = registrationPaused || registrationLocked;
+  const isEventPast = !!(event?.date && event.date <= new Date().toISOString().slice(0, 10));
   // When blocked (paused or locked), treat as effectively full so the form uses waitlist mode
   const effectivelyFull = eventIsFull || isBlocked;
 
@@ -634,7 +635,25 @@ function PublicPortal({ event, members: propMembers, setMembers, churches, gas, 
         )}
 
         <div style={{ background: "#fff", borderRadius: 20, padding: "24px 20px" }}>
-          {step === 0 && (
+          {step === 0 && isEventPast && (
+            <div style={{ textAlign: "center", padding: "16px 8px" }}>
+              <div style={{ fontSize: 44, marginBottom: 12 }}>🎉</div>
+              <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, fontWeight: 700, color: "#03223f", marginBottom: 8 }}>
+                {lang === "en" ? "Event concluded!" : "Evento realizado!"}
+              </h3>
+              <p style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.65, marginBottom: 20 }}>
+                {lang === "en"
+                  ? "Thank you to everyone who joined us. See you at the next event!"
+                  : "Obrigado a todos que participaram. Até o próximo evento!"}
+              </p>
+              {onReset && (
+                <button className="btn btn-primary" style={{ width: "100%" }} onClick={onReset}>
+                  {lang === "en" ? "← Back to Home" : "← Voltar ao início"}
+                </button>
+              )}
+            </div>
+          )}
+          {step === 0 && !isEventPast && (
             <div>
               {/* Closed/paused notice — shown when registrations are locked or paused */}
               {isBlocked && (
