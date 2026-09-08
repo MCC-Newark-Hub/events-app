@@ -27,10 +27,10 @@ const SECTIONS = [
     path: "/schedule",
     icon: Clock,
     color: "#065f46",
-    pt: { label: "Agenda", desc: "Programação do seminário e cultos" },
-    en: { label: "Schedule", desc: "Seminar and service schedule" },
+    pt: { label: "Escalas", desc: "Portaria, flores e agenda de oração 24h" },
+    en: { label: "Schedules", desc: "Door duty, flowers and 24h prayer agenda" },
     roles: ["admin", "clerk", "pastor", "ga_leader", "team_leader", "treasurer"],
-    live: false,
+    live: true,
   },
   {
     id: "apprentice",
