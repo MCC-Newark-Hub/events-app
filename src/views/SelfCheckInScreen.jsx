@@ -1,11 +1,14 @@
 import { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import ICMLogo from '@/components/ICMLogo';
 import { useT } from '@/i18n/strings';
 
 // Accent-insensitive search: "joao" matches "João"
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
-export default function SelfCheckInScreen({ eventId, regs, members, updatePresence, lang, setLang }) {
+export default function SelfCheckInScreen({ eventId: eventIdProp, regs, members, updatePresence, lang, setLang }) {
+  const { eventId: eventIdParam } = useParams();
+  const eventId = eventIdProp || eventIdParam;
   const t = useT();
   const [step, setStep] = useState('search');   // search | confirm | done | already
   const [query, setQuery] = useState('');
