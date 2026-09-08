@@ -18,13 +18,32 @@ Path alias: `@/` maps to `./src/` (configured in `vite.config.js`).
 
 ## Architecture
 
-### No Router
+### Router
 
-Views are a single `view` string in `App.jsx` state — no URL routing. This is intentional (kiosk/shared-device context). Navigation is driven by `setView()` calls. The browser back button is not supported.
+Uses React Router v6. `<BrowserRouter>` in `src/main.jsx`; full route tree in `src/App.jsx`.
 
-**Public views** (no PIN): `login`, `public` (PublicPortal), `lookup` (RegistrationLookup), plus URL params `?checkin=<regNumber>` and `?selfcheckin=<eventId>`.
+**Public routes** (no PIN required):
 
-**Authenticated views** (PIN required, maps directly to `app_users.sys_role`):
+| Path | Component |
+|---|---|
+| `/login` | HubLoginScreen |
+| `/events/register` | PublicPortal |
+| `/events/lookup` | RegistrationLookup |
+| `/events/checkin?reg=<regNumber>` | CheckInScreen |
+| `/events/selfcheckin/:eventId` | SelfCheckInScreen |
+
+**PIN-gated routes** (wrapped in `AuthGate` → `HubShell`):
+
+| Path | Component |
+|---|---|
+| `/` | HubHome — section picker tile grid |
+| `/events` | EventsSection — routes to staff view by `user.sysRole` |
+| `/cms` | CMSSection — church/member management (Phase 4+) |
+| `/schedule` | ScheduleSection — door/flower rotations, prayer agenda (Phase 3+) |
+| `/apprentice` | ApprenticeSection — Projeto Aprendiz (TBD) |
+| `/settings` | SettingsSection — users, PINs, audit (Phase 5+) |
+
+**Staff view mapping** (inside EventsSection, by `sysRole`):
 
 | sysRole | View |
 |---|---|
@@ -33,6 +52,13 @@ Views are a single `view` string in `App.jsx` state — no URL routing. This is 
 | `pastor` | PastorView — approvals and oversight |
 | `ga_leader` | GALeaderView — scoped to their assigned GA IDs |
 | `team_leader` | TeamLeaderView — scoped to their team rosters |
+| `treasurer` | TreasurerView — financial management |
+
+Internal tab navigation **inside** sections (AdminView `setSec()`, etc.) stays `useState`-based — no sub-routes.
+
+Vercel SPA rewrite in `vercel.json`: `/((?!api/).*)` → `/index.html` so deep-link refreshes don't 404.
+
+Backward compat: old QR codes with `?checkin=` or `?selfcheckin=` query params are detected on mount in App.jsx and redirected to new route paths.
 
 ### Session & Auth
 
