@@ -37,6 +37,7 @@ import PublicPortal from "@/views/PublicPortal";
 import CheckInScreen from "@/views/CheckInScreen";
 import SelfCheckInScreen from "@/views/SelfCheckInScreen";
 import RegistrationLookup from "@/views/RegistrationLookup";
+import SetlistPublicView from "@/views/SetlistPublicView";
 
 export default function App() {
   const navigate = useNavigate();
@@ -192,6 +193,7 @@ export default function App() {
                     setLang={setLang}
                   />
                 } />
+                <Route path="/songs/:date" element={<SetlistPublicView />} />
               </Route>
 
               {/* PIN-gated hub */}
